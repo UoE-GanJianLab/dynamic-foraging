@@ -1,0 +1,4 @@
+,session,str,pfc,peak,peak_width,counts_in_peak
+0,AKED0420210804,str_19,pfc_19,25,0.002,46.0
+1,AKED0420210804,str_4,pfc_54,26,0.0015,23.0
+2,AKED0420210804,str_5,pfc_68,22,0.0015,67.0
