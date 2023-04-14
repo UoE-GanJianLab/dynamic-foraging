@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict
 import pandas as pd
 import numpy as np
 
-from conversion import one_to_zero_cell, zero_to_one_cell
+from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
 spike_data_root = pjoin("data", "spike_times")
 behaviour_root = pjoin("data", "behaviour_data", "csv", "task_info")
