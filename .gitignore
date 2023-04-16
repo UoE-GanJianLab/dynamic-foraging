@@ -2,3 +2,4 @@
 *.tiff
 *.jpg
 \figures
+__pycache__
