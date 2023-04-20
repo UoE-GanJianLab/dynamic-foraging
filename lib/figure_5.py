@@ -1,6 +1,7 @@
 from os.path import join as pjoin
 from os import listdir, mkdir
 from os.path import basename
+from typing import List, Tuple
 
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ from scipy.signal import butter, filtfilt, hilbert, detrend
 import sys
 sys.path.append('lib')
 
-from extraction import get_strong_corr
+from lib.extraction import get_strong_corr
 
 # relative positions to cue_time
 ITI_LEFT = -1
@@ -79,3 +80,39 @@ def get_response_mag_bg_firing(cue_times, pfc_times, str_times):
         str_mag.append(abs(response_str_count / (RESPONSE_RIGHT - RESPONSE_LEFT) - iti_str_count / (ITI_RIGHT - ITI_LEFT)))
 
     return pfc_mag, str_mag, pfc_bg_firing, str_bg_firing
+
+def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int) -> plt.figure:
+    fig, axes = plt.subplots(2, 2, figsize=(20, 20))
+    hist, edge = np.histogram(phase_diffs, bins=bin_size)
+    y_min = np.min(hist)
+    y_max = np.max(hist)
+    dist = y_max - y_min
+    y_min = y_min - dist * 0.1
+    y_max = y_max + dist * 0.1
+    axes[0][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bg, bins=bin_size)
+    y_min = np.min(hist)
+    y_max = np.max(hist)
+    dist = y_max - y_min
+    y_min = y_min - dist * 0.1
+    y_max = y_max + dist * 0.1
+    axes[0][1].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bad, bins=bin_size)
+    y_min = np.min(hist)
+    y_max = np.max(hist)
+    dist = y_max - y_min
+    y_min = y_min - dist * 0.1
+    y_max = y_max + dist * 0.1
+    axes[1][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bg_bad, bins=bin_size)
+    y_min = np.min(hist)
+    y_max = np.max(hist)
+    dist = y_max - y_min
+    y_min = y_min - dist * 0.1
+    y_max = y_max + dist * 0.1
+    axes[1][1].set_ylim(y_min, y_max)
+    sns.histplot(phase_diffs, ax=axes[0][0], bins=bin_size, color='blue', kde=True)
+    sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=bin_size, color='blue', kde=True)
+    sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=bin_size, color='red', kde=True)
+    sns.histplot(phase_diffs_bg_bad, ax=axes[1][1], bins=bin_size, color='red', kde=True)
+    return fig

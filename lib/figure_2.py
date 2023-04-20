@@ -6,15 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def panel_A(behaviour_path: str, name):
-    df = pd.read_csv(behaviour_path)
-    # preprocessing data
-    # fill nan values with 0s
-    indices = range(df.shape[0])
-
-    df = df.fillna(0)
-    nan_trials = df[df['trial_response_side'] == 0].index.tolist()
-    left_rewarded = df[(df['trial_response_side'] == -1) & (df['trial_reward'] == 1)].index.tolist()
+# todo: refactor to take trial_response_side and trial_reward as input
+# nan trials are already filled with 0 before feeding into this function
+def panel_A(trial_response_side: np.ndarray, trial_reward: np.ndarray, leftP: np.ndarray, rightP: np.ndarray, name: str):
+    nan_trials = np.nonzero(trial_response_side == 0)
+    left_rewarded = np.nonzero(trial_response_side == -1 & trial_reward == 1)
     right_rewarded = df[(df['trial_response_side'] == 1) & (df['trial_reward'] == 1)].index.tolist()
     left_unrewarded = df[(df['trial_response_side'] == -1) & (df['trial_reward'] == 0)].index.tolist()
     right_unrewarded = df[(df['trial_response_side'] == -1) & (df['trial_reward'] == 0)].index.tolist()
