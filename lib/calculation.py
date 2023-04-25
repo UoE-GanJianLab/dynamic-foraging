@@ -14,6 +14,18 @@ def moving_window_mean(data: np.ndarray, window_size=5) -> np.ndarray:
 
     return output
 
+def moving_window_mean_prior(data: np.ndarray, window_size=5) -> np.ndarray:
+    data_len = data.size
+    output = np.zeros(data_len)
+
+    for i in range(data_len):
+        if i < window_size:
+            output[i] = np.mean(data[:i+1])
+        else:
+            output[i] = np.mean(data[i-window_size:i+1])
+
+    return output
+
 def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
     spike_ptr = 0
 
@@ -38,3 +50,27 @@ def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window
         firing_rates.append(cur_count / (window_right - window_left))       
 
     return firing_rates
+
+
+def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, windor_right: float) -> np.ndarray:
+    spike_ptr = 0
+
+    relative_spike_times = []
+
+    for cue in cue_times:
+        relative_spike_times_trial = []
+        window_left_cur = cue + window_left
+        window_right_cur = cue + windor_right
+
+        # move the pointers into window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
+            spike_ptr += 1
+        
+        # count the amount of spikes in window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
+            relative_spike_times_trial.append(spike_times[spike_ptr] - cue)
+            spike_ptr += 1
+        
+        relative_spike_times.append(relative_spike_times_trial)
+        
+    return relative_spike_times

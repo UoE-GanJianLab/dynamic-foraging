@@ -82,7 +82,7 @@ class RW:
 
         for i in range(10):
             x0 = self.sample_parameters()
-            bounds = [(0, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0, 1), (0, 1)]
+            bounds = [(0, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0, 1)]
 
             params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
@@ -97,15 +97,13 @@ class RW:
         self.kappa = parameters[1]
         self.b = parameters[2]
         self.alpha = parameters[3]
-        self.gamma = parameters[4]
 
     def sample_parameters(self):
         beta = np.random.uniform(1, 10)
         kappa = np.random.uniform(-1, 1)
         b = np.random.uniform(-1, 1)
         alpha = np.random.uniform(0, 1)
-        gamma = np.random.uniform(0, 1)
-        return [beta, kappa, b]
+        return [beta, kappa, b, alpha]
     
     # v_r - v_l
     def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> np.ndarray:
@@ -114,7 +112,7 @@ class RW:
         delta_V = np.array([])
         neg_log_likelihood = 0
         self.v0, self.v1 = 0, 0
-        delta_V = np.append(self.delta_V, self.v1 - self.v0)
+        delta_V = np.append(delta_V, self.v1 - self.v0)
 
         for i in range(choices_real.size):
             choice = choices_real[i]
@@ -122,7 +120,7 @@ class RW:
             self.choices[-1] = choice
             reward = rewards_real[i]
             self.update(reward, choice)
-            delta_V = np.append(self.delta_V, self.v1 - self.v0)
+            delta_V = np.append(delta_V, self.v1 - self.v0)
         
         return delta_V
 
