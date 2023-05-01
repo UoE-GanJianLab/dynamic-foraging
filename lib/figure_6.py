@@ -191,3 +191,83 @@ def figure_6_panel_e(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
     plt.close(fig_overall)
 
     return fig, fig_overall
+
+def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
+    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
+    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
+
+    # calculate the cross correlation
+    cross_cors = []
+    for i in range(len(cue_times)):
+        pfc_trial_times = pfc_relative_spike_times[i]
+        str_trial_times = str_relative_spike_times[i]
+
+        # if any of the array is empty, append 0
+        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
+            cross_cors.append(0)
+            continue
+
+        # binning with bin size of 10ms using histogram
+        pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
+        str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
+
+
+        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times)
+
+        # append the absolute maximum value of the cross correlation
+        cross_cors.append(np.max(np.abs(normalized_cross_corr)))
+
+
+    # smoothen the cross correlation
+    cross_cors = moving_window_mean(np.array(cross_cors), 20)
+
+    # reward proportion is the proportion of rewarded trials in the previous 10 trials
+    reward_proportion = moving_window_mean_prior(rewarded, 10)
+
+    discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0.1, 1, 0.2))
+    discretized_reward_proportion = discretized_reward_proportion * 0.2 + 0.1
+
+    # plot reward proportion vs cross correlation in twinx plot
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    
+    # plot cross_cors against reward_proportion
+    sns.lineplot(x=discretized_reward_proportion, y=cross_cors, ax=ax, color='tab:blue', err_style='bars')
+    # set x axis tick label 
+    ax.set_xticks(np.arange(0, 1, 0.2))
+
+    # calculate pearson r and the p value, set it as figure title
+    r, p = pearsonr(reward_proportion, cross_cors)
+    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {str_name}')
+
+    # if the figures directory does not exist, create it
+    if not mono:
+        if not os.path.exists('figures/figure_6/poster_panel_c'):
+            os.makedirs('figures/figure_6/poster_panel_c')
+        if not os.path.exists('figures/figure_6/significant'):
+            os.makedirs('figures/figure_6/significant')
+    else:
+        if not os.path.exists('mono_figures/figure_6/poster_panel_c'):
+            os.makedirs('mono_figures/figure_6/poster_panel_c')
+        if not os.path.exists('mono_figures/figure_6/significant'):
+            os.makedirs('mono_figures/figure_6/significant')
+
+    # save the figures
+    if not mono:
+        fig.savefig(f'figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
+    else:
+        fig.savefig(f'mono_figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
+
+
+    if p < 0.001:
+        if not mono:
+            # save the figures in significant folder
+            fig.savefig(f'figures/figure_6/significant/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant.png')
+        else:
+            # save the figures in significant folder
+            fig.savefig(f'mono_figures/figure_6/significant/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant_mono.png')
+
+    # close the figures
+    plt.close(fig)
+
+    return cross_cors, reward_proportion, p, r
+
