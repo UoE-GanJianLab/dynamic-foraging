@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -8,8 +10,8 @@ from lib.calculation import moving_window_mean, get_firing_rate_window, moving_w
 
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
 def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
-    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, 1)
-    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, 1)
+    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
+    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
 
     # calculate the cross correlation
     cross_cors = []
@@ -20,8 +22,27 @@ def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
         # if any of the array is empty, append 0
         if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
             cross_cors.append(0)
-        else:
-            cross_cors.append(np.max(np.abs(correlate(pfc_trial_times, str_trial_times, mode='same'))))
+            continue
+
+        # binning with bin size of 10ms using histogram
+        pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
+        str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
+
+
+        # create constant signal with the mean of the times
+        pfc_trial_times_const = np.ones(len(pfc_trial_times)) * np.mean(pfc_trial_times)
+        str_trial_times_const = np.ones(len(str_trial_times)) * np.mean(str_trial_times)
+
+        # cross correlate the relative time signals
+        cross_cor = correlate(pfc_trial_times, str_trial_times, mode='same')
+        cross_cor_const = correlate(pfc_trial_times_const, str_trial_times_const, mode='same') 
+
+        # calculate normalized cross correlation
+        normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)
+
+        # append the absolute maximum value of the cross correlation
+        cross_cors.append(np.max(np.abs(normalized_cross_corr)))
+
 
     # smoothen the cross correlation
     cross_cors = moving_window_mean(np.array(cross_cors), 20)
@@ -56,36 +77,52 @@ def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
     center = len(overall_cross_cor) // 2
     if len(overall_cross_cor) > 100:
         overall_cross_cor = overall_cross_cor[center - 50:center + 50]
-    fig_overall, ax = plt.subplots(1, 1, figsize=(5, 5))
-    sns.lineplot(x=np.arange(-len(overall_cross_cor) // 2, len(overall_cross_cor) // 2), y=overall_cross_cor, ax=ax)
-    ax.set_xlabel('Trial Lag')
-    ax.set_ylabel('Cross correlation')
+    # fig_overall, ax = plt.subplots(1, 1, figsize=(5, 5))
+    # sns.lineplot(x=np.arange(-len(overall_cross_cor) // 2, len(overall_cross_cor) // 2), y=overall_cross_cor, ax=ax)
+    # ax.set_xlabel('Trial Lag')
+    # ax.set_ylabel('Cross correlation')
+
+    # if the figures directory does not exist, create it
+    if not mono:
+        if not os.path.exists('figures/figure_6/panel_c'):
+            os.makedirs('figures/figure_6/panel_c')
+        if not os.path.exists('figures/figure_6/significant'):
+            os.makedirs('figures/figure_6/significant')
+        
+        # if not os.path.exists('figures/figure_6/panel_d'):
+        #     os.makedirs('figures/figure_6/panel_d')
+    else:
+        if not os.path.exists('mono_figures/figure_6/panel_c'):
+            os.makedirs('mono_figures/figure_6/panel_c')
+        if not os.path.exists('mono_figures/figure_6/significant'):
+            os.makedirs('mono_figures/figure_6/significant')
+        # if not os.path.exists('mono_figures/figure_6/panel_d'):
+        #     os.makedirs('mono_figures/figure_6/panel_d')
 
     # save the figures
     if not mono:
         fig.savefig(f'figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
-        fig_overall.savefig(f'figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation.png')
+        # fig_overall.savefig(f'figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation.png')
     else:
         fig.savefig(f'mono_figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
-        fig_overall.savefig(f'mono_figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
-
+        # fig_overall.savefig(f'mono_figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
 
 
     if p < 0.001:
         if not mono:
             # save the figures in significant folder
             fig.savefig(f'figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant.png')
-            fig_overall.savefig(f'figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant.png')
+            # fig_overall.savefig(f'figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant.png')
         else:
             # save the figures in significant folder
             fig.savefig(f'mono_figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant_mono.png')
-            fig_overall.savefig(f'mono_figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant_mono.png')
+            # fig_overall.savefig(f'mono_figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant_mono.png')
 
     # close the figures
     plt.close(fig)
-    plt.close(fig_overall)
+    # plt.close(fig_overall)
 
-    return fig, fig_overall
+    return fig
     
 
 

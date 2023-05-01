@@ -1,5 +1,7 @@
 import numpy as np
 from typing import List, Tuple
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize
 from scipy.stats import truncnorm, norm
@@ -34,15 +36,14 @@ class RW:
             # if this is the first trial, choose without kappa term
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
         else:
-            if self.choices[-1] == 0:
-                pre_choice = -1
-            else:
-                pre_choice = 1
+            pre_choice = self.choices[-1]
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice)) 
         choice = np.random.binomial(1, p_r)
+        if choice == 0:
+            choice = -1
         self.choices = np.append(self.choices, choice)
 
-        return (0, 1 - p_r) if choice == 0 else (1, p_r)
+        return (-1, 1 - p_r) if choice == -1 else (1, p_r)
 
 
     def nll(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
@@ -82,7 +83,7 @@ class RW:
 
         for i in range(10):
             x0 = self.sample_parameters()
-            bounds = [(0, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0, 1)]
+            bounds = [(0.01, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.01, 1), (0.01, 1)]
 
             params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
@@ -108,6 +109,7 @@ class RW:
     # v_r - v_l
     def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> np.ndarray:
         self.assign_parameters(parameters)
+        simulated_choices = np.array([])
         self.choices = np.array([])
         delta_V = np.array([])
         neg_log_likelihood = 0
@@ -117,11 +119,23 @@ class RW:
         for i in range(choices_real.size):
             choice = choices_real[i]
             c, prob = self.get_choice()
+            simulated_choices = np.append(simulated_choices, c)
             self.choices[-1] = choice
             reward = rewards_real[i]
             self.update(reward, choice)
             delta_V = np.append(delta_V, self.v1 - self.v0)
         
+        # smoothen the choices
+        simulated_choices = np.convolve(simulated_choices, np.ones((10,))/10, mode='same')
+        choices_real = np.convolve(choices_real, np.ones((10,))/10, mode='same')
+        # plot simulated choices and real choices, and delta_V
+        plt.plot(simulated_choices, label='simulated')
+        plt.plot(choices_real, label='real')
+        # plt.plot(delta_V, label='delta_V')
+        plt.legend()
+        plt.show()
+
+
         return delta_V
 
     # simulate according to a session of real behaviour

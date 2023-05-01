@@ -22,9 +22,11 @@ for session in tqdm.tqdm(sessions):
     # fit the models
     rw = RW()
     parameters = rw.fit(choices_real=choices, rewards_real=rewards)[0]
-
+    
     # get the relative values
     relative_values = rw.get_delta_V(parameters, choices, rewards)
+    # remove the last entry for the relative values
+    relative_values = relative_values[:-1]
 
     # save the relative values
     session_name = session.split('/')[-1].split('.')[0]

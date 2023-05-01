@@ -52,7 +52,7 @@ def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window
     return firing_rates
 
 
-def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, windor_right: float) -> np.ndarray:
+def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
     spike_ptr = 0
 
     relative_spike_times = []
@@ -60,7 +60,7 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
     for cue in cue_times:
         relative_spike_times_trial = []
         window_left_cur = cue + window_left
-        window_right_cur = cue + windor_right
+        window_right_cur = cue + window_right
 
         # move the pointers into window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
