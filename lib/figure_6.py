@@ -271,3 +271,34 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
 
     return cross_cors, reward_proportion, p, r
 
+def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray):
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+
+    # find significant ps and rs
+    sig_rs = rs[ps<0.01]
+
+    # transform positive values to 1 and negative values to 0
+    sig_rs = sig_rs>0
+    rs = rs>0
+
+    # plot the count plot
+    sns.countplot(x=sig_rs, ax=axes[0])
+    sns.countplot(x=rs, ax=axes[1])
+
+    # set the x axis tick label
+    axes[0].set_xticklabels(['-', '+'])
+    axes[1].set_xticklabels(['-', '+'])
+
+    # set the title
+    axes[0].set_title('Significant')
+    axes[1].set_title('All')
+
+    # if the figures directory does not exist, create it
+    if not os.path.exists('figures/figure_6/poster_panel_d'):
+        os.makedirs('figures/figure_6/poster_panel_d')
+    if not os.path.exists('figures/figure_6/significant'):
+        os.makedirs('figures/figure_6/significant')
+
+    # save the figures
+    fig.savefig(f'figures/figure_6/poster_panel_d/poster_6d.png')
+

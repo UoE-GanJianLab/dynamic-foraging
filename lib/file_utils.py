@@ -24,7 +24,7 @@ def get_str_pfc(session_name: str) -> Tuple[Dict, Dict]:
     return str_times, pfc_times
 
 # return the session_name, cue_times, and the pfc_str paths from each session
-def get_str_pfc_paths_session(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
+def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
     spike_dat_root = pjoin('data', 'spike_times')
     session_names = get_session_names()
     str_pfc_pair_paths = []
@@ -38,10 +38,12 @@ def get_str_pfc_paths_session(no_nan=False) -> List[Tuple[str, np.ndarray, np.nd
         cue_times = session_data['cue_time'].values
         trial_reward = session_data['trial_reward'].values
         session_root = pjoin(spike_dat_root, session_name)
+        cell_pairs = []
         for str_cell in glob(pjoin(session_root, 'str_*')):
             for pfc_cell in glob(pjoin(session_root, 'pfc_*')):
-                str_pfc_pair_paths.append([str_cell, pfc_cell])
-        str_pfc_pair_paths.append([session_name, cue_times, trial_reward, str_pfc_pair_paths])
+                cell_pair = [str_cell, pfc_cell]
+                cell_pairs.append(cell_pair)
+        str_pfc_pair_paths.append([session_name, cue_times, trial_reward, cell_pairs])
     return str_pfc_pair_paths
 
 def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
