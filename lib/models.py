@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize
 from scipy.stats import truncnorm, norm
+from lib.calculation import moving_window_mean
 
 class RW:
     def __init__(self, v0=0, v1=0, beta=5, kappa=0.1, b=0, alpha=0.2, gamma=0.1) -> None:
@@ -98,13 +99,15 @@ class RW:
         self.kappa = parameters[1]
         self.b = parameters[2]
         self.alpha = parameters[3]
+        self.gamma = parameters[4]
 
     def sample_parameters(self):
         beta = np.random.uniform(1, 10)
         kappa = np.random.uniform(-1, 1)
         b = np.random.uniform(-1, 1)
         alpha = np.random.uniform(0, 1)
-        return [beta, kappa, b, alpha]
+        gamma = np.random.uniform(0, 1)
+        return [beta, kappa, b, alpha,gamma]
     
     # v_r - v_l
     def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> np.ndarray:
@@ -126,15 +129,13 @@ class RW:
             delta_V = np.append(delta_V, self.v1 - self.v0)
         
         # smoothen the choices
-        simulated_choices = np.convolve(simulated_choices, np.ones((10,))/10, mode='same')
+        simulated_choices = moving_window_mean(simulated_choices, 10)
         choices_real = np.convolve(choices_real, np.ones((10,))/10, mode='same')
         # plot simulated choices and real choices, and delta_V
         plt.plot(simulated_choices, label='simulated')
         plt.plot(choices_real, label='real')
-        # plt.plot(delta_V, label='delta_V')
         plt.legend()
         plt.show()
-
 
         return delta_V
 
