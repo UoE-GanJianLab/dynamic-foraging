@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import correlate
 
 def moving_window_mean(data: np.ndarray, window_size=5) -> np.ndarray:
     data_len = data.size
@@ -74,3 +75,17 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         relative_spike_times.append(relative_spike_times_trial)
         
     return relative_spike_times
+
+def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_times: np.ndarray) -> np.ndarray:
+    # create constant signal with the mean of the times
+    pfc_trial_times_const = np.ones(len(pfc_trial_times)) * np.mean(pfc_trial_times)
+    str_trial_times_const = np.ones(len(str_trial_times)) * np.mean(str_trial_times)
+
+    # cross correlate the relative time signals
+    cross_cor = correlate(pfc_trial_times, str_trial_times, mode='same')
+    cross_cor_const = correlate(pfc_trial_times_const, str_trial_times_const, mode='same') 
+
+    # calculate normalized cross correlation
+    normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)
+
+    return normalized_cross_corr

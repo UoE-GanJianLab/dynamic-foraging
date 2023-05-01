@@ -6,10 +6,10 @@ import seaborn as sns
 from scipy.stats import pearsonr
 from scipy.signal import correlate
 
-from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times
+from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times, get_normalized_cross_correlation
 
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
-def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
+def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
     pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
     str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
 
@@ -29,16 +29,7 @@ def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
         str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
 
 
-        # create constant signal with the mean of the times
-        pfc_trial_times_const = np.ones(len(pfc_trial_times)) * np.mean(pfc_trial_times)
-        str_trial_times_const = np.ones(len(str_trial_times)) * np.mean(str_trial_times)
-
-        # cross correlate the relative time signals
-        cross_cor = correlate(pfc_trial_times, str_trial_times, mode='same')
-        cross_cor_const = correlate(pfc_trial_times_const, str_trial_times_const, mode='same') 
-
-        # calculate normalized cross correlation
-        normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)
+        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times)
 
         # append the absolute maximum value of the cross correlation
         cross_cors.append(np.max(np.abs(normalized_cross_corr)))
@@ -77,10 +68,6 @@ def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
     center = len(overall_cross_cor) // 2
     if len(overall_cross_cor) > 100:
         overall_cross_cor = overall_cross_cor[center - 50:center + 50]
-    # fig_overall, ax = plt.subplots(1, 1, figsize=(5, 5))
-    # sns.lineplot(x=np.arange(-len(overall_cross_cor) // 2, len(overall_cross_cor) // 2), y=overall_cross_cor, ax=ax)
-    # ax.set_xlabel('Trial Lag')
-    # ax.set_ylabel('Cross correlation')
 
     # if the figures directory does not exist, create it
     if not mono:
@@ -127,7 +114,7 @@ def figure_6_panel_cd(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
 
 
 # using firing during 1-3ms after cue
-def figure_6_panel_ef(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
+def figure_6_panel_e(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
     # calculate the cross correlation of the two signals during a centered 20-trial long window
     pfc_firing_rates = get_firing_rate_window(cue_times, pfc_times, 1, 3)
     str_firing_rates = get_firing_rate_window(cue_times, str_times, 1, 3)
@@ -186,12 +173,8 @@ def figure_6_panel_ef(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: n
     # save the figures
     if not mono:
         fig.savefig(f'figures/figure_6/panel_e/6e_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
-        fig_overall.savefig(f'figures/figure_6/panel_f/6f_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation.png')
     else:
         fig.savefig(f'mono_figures/figure_6/panel_e/6e_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
-        fig_overall.savefig(f'mono_figures/figure_6/panel_f/6f_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
-
-
 
     if p < 0.001:
         if not mono:
