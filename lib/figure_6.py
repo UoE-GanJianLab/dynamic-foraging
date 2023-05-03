@@ -271,34 +271,44 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
 
     return cross_cors, reward_proportion, p, r
 
-def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray):
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
-    # find significant ps and rs
-    sig_rs = rs[ps<0.01]
+    sig_rs_positive_percentages = []
+    sig_rs_negative_percentages = []
 
-    # transform positive values to 1 and negative values to 0
-    sig_rs = sig_rs>0
-    rs = rs>0
+    for i in range(len(rs)):
+        # get the significant rs and ps
+        sig_rs = rs[i][ps[i]<0.001]
 
-    # plot the count plot
-    sns.countplot(x=sig_rs, ax=axes[0])
-    sns.countplot(x=rs, ax=axes[1])
+        sig_rs_positive = sig_rs[sig_rs>0]
+        sig_rs_negative = sig_rs[sig_rs<0]
 
-    # set the x axis tick label
-    axes[0].set_xticklabels(['-', '+'])
-    axes[1].set_xticklabels(['-', '+'])
+        # calculate the percentage of positive and negative significant rs
+        sig_rs_positive_percentage = len(sig_rs_positive)/len(rs[i])
+        sig_rs_negative_percentage = len(sig_rs_negative)/len(rs[i])
 
-    # set the title
-    axes[0].set_title('Significant')
-    axes[1].set_title('All')
+        # append the percentage to the list
+        sig_rs_positive_percentages.append(sig_rs_positive_percentage)
+        sig_rs_negative_percentages.append(sig_rs_negative_percentage)
 
-    # if the figures directory does not exist, create it
-    if not os.path.exists('figures/figure_6/poster_panel_d'):
-        os.makedirs('figures/figure_6/poster_panel_d')
-    if not os.path.exists('figures/figure_6/significant'):
-        os.makedirs('figures/figure_6/significant')
 
-    # save the figures
-    fig.savefig(f'figures/figure_6/poster_panel_d/poster_6d.png')
+    # plot the bar plot with the average percentage of positive and negative significant rs
+    sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
+    axes.set_ylim(0, 1)
+
+    if not mono:
+        # if the figures directory does not exist, create it
+        if not os.path.exists('figures/figure_6/poster_panel_d'):
+            os.makedirs('figures/figure_6/poster_panel_d')
+
+        # save the figures
+        fig.savefig(f'figures/figure_6/poster_panel_d/poster_6d.png')
+    else:
+        # if the figures directory does not exist, create it
+        if not os.path.exists('mono_figures/figure_6/poster_panel_d'):
+            os.makedirs('mono_figures/figure_6/poster_panel_d')
+
+        # save the figures
+        fig.savefig(f'mono_figures/figure_6/poster_panel_d/poster_6d_mono.png')
 

@@ -52,8 +52,12 @@ def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarr
 
     result = []
 
-    session_names = mono_pairs['mouse']+mono_pairs['date']
-    session_names = session_names.unique()
+    # concatenate mouse and date column of the dataframe to get session name
+    # convert 'date' to string
+    mono_pairs['date'] = mono_pairs['date'].astype(str)
+    mono_pairs['session_names'] = mono_pairs['mouse'] + mono_pairs['date']
+    session_names = mono_pairs['session_names'].values
+    session_names = np.unique(session_names)
 
     for session_name in session_names:
         session_data_path = pjoin('data', 'behaviour_data', session_name+'.csv')
