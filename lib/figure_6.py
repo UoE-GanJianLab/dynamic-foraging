@@ -3,7 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ttest_ind, spearmanr
 from scipy.signal import correlate
 
 from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times, get_normalized_cross_correlation
@@ -28,12 +28,10 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
         pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
         str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
 
-
         normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times)
 
         # append the absolute maximum value of the cross correlation
         cross_cors.append(np.max(np.abs(normalized_cross_corr)))
-
 
     # smoothen the cross correlation
     cross_cors = moving_window_mean(np.array(cross_cors), 20)
@@ -94,7 +92,6 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
         fig.savefig(f'mono_figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
         # fig_overall.savefig(f'mono_figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
 
-
     if p < 0.001:
         if not mono:
             # save the figures in significant folder
@@ -110,7 +107,6 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
     # plt.close(fig_overall)
 
     return fig
-    
 
 
 # using firing during 1-3ms after cue
@@ -211,7 +207,6 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
         pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
         str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
 
-
         normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times)
 
         # append the absolute maximum value of the cross correlation
@@ -219,13 +214,13 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
 
 
     # smoothen the cross correlation
-    cross_cors = moving_window_mean(np.array(cross_cors), 20)
+    # cross_cors = moving_window_mean(np.array(cross_cors), 20)
 
     # reward proportion is the proportion of rewarded trials in the previous 10 trials
     reward_proportion = moving_window_mean_prior(rewarded, 10)
 
-    discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0.1, 1, 0.2))
-    discretized_reward_proportion = discretized_reward_proportion * 0.2 + 0.1
+    discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0, 1, 0.2))
+    discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
 
     # plot reward proportion vs cross correlation in twinx plot
     fig, ax = plt.subplots(1, 1, figsize=(15, 5))
@@ -237,6 +232,8 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
 
     # calculate pearson r and the p value, set it as figure title
     r, p = pearsonr(reward_proportion, cross_cors)
+    # calculate spearman rank correlation and the p value
+    sr, sp = spearmanr(reward_proportion, cross_cors)
     fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {str_name}')
 
     # if the figures directory does not exist, create it
@@ -257,32 +254,29 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
     else:
         fig.savefig(f'mono_figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
 
-
-    if p < 0.001:
-        if not mono:
-            # save the figures in significant folder
-            fig.savefig(f'figures/figure_6/significant/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant.png')
-        else:
-            # save the figures in significant folder
-            fig.savefig(f'mono_figures/figure_6/significant/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant_mono.png')
-
     # close the figures
     plt.close(fig)
 
-    return cross_cors, reward_proportion, p, r
+    return cross_cors, reward_proportion, p, r, sp, sr
 
-def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False):
+
+def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False, spearman=False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     sig_rs_positive_percentages = []
     sig_rs_negative_percentages = []
 
+    sig_size = 0
+
     for i in range(len(rs)):
         # get the significant rs and ps
-        sig_rs = rs[i][ps[i]<0.001]
+        sig_rs = rs[i][ps[i]<0.01]
+        sig_size += len(sig_rs)
 
         sig_rs_positive = sig_rs[sig_rs>0]
         sig_rs_negative = sig_rs[sig_rs<0]
+        
+        print(f'{i}th session, positive: {len(sig_rs_positive)}, negative: {len(sig_rs_negative)}')
 
         # calculate the percentage of positive and negative significant rs
         sig_rs_positive_percentage = len(sig_rs_positive)/len(rs[i])
@@ -292,6 +286,11 @@ def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False):
         sig_rs_positive_percentages.append(sig_rs_positive_percentage)
         sig_rs_negative_percentages.append(sig_rs_negative_percentage)
 
+    print(f'num of significant rs: {sig_size}')
+
+    # t test to see if the percentage of positive and negative significant rs are different
+    t, p = ttest_ind(sig_rs_positive_percentages, sig_rs_negative_percentages, alternative='less')
+    print(f't: {t}, p: {p}')
 
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
@@ -299,16 +298,70 @@ def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False):
 
     if not mono:
         # if the figures directory does not exist, create it
-        if not os.path.exists('figures/figure_6/poster_panel_d'):
-            os.makedirs('figures/figure_6/poster_panel_d')
-
-        # save the figures
-        fig.savefig(f'figures/figure_6/poster_panel_d/poster_6d.png')
+        if not os.path.exists('figures/figure_6'):
+            os.makedirs('figures/figure_6')
+        if not spearman:
+            # save the figures
+            fig.savefig(f'figures/figure_6/poster_6d.png')
+        else:
+            fig.savefig(f'figures/figure_6/poster_6d_spearman.png')
     else:
         # if the figures directory does not exist, create it
-        if not os.path.exists('mono_figures/figure_6/poster_panel_d'):
-            os.makedirs('mono_figures/figure_6/poster_panel_d')
+        if not os.path.exists('mono_figures/figure_6'):
+            os.makedirs('mono_figures/figure_6')
+        # save the figures
+        if not spearman:
+            fig.savefig(f'mono_figures/figure_6/poster_6d_mono.png')
+        else:
+            fig.savefig(f'mono_figures/figure_6/poster_6d_spearman_mono.png')
+
+def figure_6_poster_panel_d_mono_window(rs: np.ndarray, ps: np.ndarray, mono=False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+
+    sig_rs_positive_percentages = []
+    sig_rs_negative_percentages = []
+
+    sig_size = 0
+
+    for i in range(len(rs)):
+        # get the significant rs and ps
+        sig_rs = rs[i][ps[i]<0.01]
+        sig_size += len(sig_rs)
+
+        sig_rs_positive = sig_rs[sig_rs>0]
+        sig_rs_negative = sig_rs[sig_rs<0]
+        
+        print(f'{i}th session, positive: {len(sig_rs_positive)}, negative: {len(sig_rs_negative)}')
+
+        # calculate the percentage of positive and negative significant rs
+        sig_rs_positive_percentage = len(sig_rs_positive)/len(rs[i])
+        sig_rs_negative_percentage = len(sig_rs_negative)/len(rs[i])
+
+        # append the percentage to the list
+        sig_rs_positive_percentages.append(sig_rs_positive_percentage)
+        sig_rs_negative_percentages.append(sig_rs_negative_percentage)
+
+    print(f'num of significant rs: {sig_size}')
+
+    # t test to see if the percentage of positive and negative significant rs are different
+    t, p = ttest_ind(sig_rs_positive_percentages, sig_rs_negative_percentages, alternative='less')
+    print(f't: {t}, p: {p}')
+
+    # plot the bar plot with the average percentage of positive and negative significant rs
+    sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
+    axes.set_ylim(0, 1)
+
+    if not mono:
+        # if the figures directory does not exist, create it
+        if not os.path.exists('figures/figure_6'):
+            os.makedirs('figures/figure_6')
 
         # save the figures
-        fig.savefig(f'mono_figures/figure_6/poster_panel_d/poster_6d_mono.png')
+        fig.savefig(f'figures/figure_6/poster_6d_mono_window.png')
+    else:
+        # if the figures directory does not exist, create it
+        if not os.path.exists('mono_figures/figure_6'):
+            os.makedirs('mono_figures/figure_6')
 
+        # save the figures
+        fig.savefig(f'mono_figures/figure_6/poster_6d_mono_window.png')

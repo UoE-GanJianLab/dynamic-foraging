@@ -82,8 +82,8 @@ def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_time
     str_trial_times_const = np.ones(len(str_trial_times)) * np.mean(str_trial_times)
 
     # cross correlate the relative time signals
-    cross_cor = correlate(pfc_trial_times, str_trial_times, mode='same')
-    cross_cor_const = correlate(pfc_trial_times_const, str_trial_times_const, mode='same') 
+    cross_cor = correlate(str_trial_times, pfc_trial_times, mode='same')
+    cross_cor_const = correlate(str_trial_times_const, pfc_trial_times_const, mode='same') 
 
     # calculate normalized cross correlation
     normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)
