@@ -9,7 +9,9 @@ import pandas as pd
 
 from scipy.signal import find_peaks
 
+# relative time window before cue time
 LEFT = 0.01
+# relative time window after cue time
 RIGHT = 0.02
 FREQ=2000
 

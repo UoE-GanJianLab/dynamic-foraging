@@ -20,7 +20,7 @@ ITI_RIGHT = 0
 RESPONSE_LEFT = 0
 RESPONSE_RIGHT = 1.5
 
-def get_response_mag_bg_firing(cue_times, pfc_times, str_times):
+def get_response_mag_bg_firing(cue_times: np.ndarray, pfc_times: np.ndarray, str_times: np.ndarray):
     pfc_ptr = 0
     str_ptr = 0
 

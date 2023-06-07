@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.signal import correlate
 
+# calculate the mean of a centered moving window, if window is not complete, 
+# use the available data without padding
 def moving_window_mean(data: np.ndarray, window_size=5) -> np.ndarray:
     data_len = data.size
     output = np.zeros(data_len)
@@ -15,6 +17,8 @@ def moving_window_mean(data: np.ndarray, window_size=5) -> np.ndarray:
 
     return output
 
+# calculate the mean of a moving window whose right end is the current index
+# if window is not complete, use the available data without padding 
 def moving_window_mean_prior(data: np.ndarray, window_size=5) -> np.ndarray:
     data_len = data.size
     output = np.zeros(data_len)
@@ -27,6 +31,7 @@ def moving_window_mean_prior(data: np.ndarray, window_size=5) -> np.ndarray:
 
     return output
 
+# calculate the firing rate of a neuron in a given window wrt cue time
 def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
     spike_ptr = 0
 

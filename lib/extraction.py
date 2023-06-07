@@ -40,6 +40,9 @@ def get_strong_corr():
 
     return strong_corr_iti[['session_path', 'str_path', 'pfc_path']], strong_corr[['session_path', 'str_path', 'pfc_path']]
 
+
+# calculate the performance of all sessions using cross-correlation metric
+# returns a dictionary of session name to performance, and the average performance
 def get_session_performances() -> Tuple[Dict[str, float], float]:
     results = {}
     performances = []
