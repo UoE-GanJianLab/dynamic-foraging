@@ -59,6 +59,7 @@ def get_mean(pfc_spikes, str_spikes):
         jittered_array.append(bins[0])
     
     mean_array = np.mean(a=jittered_array, axis=0)
+    # TODO this may need to change to 2.5 std
     std_array = np.add(np.std(a=jittered_array, axis=0)*3, mean_array)
 
     return mean_array, std_array
@@ -83,13 +84,20 @@ from time import perf_counter
 sessions = listdir(pjoin('data', 'spike_times'))
 fig, ax = plt.subplots()
 
+session_all = []
+str_all = []
+pfc_all = []
+peak_all = []
+peak_width_all = []
+counts_in_peak_all = []
+
 for s in sessions:
-    session_df = []
-    str_df = []
-    pfc_df = []
-    peak_df = []
-    peak_width_df = []
-    counts_in_peak_df = []
+    # session_df = []
+    # str_df = []
+    # pfc_df = []
+    # peak_df = []
+    # peak_width_df = []
+    # counts_in_peak_df = []
 
     session_bin = []
     session_path = pjoin('data', 'spike_times', s)
@@ -125,8 +133,8 @@ for s in sessions:
                 np.save(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"), arr=[mean, std, bins])
             pbar.update(1)
 
-            higher_than_expected = np.greater(bins, mean)
-            higher_percentage = np.sum(higher_than_expected) / len(bins)
+            higher_than_mean = np.greater(bins, mean)
+            higher_percentage = np.sum(higher_than_mean) / len(bins)
 
             if higher_percentage <= 0.3:
                 continue
@@ -147,12 +155,19 @@ for s in sessions:
                         left, right, counts = FWHM(peak + left_ind, bins)
                         if (right + left + 1) * (1/FREQ) <= 0.003:
                             real_peaks.append(peak + left_ind)
-                            peak_df.append(peak+left_ind)
-                            session_df.append(s)
-                            str_df.append(str(str_name))
-                            pfc_df.append(str(pfc_name))
-                            peak_width_df.append((left + right + 1) * (1/FREQ))
-                            counts_in_peak_df.append(counts)
+                            # peak_df.append(peak+left_ind)
+                            # session_df.append(s)
+                            # str_df.append(str(str_name))
+                            # pfc_df.append(str(pfc_name))
+                            # peak_width_df.append((left + right + 1) * (1/FREQ))
+                            # counts_in_peak_df.append(counts)
+
+                            session_all.append(s)
+                            str_all.append(str(str_name))
+                            pfc_all.append(str(pfc_name))
+                            peak_all.append(peak+left_ind)
+                            peak_width_all.append((left + right + 1) * (1/FREQ))
+                            counts_in_peak_all.append(counts)
                             
                         
             if len(real_peaks) > 0:
@@ -169,8 +184,11 @@ for s in sessions:
             if len(real_peaks) > 0:
                 fig.savefig(pjoin('data', 'PMSE', 'qualified', f"{s}_{str_name}_{pfc_name}.png"), dpi=400)
 
-    results = pd.DataFrame({'session': session_df, 'str': str_df, 'pfc': pfc_df, 'peak': peak_df, 'peak_width': peak_width_df, 'counts_in_peak': counts_in_peak_df})
-    results.to_csv(pjoin('data', 'PMSE', f'{s}.csv'))
+    # results = pd.DataFrame({'session': session_df, 'str': str_df, 'pfc': pfc_df, 'peak': peak_df, 'peak_width': peak_width_df, 'counts_in_peak': counts_in_peak_df})
+    # results.to_csv(pjoin('data', 'PMSE', f'{s}.csv'))
+
+results = pd.DataFrame({'session': session_all, 'str': str_all, 'pfc': pfc_all, 'peak': peak_all, 'peak_width': peak_width_all, 'counts_in_peak': counts_in_peak_all})
+results.to_csv(pjoin('data', 'PMSE', f'PMSE.csv'))
 
 
 # figs, axes = plt.subplots(3, 1, figsize=(10,15))

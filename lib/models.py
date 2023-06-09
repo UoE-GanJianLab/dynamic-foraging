@@ -84,7 +84,7 @@ class RW:
 
         for i in range(10):
             x0 = self.sample_parameters()
-            bounds = [(0.01, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.01, 1), (0.01, 1)]
+            bounds = [(0.00001, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.00001, 1), (0.00001, 1)]
 
             params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:

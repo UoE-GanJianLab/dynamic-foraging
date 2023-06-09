@@ -81,6 +81,8 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         
     return relative_spike_times
 
+
+# calculate the normalized cross correlation (Wei's standard) of two signals
 def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_times: np.ndarray) -> np.ndarray:
     # create constant signal with the mean of the times
     pfc_trial_times_const = np.ones(len(pfc_trial_times)) * np.mean(pfc_trial_times)
