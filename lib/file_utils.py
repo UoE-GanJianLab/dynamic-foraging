@@ -89,9 +89,9 @@ def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarr
 
 
 spike_data_root = pjoin("data", "spike_times")
-behaviour_root = pjoin("data", "behaviour_data", "csv", "task_info")
-strong_corr_iti_path = "strong_correlation_pairs_ITI.csv"
-strong_corr_path = "strong_correlation_pairs.csv"
+behaviour_root = pjoin("data", "behaviour_data")
+strong_corr_iti_path = pjoin('data', "delta_P_correlated_background.csv")
+strong_corr_path = pjoin('data', "delta_P_correlated_response.csv")
 
 # using this instead of static path for compatibility with both windows and linux systems
 # returns two dataframe of cell pair data, first for iti, then for response window
@@ -104,16 +104,16 @@ def get_strong_corr():
     strong_corr_iti["session_path"] = strong_corr_iti["session_path"] + '.csv'
     strong_corr["session_path"] = strong_corr["session_path"] + '.csv'
 
-    strong_corr_iti["str_path"] = strong_corr_iti["str"] + '.npy'
-    strong_corr_iti["pfc_path"] = strong_corr_iti["pfc"] + '.npy'
+    strong_corr_iti["str_path"] = strong_corr_iti["str_name"] + '.npy'
+    strong_corr_iti["pfc_path"] = strong_corr_iti["pfc_name"] + '.npy'
 
     strong_corr["str_path"] = strong_corr["str_name"] + '.npy'
     strong_corr["pfc_path"] = strong_corr["pfc_name"] + '.npy'
 
-    strong_corr_iti["str_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session_name'], row['str_path']), axis=1)
-    strong_corr_iti["pfc_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session_name'], row['pfc_path']), axis=1)
+    strong_corr_iti["str_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['str_path']), axis=1)
+    strong_corr_iti["pfc_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
 
-    strong_corr["str_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session_name'], row['str_path']), axis=1)
-    strong_corr["pfc_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session_name'], row['pfc_path']), axis=1)
+    strong_corr["str_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['str_path']), axis=1)
+    strong_corr["pfc_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
 
     return strong_corr_iti[['session_path', 'str_path', 'pfc_path']], strong_corr[['session_path', 'str_path', 'pfc_path']]

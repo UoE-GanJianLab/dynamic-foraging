@@ -4,13 +4,14 @@ from scipy.signal import correlate
 from os.path import join as pjoin
 from os import listdir
 from typing import List, Tuple, Dict
+from glob import glob
 
 import pandas as pd
 import numpy as np
 
 from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
-behaviour_root = pjoin("data", "behaviour_data", "csv", "task_info")
+behaviour_root = pjoin("data", "behaviour_data")
 
 # calculate the mean of a centered moving window, if window is not complete, 
 # use the available data without padding
@@ -114,9 +115,9 @@ def get_session_performances() -> Tuple[Dict[str, float], float]:
     results = {}
     performances = []
     # calculates the xcorr between rightP and proportion of rightward resonse
-    for behaviour_path in listdir(behaviour_root):
-        session_name = behaviour_path.split('.')[0]
-        session_data = pd.read_csv(pjoin(behaviour_root, behaviour_path))
+    for behaviour_path in glob(pjoin(behaviour_root, '*.csv')):
+        session_name = behaviour_path.split('/')[-1].split('.')[0]
+        session_data = pd.read_csv(behaviour_path)
         right_prob = session_data['rightP']
         left_prob = session_data['leftP']
         right_proportion = np.convolve((session_data['trial_response_side']==1).to_numpy(), np.ones(20)/20, mode='same')
@@ -136,3 +137,49 @@ def get_session_performances() -> Tuple[Dict[str, float], float]:
         results[session_name] = performance
     
     return results, np.mean(performances)
+
+
+# relative positions to cue_time
+ITI_LEFT = -1
+ITI_RIGHT = 0
+RESPONSE_LEFT = 0
+RESPONSE_RIGHT = 1.5
+
+
+# get the firing rate 
+def get_response_bg_firing(cue_times, spike_times):
+    ptr = 0
+    response_mag = []
+    bg_firing = []
+
+    for cue in cue_times:
+        iti_count = 0
+        response_count = 0
+
+        iti_left = cue + ITI_LEFT
+        iti_right = cue + ITI_RIGHT
+        response_left = cue + RESPONSE_LEFT
+        response_right = cue + RESPONSE_RIGHT
+
+        # move the pointers into iti window
+        while ptr < len(spike_times) and spike_times[ptr] < iti_left:
+            ptr += 1
+
+        # count the amount of spikes in iti
+        while ptr < len(spike_times) and spike_times[ptr] < iti_right:
+            ptr += 1
+            iti_count += 1
+
+        # move the pointer to response time window
+        while ptr < len(spike_times) and spike_times[ptr] < response_left:
+            ptr += 1
+
+        # count the amount of spikes in response time
+        while ptr < len(spike_times) and spike_times[ptr] < response_right:
+            ptr += 1
+            response_count += 1
+        
+        bg_firing.append(iti_count / (ITI_RIGHT - ITI_LEFT))
+        response_mag.append(abs(response_count / (RESPONSE_RIGHT - RESPONSE_LEFT) - iti_count / (ITI_RIGHT - ITI_LEFT)))
+
+    return response_mag, bg_firing
