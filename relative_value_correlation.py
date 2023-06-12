@@ -60,6 +60,6 @@ result = pd.DataFrame({'session_name': session_names,
                         'background_firing_p_values': background_firing_p_values,
                         'response_firing_pearson_r': response_firing_pearson_r,
                         'response_firing_p_values': response_firing_p_values})
-result.to_csv('relative_value_correlation.csv', index=False)
+result.to_csv(pjoin('data', 'relative_value_correlation.csv'), index=False)
 
 

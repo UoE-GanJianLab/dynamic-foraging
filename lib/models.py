@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
+from os.path import join as pjoin
 
 from scipy.optimize import minimize
 from scipy.stats import truncnorm, norm
@@ -110,7 +111,7 @@ class RW:
         return [beta, kappa, b, alpha,gamma]
     
     # v_r - v_l
-    def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> np.ndarray:
+    def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray, session='session') -> np.ndarray:
         self.assign_parameters(parameters)
         simulated_choices = np.array([])
         self.choices = np.array([])
@@ -135,7 +136,10 @@ class RW:
         plt.plot(simulated_choices, label='simulated')
         plt.plot(choices_real, label='real')
         plt.legend()
-        plt.show()
+
+        # save the plot in data/relative values
+        plt.savefig(pjoin('data', 'relative_values', f'{session}.png'))
+        plt.close()
 
         return delta_V
 

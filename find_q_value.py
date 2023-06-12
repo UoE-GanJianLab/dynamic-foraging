@@ -17,17 +17,19 @@ for session in tqdm.tqdm(sessions):
     # remove nan trials
     session_data = session_data[~session_data['trial_response_side'].isna()]
     choices = session_data['trial_response_side'].values
+    # convert choices of -1 to 0
+    choices[choices == -1] = 0
     rewards = session_data['trial_reward'].values
 
     # fit the models
     rw = RW()
     parameters = rw.fit(choices_real=choices, rewards_real=rewards)[0]
     
+    session_name = session.split('/')[-1].split('.')[0]
     # get the relative values
-    relative_values = rw.get_delta_V(parameters, choices, rewards)
+    relative_values = rw.get_delta_V(parameters, choices, rewards, session_name)
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
 
     # save the relative values
-    session_name = session.split('/')[-1].split('.')[0]
     np.save(pjoin(RELATIVE_VALUE_ROOT, session_name+'.npy'), relative_values)
