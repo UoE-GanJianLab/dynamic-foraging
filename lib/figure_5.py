@@ -54,50 +54,50 @@ def fig_5_panel_b(pfc_mag, str_mag) -> plt.figure:
 
 
 def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int) -> plt.figure:
-    fig, axes = plt.subplots(2, 2, figsize=(20, 20))
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10))
     hist, edge = np.histogram(phase_diffs, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
     y_max = y_max + dist * 0.1
-    axes[0][0].set_ylim(y_min, y_max)
+    axes[0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bg, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
     y_max = y_max + dist * 0.1
-    axes[0][1].set_ylim(y_min, y_max)
-    sns.histplot(phase_diffs, ax=axes[0][0], bins=bin_size, color='black', kde=True)
-    sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=bin_size, color='black', kde=True)
+    axes[1].set_ylim(y_min, y_max)
+    sns.histplot(phase_diffs, ax=axes[0], bins=bin_size, color='black', kde=True)
+    sns.histplot(phase_diffs_bg, ax=axes[1], bins=bin_size, color='black', kde=True)
     return fig
 
 def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int) -> plt.figure:
     fig, axes = plt.subplots(2, 2, figsize=(20, 20))
     hist, edge = np.histogram(phase_diffs, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
     y_max = y_max + dist * 0.1
     axes[0][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bg, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
     y_max = y_max + dist * 0.1
     axes[0][1].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bad, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
     y_max = y_max + dist * 0.1
     axes[1][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bg_bad, bins=bin_size)
-    y_min = np.min(hist)
+    y_min = 0
     y_max = np.max(hist)
     dist = y_max - y_min
     y_min = y_min - dist * 0.1
