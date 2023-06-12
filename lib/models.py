@@ -39,13 +39,13 @@ class RW:
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
         else:
             pre_choice = self.choices[-1]
+            if pre_choice == 0:
+                pre_choice = -1
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice)) 
         choice = np.random.binomial(1, p_r)
-        if choice == 0:
-            choice = -1
         self.choices = np.append(self.choices, choice)
 
-        return (-1, 1 - p_r) if choice == -1 else (1, p_r)
+        return (0, 1 - p_r) if choice == 0 else (1, p_r)
 
 
     def nll(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:

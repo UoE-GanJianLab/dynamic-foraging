@@ -17,10 +17,9 @@ background_firing_p_values = []
 response_firing_pearson_r = []
 response_firing_p_values = []
 
-for session in tqdm.tqdm(listdir(data_root)):
-    session_path = pjoin(data_root, session)
-    relative_values = np.load(session_path)
-    session_name = session.split('.')[0]
+for session in tqdm.tqdm(glob(pjoin(data_root, '*.npy'))):
+    relative_values = np.load(session)
+    session_name = session.split('/')[-1].split('.')[0]
 
     print(session_name)
     print(relative_values)

@@ -1,6 +1,17 @@
 import numpy as np
 from scipy.signal import correlate
 
+from os.path import join as pjoin
+from os import listdir
+from typing import List, Tuple, Dict
+
+import pandas as pd
+import numpy as np
+
+from lib.conversion import one_to_zero_cell, zero_to_one_cell
+
+behaviour_root = pjoin("data", "behaviour_data", "csv", "task_info")
+
 # calculate the mean of a centered moving window, if window is not complete, 
 # use the available data without padding
 def moving_window_mean(data: np.ndarray, window_size=5) -> np.ndarray:
@@ -96,3 +107,32 @@ def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_time
     normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)
 
     return normalized_cross_corr
+
+# calculate the performance of all sessions using cross-correlation metric
+# returns a dictionary of session name to performance, and the average performance
+def get_session_performances() -> Tuple[Dict[str, float], float]:
+    results = {}
+    performances = []
+    # calculates the xcorr between rightP and proportion of rightward resonse
+    for behaviour_path in listdir(behaviour_root):
+        session_name = behaviour_path.split('.')[0]
+        session_data = pd.read_csv(pjoin(behaviour_root, behaviour_path))
+        right_prob = session_data['rightP']
+        left_prob = session_data['leftP']
+        right_proportion = np.convolve((session_data['trial_response_side']==1).to_numpy(), np.ones(20)/20, mode='same')
+        left_proportion = np.convolve((session_data['trial_response_side']==-1).to_numpy(), np.ones(20)/20, mode='same')
+        # normalization
+        right_prob = np.array(right_prob) / np.linalg.norm(right_prob)
+        left_prob = np.array(left_prob) / np.linalg.norm(left_prob)
+        right_proportion = right_proportion / np.linalg.norm(right_proportion)
+        left_proportion = left_proportion / np.linalg.norm(left_proportion)
+
+        xcorr_right = np.correlate(right_prob, right_proportion)
+        xcorr_left = np.correlate(left_prob, left_proportion)
+        corrs = [xcorr_left, xcorr_right]
+        corrs_averaged = np.mean(corrs, axis=0)
+        performance = np.max(corrs_averaged)
+        performances.append(performance)
+        results[session_name] = performance
+    
+    return results, np.mean(performances)
