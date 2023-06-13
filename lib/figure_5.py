@@ -14,7 +14,7 @@ from scipy.stats import circmean
 import sys
 sys.path.append('lib')
 
-from lib.file_utils import get_strong_corr
+from lib.file_utils import get_str_pfc_strong_corr_mono
 
 # relative positions to cue_time
 ITI_LEFT = -1

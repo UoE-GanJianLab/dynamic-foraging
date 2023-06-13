@@ -23,9 +23,9 @@ def get_str_pfc(session_name: str) -> Tuple[Dict, Dict]:
         str_times[basename(str_cell).split('.')[0]] = np.load(str_cell)
     return str_times, pfc_times
 
-# return the session_name, cue_times, and the pfc_str paths from each session
+# return the session_name, cue_times, and all pfc_str pairs' paths from each session
 def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
-    spike_dat_root = pjoin('data', 'spike_times')
+    spike_data_root = pjoin('data', 'spike_times')
     session_names = get_session_names()
     str_pfc_pair_paths = []
     for session_name in session_names:
@@ -37,7 +37,7 @@ def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarra
             session_data.fillna(0, inplace=True)
         cue_times = session_data['cue_time'].values
         trial_reward = session_data['trial_reward'].values
-        session_root = pjoin(spike_dat_root, session_name)
+        session_root = pjoin(spike_data_root, session_name)
         cell_pairs = []
         for str_cell in glob(pjoin(session_root, 'str_*')):
             for pfc_cell in glob(pjoin(session_root, 'pfc_*')):
@@ -46,17 +46,14 @@ def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarra
         str_pfc_pair_paths.append([session_name, cue_times, trial_reward, cell_pairs])
     return str_pfc_pair_paths
 
+# return the session_name, cue_times, and all PMSE pfc_str pairs' paths from each session
 def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
     # get all mono pairs
-    mono_pairs = pd.read_csv('mono_pairs.csv')
+    mono_pairs = pd.read_csv(pjoin('data', 'PMSE', 'PMSE.csv'))
 
     result = []
 
-    # concatenate mouse and date column of the dataframe to get session name
-    # convert 'date' to string
-    mono_pairs['date'] = mono_pairs['date'].astype(str)
-    mono_pairs['session_names'] = mono_pairs['mouse'] + mono_pairs['date']
-    session_names = mono_pairs['session_names'].values
+    session_names = mono_pairs['session'].values
     session_names = np.unique(session_names)
 
     for session_name in session_names:
@@ -69,13 +66,13 @@ def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarr
         cue_times = session_data['cue_time'].values
         trial_reward = session_data['trial_reward'].values
 
-        session_pairs = mono_pairs[mono_pairs['mouse']+mono_pairs['date']==session_name]
+        session_pairs: pd.DataFrame = mono_pairs[mono_pairs['session']==session_name]
 
         str_pfc_paths = []
 
         for _, row in session_pairs.iterrows():
-            str_name = row['str_name']
-            pfc_name = row['pfc_name']
+            str_name = row['str']
+            pfc_name = row['pfc']
             # change index from 1 based to 0 based
             str_name = one_to_zero_cell(str_name)
             pfc_name = one_to_zero_cell(pfc_name)
@@ -95,7 +92,8 @@ strong_corr_path = pjoin('data', "delta_P_correlated_response.csv")
 
 # using this instead of static path for compatibility with both windows and linux systems
 # returns two dataframe of cell pair data, first for iti, then for response window
-def get_strong_corr():
+# instead of the 
+def get_str_pfc_strong_corr_mono():
     strong_corr_iti = pd.read_csv(strong_corr_iti_path)
     strong_corr = pd.read_csv(strong_corr_path)
 

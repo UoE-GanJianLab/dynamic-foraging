@@ -243,16 +243,16 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
         if not os.path.exists('figures/figure_6/significant'):
             os.makedirs('figures/figure_6/significant')
     else:
-        if not os.path.exists('mono_figures/figure_6/poster_panel_c'):
-            os.makedirs('mono_figures/figure_6/poster_panel_c')
-        if not os.path.exists('mono_figures/figure_6/significant'):
-            os.makedirs('mono_figures/figure_6/significant')
+        if not os.path.exists('figures/figure_6/poster_panel_c'):
+            os.makedirs('figures/figure_6/poster_panel_c')
+        if not os.path.exists('figures/figure_6/significant'):
+            os.makedirs('figures/figure_6/significant')
 
     # save the figures
     if not mono:
         fig.savefig(f'figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
     else:
-        fig.savefig(f'mono_figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
+        fig.savefig(f'figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
 
     # close the figures
     plt.close(fig)
@@ -307,13 +307,13 @@ def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False, spearman
             fig.savefig(f'figures/figure_6/poster_6d_spearman.png')
     else:
         # if the figures directory does not exist, create it
-        if not os.path.exists('mono_figures/figure_6'):
-            os.makedirs('mono_figures/figure_6')
+        if not os.path.exists('figures/figure_6'):
+            os.makedirs('figures/figure_6')
         # save the figures
         if not spearman:
-            fig.savefig(f'mono_figures/figure_6/poster_6d_mono.png')
+            fig.savefig(f'figures/figure_6/poster_6d_mono.png')
         else:
-            fig.savefig(f'mono_figures/figure_6/poster_6d_spearman_mono.png')
+            fig.savefig(f'figures/figure_6/poster_6d_spearman_mono.png')
 
 def figure_6_poster_panel_d_mono_window(rs: np.ndarray, ps: np.ndarray, mono=False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
@@ -359,9 +359,5 @@ def figure_6_poster_panel_d_mono_window(rs: np.ndarray, ps: np.ndarray, mono=Fal
         # save the figures
         fig.savefig(f'figures/figure_6/poster_6d_mono_window.png')
     else:
-        # if the figures directory does not exist, create it
-        if not os.path.exists('mono_figures/figure_6'):
-            os.makedirs('mono_figures/figure_6')
-
         # save the figures
-        fig.savefig(f'mono_figures/figure_6/poster_6d_mono_window.png')
+        fig.savefig(f'figures/figure_6/poster_6d_mono_window.png')
