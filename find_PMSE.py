@@ -1,15 +1,15 @@
 from os.path import join as pjoin, isdir, basename, isfile
-from os import listdir, mkdir
-import numpy as np
+from os import listdir, mkdir, cpu_count
 from glob import glob
+
+import numpy as np
 from tqdm import tqdm 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
 from scipy.signal import find_peaks
-
-from lib.calculation import get_spikes_in_window, get_relative_spike_times
+from lib.calculation import get_spikes_in_window, get_relative_spike_times_flat
 
 # relative time window before pfc time
 LEFT = -0.01
@@ -22,6 +22,8 @@ std_multiplier = 3
 ITI_LEFT = -1
 ITI_RIGHT = -0.5
 
+threads = cpu_count() // 2
+
 
 def jitter(str_spikes):
     return np.add(str_spikes, np.random.uniform(low = -0.005, high=0.005, size=len(str_spikes)))
@@ -33,9 +35,10 @@ def get_mean(pfc_spikes, str_spikes):
     for i in range(500):
         jittered_str = jitter(str_spikes)
         # remove spikes not in intertrial interval
-        relative_times = get_relative_spike_times(jittered_str, pfc_spikes, window_left=LEFT, window_right=RIGHT)
-        bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))
-        jittered_array.append(bins[0])
+        relative_times = get_relative_spike_times_flat(spike_times= jittered_str, cue_times= pfc_spikes, window_left=LEFT, window_right=RIGHT)
+        bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
+
+        jittered_array.append(bins)
     
     mean_array = np.mean(a=jittered_array, axis=0)
     std_array = np.add(np.std(a=jittered_array, axis=0)*std_multiplier, mean_array)
@@ -70,14 +73,8 @@ def find_PMSE(reset=False):
     counts_in_peak_all = []
 
     for s in sessions:
-        # session_df = []
-        # str_df = []
-        # pfc_df = []
-        # peak_df = []
-        # peak_width_df = []
-        # counts_in_peak_df = []
-        behaviour_path = pjoin('data', 'behaviour_data', s)
-        behaviour_data = np.load(pjoin(behaviour_path, 'behaviour_data.npy'))
+        behaviour_path = pjoin('data', 'behaviour_data', s+'.csv')
+        behaviour_data = pd.read_csv(behaviour_path)
         cue_time = behaviour_data['cue_time']
 
         session_path = pjoin('data', 'spike_times', s)
@@ -94,25 +91,23 @@ def find_PMSE(reset=False):
             str_name = basename(st).split('.')[0]
             str_data = np.load(st)
 
-            str_data = get_spikes_in_window(cue_time, str_data, ITI_LEFT, ITI_RIGHT)
+            str_data = get_spikes_in_window(cue_times=cue_time, spike_times=str_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
 
             for pfc in pfcs:
                 ax.clear()
                 pfc_name = basename(pfc).split('.')[0]
                 pfc_data = np.load(pfc)
 
-                pfc_data = get_spikes_in_window(cue_time, pfc_data, ITI_LEFT, ITI_RIGHT)
+                pfc_data = get_spikes_in_window(cue_times=cue_time, spike_times=pfc_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
 
-                relative_times = get_relative_spike_times(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
+                relative_times = get_relative_spike_times_flat(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
 
                 if isfile(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy")) and not reset:
                     data = np.load(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"))
                     mean, std, bins = data
                 else:
-                    bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT+0.0001, step=1/FREQ))
+                    bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
                     # times of the left edge of the bin
-                    left_times = bins[1][:-1]
-                    bins = bins[0]
                     mean, std  = get_mean(pfc_data, str_data)
                     np.save(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"), arr=[mean, std, bins])
                 pbar.update(1)

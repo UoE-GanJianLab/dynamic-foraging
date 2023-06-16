@@ -82,6 +82,10 @@ def get_spikes_in_window(cue_times: np.ndarray, spike_times:np.ndarray, window_l
         window_left_cur = cue + window_left
         window_right_cur = cue + window_right
 
+        # backtrack in case of overlapping cue time windows
+        while spike_ptr > 0 and spike_times[spike_ptr-1] > window_left_cur:
+            spike_ptr -= 1
+
         # move the pointers into window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
             spike_ptr += 1
@@ -89,6 +93,7 @@ def get_spikes_in_window(cue_times: np.ndarray, spike_times:np.ndarray, window_l
         # count the amount of spikes in window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
             in_window_spikes.append(spike_times[spike_ptr])
+            spike_ptr += 1
         
     return in_window_spikes
 
@@ -104,6 +109,10 @@ def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window
 
         window_left_cur = cue + window_left
         window_right_cur = cue + window_right
+
+        # backtrack in case of overlapping cue time windows
+        while spike_ptr > 0 and spike_times[spike_ptr-1] > window_left_cur:
+            spike_ptr -= 1
 
         # move the pointers into window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
@@ -130,6 +139,10 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         window_left_cur = cue + window_left
         window_right_cur = cue + window_right
 
+        # backtrack in case of overlapping cue time windows
+        while spike_ptr > 0 and spike_times[spike_ptr-1] > window_left_cur:
+            spike_ptr -= 1
+
         # move the pointers into window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
             spike_ptr += 1
@@ -141,6 +154,44 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         
         relative_spike_times.append(relative_spike_times_trial)
         
+    return relative_spike_times
+
+def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+    spike_ptr = 0
+
+    relative_spike_times = []
+
+    for cue in cue_times:
+        window_left_cur = cue + window_left
+        window_right_cur = cue + window_right
+
+        # backtrack in case of overlapping cue time windows
+        while spike_ptr > 0 and spike_times[spike_ptr-1] > window_left_cur:
+            spike_ptr -= 1
+
+        # move the pointers into window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
+            spike_ptr += 1
+        
+        # count the amount of spikes in window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
+            relative_spike_times.append(spike_times[spike_ptr] - cue)
+            spike_ptr += 1
+                
+    return relative_spike_times
+
+
+def get_relative_spike_times_brute_force(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+    # use O(n^2) algorithm to calculate relative spike times
+    relative_spike_times = []
+
+    for cue in cue_times:
+
+        for spike in spike_times:
+            if spike > cue + window_left and spike < cue + window_right:
+                relative_spike_times.append(spike - cue)
+        
+
     return relative_spike_times
 
 
