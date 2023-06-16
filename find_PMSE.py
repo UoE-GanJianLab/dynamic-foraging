@@ -9,10 +9,10 @@ import pandas as pd
 
 from scipy.signal import find_peaks
 
-from lib.calculation import get_spikes_in_window
+from lib.calculation import get_spikes_in_window, get_relative_spike_times
 
 # relative time window before pfc time
-LEFT = 0.01
+LEFT = -0.01
 # relative time window after pfc time
 RIGHT = 0.02
 FREQ=2000
@@ -22,37 +22,6 @@ std_multiplier = 3
 ITI_LEFT = -1
 ITI_RIGHT = -0.5
 
-def in_bin(pfc, st):
-    return st >= pfc - LEFT and st <= pfc + RIGHT
-
-def ordered(l):
-    return all(l[i] <= l[i+1] for i in range(len(l) - 1))
-
-
-# get the str spike times relative to the pfc spike times
-def get_relative_times(pfc, str):
-    results = []
-    p_ptr = 0
-    s_ptr = 0
-
-    while p_ptr < len(pfc) and s_ptr < len(str):
-        if pfc[p_ptr] - LEFT > str[s_ptr]:
-            s_ptr += 1
-        elif in_bin(pfc[p_ptr], str[s_ptr]):
-            results.append(str[s_ptr] - pfc[p_ptr])
-            s_ptr += 1
-            if s_ptr == len(str):
-                p_ptr += 1
-                # if s_ptr has overshot for the current pfc
-                while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
-                    s_ptr -= 1
-        else:
-            p_ptr += 1
-            # if s_ptr has overshot for the current pfc
-            while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
-                s_ptr -= 1
-    
-    return results
 
 def jitter(str_spikes):
     return np.add(str_spikes, np.random.uniform(low = -0.005, high=0.005, size=len(str_spikes)))
@@ -64,8 +33,8 @@ def get_mean(pfc_spikes, str_spikes):
     for i in range(500):
         jittered_str = jitter(str_spikes)
         # remove spikes not in intertrial interval
-        relative_times = get_relative_times(pfc_spikes, jittered_str)
-        bins = np.histogram(relative_times, bins=np.arange(start=-LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))
+        relative_times = get_relative_spike_times(jittered_str, pfc_spikes, window_left=LEFT, window_right=RIGHT)
+        bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))
         jittered_array.append(bins[0])
     
     mean_array = np.mean(a=jittered_array, axis=0)
@@ -134,13 +103,13 @@ def find_PMSE(reset=False):
 
                 pfc_data = get_spikes_in_window(cue_time, pfc_data, ITI_LEFT, ITI_RIGHT)
 
-                relative_times = get_relative_times(pfc_data, str_data)
+                relative_times = get_relative_spike_times(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
 
                 if isfile(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy")) and not reset:
                     data = np.load(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"))
                     mean, std, bins = data
                 else:
-                    bins = np.histogram(relative_times, bins=np.arange(start=-LEFT, stop=RIGHT+0.0001, step=1/FREQ))
+                    bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT+0.0001, step=1/FREQ))
                     # times of the left edge of the bin
                     left_times = bins[1][:-1]
                     bins = bins[0]
@@ -156,8 +125,8 @@ def find_PMSE(reset=False):
                     continue
 
                 # Method 4
-                left_ind = int((PMSE_WINDOW[0] + LEFT) * FREQ)
-                right_ind = int((PMSE_WINDOW[1] + LEFT) * FREQ)
+                left_ind = int((PMSE_WINDOW[0] - LEFT) * FREQ)
+                right_ind = int((PMSE_WINDOW[1] - LEFT) * FREQ)
                 
                 real_peaks = []
                 bins_in_window = bins[left_ind: right_ind]
@@ -179,12 +148,12 @@ def find_PMSE(reset=False):
                                 
                             
                 if len(real_peaks) > 0:
-                    sns.histplot(x=relative_times, bins=np.arange(start=-LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ), ax=ax)
-                    sns.lineplot(x=np.arange(start=-LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=bins, ax=ax)
-                    sns.lineplot(x=np.arange(start=-LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=mean, ax=ax)
-                    sns.lineplot(x=np.arange(start=-LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=std, ax=ax)
+                    sns.histplot(x=relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ), ax=ax)
+                    sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=bins, ax=ax)
+                    sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=mean, ax=ax)
+                    sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=std, ax=ax)
                     for peak in real_peaks:
-                        ax.plot(-LEFT + 1/(2*FREQ) + peak * (1/FREQ), bins[peak], 'ro')
+                        ax.plot(LEFT + 1/(2*FREQ) + peak * (1/FREQ), bins[peak], 'ro')
 
                 ax.axvline(x=PMSE_WINDOW[0])
                 ax.axvline(x=PMSE_WINDOW[1])
