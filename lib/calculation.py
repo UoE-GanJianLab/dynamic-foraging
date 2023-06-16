@@ -8,6 +8,8 @@ from glob import glob
 
 import pandas as pd
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
+
 
 from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
@@ -42,6 +44,33 @@ def moving_window_mean_prior(data: np.ndarray, window_size=5) -> np.ndarray:
             output[i] = np.mean(data[i-window_size:i+1])
 
     return output
+
+
+def _check_arg(x, xname):
+    x = np.asarray(x)
+    if x.ndim != 1:
+        raise ValueError('%s must be one-dimensional.' % xname)
+    return x
+
+# crosscorrelation with maxlag
+def crosscorrelation(x, y, maxlag):
+    """
+    Cross correlation with a maximum number of lags.
+
+    `x` and `y` must be one-dimensional numpy arrays with the same length.
+
+    This computes the same result as
+        numpy.correlate(x, y, mode='full')[len(a)-maxlag-1:len(a)+maxlag]
+
+    The return vaue has length 2*maxlag + 1.
+    """
+    x = _check_arg(x, 'x')
+    y = _check_arg(y, 'y')
+    py = np.pad(y.conj(), 2*maxlag, mode='constant')
+    T = as_strided(py[2*maxlag:], shape=(2*maxlag+1, len(y) + 2*maxlag),
+                   strides=(-py.strides[0], py.strides[0]))
+    px = np.pad(x, maxlag, mode='constant')
+    return T.dot(px)
 
 # calculate the firing rate of a neuron in a given window wrt cue time
 def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
@@ -95,14 +124,14 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
 
 
 # calculate the normalized cross correlation (Wei's standard) of two signals
-def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_times: np.ndarray) -> np.ndarray:
+def get_normalized_cross_correlation(pfc_trial_times: np.ndarray, str_trial_times: np.ndarray, maxlag: int = 0) -> np.ndarray:
     # create constant signal with the mean of the times
     pfc_trial_times_const = np.ones(len(pfc_trial_times)) * np.mean(pfc_trial_times)
     str_trial_times_const = np.ones(len(str_trial_times)) * np.mean(str_trial_times)
 
     # cross correlate the relative time signals
-    cross_cor = correlate(str_trial_times, pfc_trial_times, mode='same')
-    cross_cor_const = correlate(str_trial_times_const, pfc_trial_times_const, mode='same') 
+    cross_cor = crosscorrelation(str_trial_times, pfc_trial_times, maxlag)
+    cross_cor_const = crosscorrelation(str_trial_times_const, pfc_trial_times_const, maxlag) 
 
     # calculate normalized cross correlation
     normalized_cross_corr = np.divide(cross_cor - cross_cor_const, cross_cor_const, out=np.zeros_like(cross_cor_const), where=cross_cor_const!=0)

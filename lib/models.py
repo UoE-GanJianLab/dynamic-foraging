@@ -36,7 +36,7 @@ class RW:
     def get_choice(self) -> tuple[int, float]:
         if self.choices.size == 0:
             # if this is the first trial, choose without kappa term
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         else:
             pre_choice = self.choices[-1]
             if pre_choice == 0:

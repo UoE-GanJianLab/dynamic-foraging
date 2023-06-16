@@ -87,8 +87,8 @@ def get_str_pfc_paths_mono(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarr
 
 spike_data_root = pjoin("data", "spike_times")
 behaviour_root = pjoin("data", "behaviour_data")
-strong_corr_iti_path = pjoin('data', "delta_P_correlated_background.csv")
-strong_corr_path = pjoin('data', "delta_P_correlated_response.csv")
+strong_corr_iti_path = pjoin('data', "delta_P_correlated_mono_pairs_background.csv")
+strong_corr_path = pjoin('data', "delta_P_correlated_mono_pairs_response.csv")
 
 # using this instead of static path for compatibility with both windows and linux systems
 # returns two dataframe of cell pair data, first for iti, then for response window
