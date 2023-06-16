@@ -12,13 +12,13 @@ from lib.calculation import moving_window_mean, get_firing_rate_window, moving_w
 # reset means whether to recalculate the values disregarding the saved files
 def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False, reset: bool = False):
     # if the relative spike time file for current session and cell already exists, load it
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy'):
+    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy') and not reset:
         pfc_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy')
     else:
         pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
         np.save(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy', pfc_relative_spike_times)
     
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy'):
+    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy') and not reset:
         str_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy')
     else:
         str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
@@ -35,13 +35,13 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
             cross_cors.append(0)
             continue
         # if the binnning file for current trial already exists, load it
-        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{i}.npy'):
+        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{i}.npy') and not reset:
             pfc_trial_times = np.load(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{i}.npy')
         else:
             # binning with bin size of 10ms using histogram
             pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
             np.save(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{i}.npy', pfc_trial_times)
-        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{str_name}_{i}.npy'):
+        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{str_name}_{i}.npy') and not reset:
             str_trial_times = np.load(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{i}.npy')
         else:
             str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]

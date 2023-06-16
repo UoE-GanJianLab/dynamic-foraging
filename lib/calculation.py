@@ -73,6 +73,27 @@ def crosscorrelation(x, y, maxlag):
     return T.dot(px)
 
 # calculate the firing rate of a neuron in a given window wrt cue time
+def get_spikes_in_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+    spike_ptr = 0
+
+    in_window_spikes = []
+
+    for cue in cue_times:
+        window_left_cur = cue + window_left
+        window_right_cur = cue + window_right
+
+        # move the pointers into window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
+            spike_ptr += 1
+        
+        # count the amount of spikes in window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
+            in_window_spikes.append(spike_times[spike_ptr])
+        
+    return in_window_spikes
+
+
+# calculate the firing rate of a neuron in a given window wrt cue time
 def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
     spike_ptr = 0
 
