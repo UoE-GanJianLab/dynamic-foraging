@@ -3,7 +3,28 @@ Code base for paper Prefronto-striatal representation of perceived reward probab
 
 ## data format
 
-All of the data uses 0 based indexing, while the two csv files specifying strong corralation pairs uses 1 based indexing from matlab, for example, str_1 in the strong_corr csv files points to the str_0.npy file storing the spike firing data.
+### binary data
+
+The raw experiemental data are stored in binary data format as .dat files
+
+Task data:
+- Also 20,000Hz
+- 8 Digital channels stored in 2 bytes
+- Each channel 1 bit
+- Channels
+    - 1: all state transition 
+    - 2: init 
+    - 3: reward 
+    - 5, 6: rotary 3, 2(0 indexed)
+        - 1024 ticks around per 360&deg
+
+Response time window: 0 - 1.5s
+
+Background firing (intertrial period): -1 - -0.5s
+
+response magnitude: response time window firing - background firing
+
+PRP: prior reward probability
 
 ## repository structure
 
