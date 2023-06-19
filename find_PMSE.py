@@ -1,6 +1,7 @@
 from os.path import join as pjoin, isdir, basename, isfile
-from os import listdir, mkdir, cpu_count
+from os import listdir, mkdir, rmdir
 from glob import glob
+from shutil import rmtree
 
 import numpy as np
 from tqdm import tqdm 
@@ -12,47 +13,47 @@ from scipy.signal import find_peaks
 from lib.calculation import get_spikes_in_window, get_relative_spike_times_flat
 
 # relative time window before pfc time
-LEFT = -0.01
+LEFT = -0.025
 # relative time window after pfc time
-RIGHT = 0.02
+RIGHT = 0.025
 FREQ=2000
 PMSE_WINDOW = [0.0005, 0.007]
-std_multiplier = 3
+std_multiplier = 2.5
 
-ITI_LEFT = -3
+ITI_LEFT = -1
 ITI_RIGHT = -0.5
 
-def in_bin(pfc, st):
-    return st >= pfc + LEFT and st <= pfc + RIGHT
+# def in_bin(pfc, st):
+#     return st >= pfc + LEFT and st <= pfc + RIGHT
 
-def ordered(l):
-    return all(l[i] <= l[i+1] for i in range(len(l) - 1))
+# def ordered(l):
+#     return all(l[i] <= l[i+1] for i in range(len(l) - 1))
 
 
-# get the str spike times relative to the pfc spike times
-def get_relative_times(pfc, str):
-    results = []
-    p_ptr = 0
-    s_ptr = 0
+# # get the str spike times relative to the pfc spike times
+# def get_relative_times(pfc, str):
+#     results = []
+#     p_ptr = 0
+#     s_ptr = 0
 
-    while p_ptr < len(pfc) and s_ptr < len(str):
-        if pfc[p_ptr] + LEFT > str[s_ptr]:
-            s_ptr += 1
-        elif in_bin(pfc[p_ptr], str[s_ptr]):
-            results.append(str[s_ptr] - pfc[p_ptr])
-            s_ptr += 1
-            if s_ptr == len(str):
-                p_ptr += 1
-                # if s_ptr has overshot for the current pfc
-                while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
-                    s_ptr -= 1
-        else:
-            p_ptr += 1
-            # if s_ptr has overshot for the current pfc
-            while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
-                s_ptr -= 1
+#     while p_ptr < len(pfc) and s_ptr < len(str):
+#         if pfc[p_ptr] + LEFT > str[s_ptr]:
+#             s_ptr += 1
+#         elif in_bin(pfc[p_ptr], str[s_ptr]):
+#             results.append(str[s_ptr] - pfc[p_ptr])
+#             s_ptr += 1
+#             if s_ptr == len(str):
+#                 p_ptr += 1
+#                 # if s_ptr has overshot for the current pfc
+#                 while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
+#                     s_ptr -= 1
+#         else:
+#             p_ptr += 1
+#             # if s_ptr has overshot for the current pfc
+#             while p_ptr < len(pfc) and s_ptr - 1 >= 0 and in_bin(pfc[p_ptr], str[s_ptr-1]):
+#                 s_ptr -= 1
 
-    return results
+#     return results
 
 
 def jitter(str_spikes):
@@ -64,8 +65,8 @@ def get_mean(pfc_spikes, str_spikes):
 
     for i in range(500):
         jittered_str = jitter(str_spikes)
-        # relative_times = get_relative_spike_times_flat(spike_times= jittered_str, cue_times= pfc_spikes, window_left=LEFT, window_right=RIGHT)
-        relative_times = get_relative_times(pfc_spikes, jittered_str)
+        relative_times = get_relative_spike_times_flat(spike_times= jittered_str, cue_times= pfc_spikes, window_left=LEFT, window_right=RIGHT)
+        # relative_times = get_relative_times(pfc_spikes, jittered_str)
         bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
 
         jittered_array.append(bins)
@@ -92,7 +93,7 @@ def FWHM(peak, bins):
 
 
 def find_PMSE(reset=False):
-    sessions = listdir(pjoin('data', 'spike_times'))
+    sessions = listdir(pjoin('data', 'spike_times', 'sessions'))
     fig, ax = plt.subplots()
 
     session_all = []
@@ -102,43 +103,45 @@ def find_PMSE(reset=False):
     peak_width_all = []
     counts_in_peak_all = []
 
+    if reset:
+        rmtree(pjoin('data', 'PMSE'))
+        mkdir(pjoin('data', 'PMSE'))
+        mkdir(pjoin('data', 'PMSE', 'qualified'))
+
     for s in sessions:
         behaviour_path = pjoin('data', 'behaviour_data', s+'.csv')
         behaviour_data = pd.read_csv(behaviour_path)
         cue_time = behaviour_data['cue_time']
 
-        session_path = pjoin('data', 'spike_times', s)
+        session_path = pjoin('data', 'spike_times', 'sessions', s)
         strs = glob(pjoin(session_path, 'str_*'))
         pfcs = glob(pjoin(session_path, 'pfc_*'))
         pbar = tqdm(total=len(strs)*len(pfcs))
         if not isdir(pjoin('data', 'PMSE', s)):
             mkdir(pjoin('data', 'PMSE', s))
 
-        if not isdir(pjoin('data', 'PMSE', s, 'qualified')):
-            mkdir(pjoin('data', 'PMSE', s, 'qualified'))
-
         for st in strs:
             str_name = basename(st).split('.')[0]
             str_data = np.load(st)
 
-            # str_data = get_spikes_in_window(cue_times=cue_time, spike_times=str_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
+            str_data = get_spikes_in_window(cue_times=cue_time, spike_times=str_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
 
             for pfc in pfcs:
                 ax.clear()
                 pfc_name = basename(pfc).split('.')[0]
                 pfc_data = np.load(pfc)
 
-                # pfc_data = get_spikes_in_window(cue_times=cue_time, spike_times=pfc_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
+                pfc_data = get_spikes_in_window(cue_times=cue_time, spike_times=pfc_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
 
-                # relative_times = get_relative_spike_times_flat(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
-                relative_times = get_relative_times(pfc_data, str_data)
+                relative_times = get_relative_spike_times_flat(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
+                # relative_times = get_relative_times(pfc_data, str_data)
 
                 # # find the items that are different between the two methods
                 # diff = np.setdiff1d(relative_times, relative_times_org)
                 # if len(diff) > 0:
                 #     print(f"diff: {diff}")
 
-                if isfile(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy")) and not reset:
+                if isfile(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy")):
                     data = np.load(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"))
                     mean, std, bins = data
                 else:
@@ -165,7 +168,7 @@ def find_PMSE(reset=False):
                 peaks, properties = find_peaks(bins_in_window, height=heights)
                 if len(peaks) > 0:
                     for peak in peaks:
-                        if bins[peak + left_ind] > mean[peak + left_ind] + 10:
+                        if bins[peak + left_ind] > mean[peak + left_ind] + 5:
                             # check full width at half maximum
                             left, right, counts = FWHM(peak + left_ind, bins)
                             if (right + left + 1) * (1/FREQ) <= 0.003:

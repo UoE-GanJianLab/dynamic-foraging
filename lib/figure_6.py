@@ -12,48 +12,61 @@ from lib.calculation import moving_window_mean, get_firing_rate_window, moving_w
 # reset means whether to recalculate the values disregarding the saved files
 def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False, reset: bool = False):
     # if the relative spike time file for current session and cell already exists, load it
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy') and not reset:
-        pfc_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy')
+    if os.path.exists(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy') and not reset:
+        pfc_relative_spike_times = np.load(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy')
     else:
         pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-        np.save(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy', pfc_relative_spike_times)
+        np.save(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy', pfc_relative_spike_times)
     
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy') and not reset:
-        str_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy')
+    if os.path.exists(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy') and not reset:
+        str_relative_spike_times = np.load(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy')
     else:
         str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
-        np.save(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy', str_relative_spike_times)
+        np.save(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy', str_relative_spike_times)
 
     # calculate the cross correlation
     cross_cors = []
     for i in range(len(cue_times)):
-        pfc_trial_times = pfc_relative_spike_times[i]
-        str_trial_times = str_relative_spike_times[i]
+        # get the 10 trials index before the current trial and the 10 trials index after the current trial
+        # if the current trial is within the first 10 trials or last 10 trials, use the incomplete window
+        # without padding
+        if i < 10:
+            indices = np.arange(0, i + 11)
+        elif i > len(cue_times) - 11:
+            indices = np.arange(i - 10, len(cue_times))
+        else:
+            indices = np.arange(i - 10, i + 11)
+
+        # empty histogram array
+        pfc_trial_times = np.array([0] * 50)
+        str_trial_times = np.array([0] * 50)
+
+        for ind in indices:    
+            # if the binnning file for current trial already exists, load it
+            if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{ind}.npy') and not reset:
+                # load the binned array and add the respective counts to the histogram array
+                pfc_trial_times += np.load(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{ind}.npy')
+            else:
+                # binning with bin size of 10ms using histogram
+                pfc_trial_times_cur = np.histogram(pfc_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
+                np.save(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{ind}.npy', pfc_trial_times_cur)
+                pfc_trial_times += pfc_trial_times_cur
+            if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{str_name}_{ind}.npy') and not reset:
+                str_trial_times += np.load(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{ind}.npy')
+            else:
+                str_trial_times_cur = np.histogram(str_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
+                np.save(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{ind}.npy', str_trial_times_cur)
+                str_trial_times += str_trial_times_cur
+
 
         # if any of the array is empty, append 0
         if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
             cross_cors.append(0)
             continue
-        # if the binnning file for current trial already exists, load it
-        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{i}.npy') and not reset:
-            pfc_trial_times = np.load(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{i}.npy')
-        else:
-            # binning with bin size of 10ms using histogram
-            pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-            np.save(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{i}.npy', pfc_trial_times)
-        if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{str_name}_{i}.npy') and not reset:
-            str_trial_times = np.load(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{i}.npy')
-        else:
-            str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-            np.save(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{i}.npy', str_trial_times)
-
         normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 100)
 
         # append the absolute maximum value of the cross correlation
         cross_cors.append(np.max(np.abs(normalized_cross_corr)))
-
-    # smoothen the cross correlation
-    cross_cors = moving_window_mean(np.array(cross_cors), 20)
 
     # reward proportion is the proportion of rewarded trials in the previous 10 trials
     reward_proportion = moving_window_mean_prior(rewarded, 10)
