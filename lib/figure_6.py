@@ -3,8 +3,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import pearsonr, ttest_ind, spearmanr
-from scipy.signal import correlate
+
+from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
+from scipy.signal import correlate # type: ignore
 
 from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times, get_normalized_cross_correlation, crosscorrelation
 

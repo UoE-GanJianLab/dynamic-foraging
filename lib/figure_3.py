@@ -8,6 +8,7 @@ import tqdm
 
 from lib.calculation import moving_window_mean, get_relative_spike_times
 
+# poster panel a,b of figure 3
 def figure_3_panel_bc():
     spike_time_dir = pjoin('data', 'spike_times')
     relative_spike_time_dir = pjoin('data', 'relative_spike_time_trials')
@@ -37,9 +38,8 @@ def figure_3_panel_bc():
         reward = reward & (behaviour_data['trial_reward'] == 1)
         reward_idx = np.where(reward)[0]
 
-
         # load the pfc spike times
         for pfc_times in glob(pjoin(spike_time_dir, session_name, 'pfc_*')):
             pfc_times = np.load(pfc_times)
-
+            relative_to_pfc = get_relative_spike_times(pfc_times, cue_times, -0.5, 1.5)
 
