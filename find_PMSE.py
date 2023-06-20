@@ -17,7 +17,7 @@ LEFT = -0.025
 # relative time window after pfc time
 RIGHT = 0.025
 FREQ=2000
-PMSE_WINDOW = [0.0005, 0.007]
+PMSE_WINDOW = [0.0005, 0.008]
 std_multiplier = 2.5
 
 ITI_LEFT = -1
@@ -168,7 +168,7 @@ def find_PMSE(reset=False):
                 peaks, properties = find_peaks(bins_in_window, height=heights)
                 if len(peaks) > 0:
                     for peak in peaks:
-                        if bins[peak + left_ind] > mean[peak + left_ind] + 5:
+                        if bins[peak + left_ind] > mean[peak + left_ind] + 7:
                             # check full width at half maximum
                             left, right, counts = FWHM(peak + left_ind, bins)
                             if (right + left + 1) * (1/FREQ) <= 0.003:

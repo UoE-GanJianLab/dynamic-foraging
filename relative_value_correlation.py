@@ -21,9 +21,6 @@ for session in tqdm.tqdm(glob(pjoin(data_root, '*.npy'))):
     relative_values = np.load(session)
     session_name = session.split('/')[-1].split('.')[0]
 
-    print(session_name)
-    print(relative_values)
-
     # load behaviour data
     session_behaviour_path = pjoin('data', 'behaviour_data', session_name + '.csv')
     session_behaviour = pd.read_csv(session_behaviour_path)
@@ -32,7 +29,7 @@ for session in tqdm.tqdm(glob(pjoin(data_root, '*.npy'))):
     cue_times = session_behaviour['cue_time'].values
 
     # load the spike times of the session
-    session_spike_time_path = pjoin('data', 'spike_times', session_name)
+    session_spike_time_path = pjoin('data', 'spike_times', 'sessions', session_name)
 
     for cell in glob(pjoin(session_spike_time_path, '*_*')):
         cell_name = cell.split('/')[-1].split('.')[0]
