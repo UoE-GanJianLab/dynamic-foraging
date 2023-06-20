@@ -73,7 +73,7 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
     reward_proportion = moving_window_mean_prior(rewarded, 10)
 
     # plot reward proportion vs cross correlation in twinx plot
-    fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
+    fig, ax1: plt.Axes = plt.subplots(1, 1, figsize=(15, 5))
     ax1.plot(reward_proportion, color='tab:blue')
     ax1.set_xlabel('Trial')
     ax1.set_ylabel('Reward proportion', color='tab:blue')
