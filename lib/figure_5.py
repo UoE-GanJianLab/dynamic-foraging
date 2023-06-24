@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import seaborn as sns
-from scipy.signal import butter, filtfilt, hilbert, detrend
-from scipy.stats import circmean
+from scipy.signal import butter, filtfilt, hilbert, detrend # type: ignore
+from scipy.stats import circmean # type: ignore
 
 # relative positions to cue_time
 ITI_LEFT = -1
@@ -65,8 +65,8 @@ def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_siz
         y_min = np.min(hist) * 0.95
     y_max = np.max(hist) * 1.05
     axes[1].set_ylim(y_min, y_max)
-    sns.histplot(phase_diffs, ax=axes[0], bins=bin_size, color='black', kde=True)
-    sns.histplot(phase_diffs_bg, ax=axes[1], bins=bin_size, color='black', kde=True)
+    sns.histplot(phase_diffs, ax=axes[0], bins=bin_size, color='black', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg, ax=axes[1], bins=bin_size, color='black', kde=True) # type: ignore
 
     # set y label
     axes[0].set_ylabel('Number of Cell Pairs')
@@ -85,6 +85,7 @@ def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_siz
     remove_top_and_right_spines(axes[1])
 
     return fig
+
 
 def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
@@ -120,10 +121,10 @@ def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_d
         y_min = np.min(hist) * 0.95
     y_max = np.max(hist) * 1.05
     axes[1][1].set_ylim(y_min, y_max)
-    sns.histplot(phase_diffs, ax=axes[0][0], bins=bin_size, color='blue', kde=True)
-    sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=bin_size, color='blue', kde=True)
-    sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=bin_size, color='red', kde=True)
-    sns.histplot(phase_diffs_bg_bad, ax=axes[1][1], bins=bin_size, color='red', kde=True)
+    sns.histplot(phase_diffs, ax=axes[0][0], bins=bin_size, color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=bin_size, color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=bin_size, color='red', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg_bad, ax=axes[1][1], bins=bin_size, color='red', kde=True) # type: ignore
 
     # set y label
     axes[0][1].set_ylabel('Number of Cell Pairs')
@@ -167,10 +168,10 @@ def fig_5_panel_e(phase_diffs_pdrp_pfc: List[float], phase_diff_pdrp_pfc_bg: Lis
     y_min = np.min(hist) * 0.95
     y_max = np.max(hist) * 1.05
     axes[1][1].set_ylim(y_min, y_max)
-    sns.histplot(phase_diffs_pdrp_pfc, ax=axes[0][0], bins=bin_size, color='blue', kde=True)
-    sns.histplot(phase_diff_pdrp_pfc_bg, ax=axes[0][1], bins=bin_size, color='blue', kde=True)
-    sns.histplot(phase_diff_pdrp_str, ax=axes[1][0], bins=bin_size, color='red', kde=True)
-    sns.histplot(phase_diff_pdrp_str_bg, ax=axes[1][1], bins=bin_size, color='red', kde=True)
+    sns.histplot(phase_diffs_pdrp_pfc, ax=axes[0][0], bins=bin_size, color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diff_pdrp_pfc_bg, ax=axes[0][1], bins=bin_size, color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diff_pdrp_str, ax=axes[1][0], bins=bin_size, color='red', kde=True) # type: ignore
+    sns.histplot(phase_diff_pdrp_str_bg, ax=axes[1][1], bins=bin_size, color='red', kde=True) # type: ignore
 
     # set y label
     axes[0][1].set_ylabel('Number of Cells')
@@ -193,6 +194,14 @@ def fig_5_panel_e(phase_diffs_pdrp_pfc: List[float], phase_diff_pdrp_pfc_bg: Lis
     remove_top_and_right_spines(axes[0][1])
     remove_top_and_right_spines(axes[1][0])
     remove_top_and_right_spines(axes[1][1])
+
+    return fig
+
+    # Set the x-axis tick labels to pi
+    set_xticks_and_labels_pi(axes[0][0])
+    set_xticks_and_labels_pi(axes[0][1])
+    set_xticks_and_labels_pi(axes[1][0])
+    set_xticks_and_labels_pi(axes[1][1])
 
     return fig
 
