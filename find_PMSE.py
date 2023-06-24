@@ -1,3 +1,4 @@
+# type: ignore
 from os.path import join as pjoin, isdir, basename, isfile
 from os import listdir, mkdir, rmdir
 from glob import glob
