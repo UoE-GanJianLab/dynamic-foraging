@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import correlate
+from scipy.signal import correlate # type: ignore
 
 from os.path import join as pjoin
 from os import listdir
@@ -14,6 +14,12 @@ from numpy.lib.stride_tricks import as_strided
 from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
 behaviour_root = pjoin("data", "behaviour_data")
+
+# relative positions to cue_time
+ITI_LEFT = -1
+ITI_RIGHT = -0.5
+RESPONSE_LEFT = 0
+RESPONSE_RIGHT = 1.5
 
 # calculate the mean of a centered moving window, if window is not complete, 
 # use the available data without padding
@@ -94,12 +100,54 @@ def get_spikes_in_window(cue_times: np.ndarray, spike_times:np.ndarray, window_l
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
             in_window_spikes.append(spike_times[spike_ptr])
             spike_ptr += 1
+
+    in_window_spikes = np.array(in_window_spikes)
         
     return in_window_spikes
 
 
+def get_spikes_outside_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+    spike_ptr = 0
+
+    outside_window_spikes = []
+
+    for cue in cue_times:
+
+        window_left_cur = cue + window_left
+        window_right_cur = cue + window_right
+
+        # # for the edge case of last spike being in the window
+        # if spike_ptr == len(spike_times) and spike_times[spike_ptr-1] > window_left_cur:
+        #     spike_ptr -= 1
+
+        # # backtrack in case of overlapping cue time windows
+        # while spike_ptr > 0 and spike_ptr < len(spike_times) and spike_times[spike_ptr] > window_left_cur:
+        #     spike_ptr -= 1
+        #     # remove the spike if it is in the window
+        #     if len(outside_window_spikes) > 0:
+        #         outside_window_spikes.pop()
+
+        # move the pointers into window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
+            outside_window_spikes.append(spike_times[spike_ptr])
+            spike_ptr += 1
+
+        # count the amount of spikes in window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
+            spike_ptr += 1
+
+        
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur + 1:
+            outside_window_spikes.append(spike_times[spike_ptr])
+            spike_ptr += 1
+
+    outside_window_spikes = np.array(outside_window_spikes)
+        
+    return outside_window_spikes
+
+
 # calculate the firing rate of a neuron in a given window wrt cue time
-def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window_left: float, window_right: float) -> List[float]:
     spike_ptr = 0
 
     firing_rates = []
@@ -129,7 +177,7 @@ def get_firing_rate_window(cue_times: np.ndarray, spike_times:np.ndarray, window
     return firing_rates
 
 
-def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
     spike_ptr = 0
 
     relative_spike_times = []
@@ -156,7 +204,7 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         
     return relative_spike_times
 
-def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
     spike_ptr = 0
 
     relative_spike_times = []
@@ -181,7 +229,7 @@ def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray
     return relative_spike_times
 
 
-def get_relative_spike_times_brute_force(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> np.ndarray:
+def get_relative_spike_times_brute_force(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
     # use O(n^2) algorithm to calculate relative spike times
     relative_spike_times = []
 
@@ -219,32 +267,32 @@ def get_session_performances() -> Tuple[Dict[str, float], float]:
     for behaviour_path in glob(pjoin(behaviour_root, '*.csv')):
         session_name = behaviour_path.split('/')[-1].split('.')[0]
         session_data = pd.read_csv(behaviour_path)
-        right_prob = session_data['rightP']
-        left_prob = session_data['leftP']
-        right_proportion = np.convolve((session_data['trial_response_side']==1).to_numpy(), np.ones(20)/20, mode='same')
-        left_proportion = np.convolve((session_data['trial_response_side']==-1).to_numpy(), np.ones(20)/20, mode='same')
-        # normalization
-        right_prob = np.array(right_prob) / np.linalg.norm(right_prob)
-        left_prob = np.array(left_prob) / np.linalg.norm(left_prob)
-        right_proportion = right_proportion / np.linalg.norm(right_proportion)
-        left_proportion = left_proportion / np.linalg.norm(left_proportion)
+        right_prob = np.array(session_data['rightP'])
+        left_prob = np.array(session_data['leftP'])
+        right_proportion = moving_window_mean((session_data['trial_response_side']==1).to_numpy(), 20)
+        left_proportion = moving_window_mean((session_data['trial_response_side']==-1).to_numpy(), 20)
 
-        xcorr_right = np.correlate(right_prob, right_proportion)
-        xcorr_left = np.correlate(left_prob, left_proportion)
+        # # subtract the mean of each signal
+        # right_prob = right_prob - np.mean(right_prob)
+        # left_prob = left_prob - np.mean(left_prob)
+        # right_proportion = right_proportion - np.mean(right_proportion)
+        # left_proportion = left_proportion - np.mean(left_proportion)        
+
+        xcorr_right = crosscorrelation(right_prob, right_proportion, maxlag=50)
+        xcorr_left = crosscorrelation(left_prob, left_proportion, maxlag=50)
+
+        # normalize the result to simulate the effect of matlab coeff mode
+        xcorr_right = xcorr_right / np.sqrt(np.sum(right_prob**2) * np.sum(right_proportion**2))
+        xcorr_left = xcorr_left / np.sqrt(np.sum(left_prob**2) * np.sum(left_proportion**2))
+
         corrs = [xcorr_left, xcorr_right]
         corrs_averaged = np.mean(corrs, axis=0)
         performance = np.max(corrs_averaged)
         performances.append(performance)
         results[session_name] = performance
     
-    return results, np.mean(performances)
+    return results, np.mean(performances, dtype=float)
 
-
-# relative positions to cue_time
-ITI_LEFT = -1
-ITI_RIGHT = 0
-RESPONSE_LEFT = 0
-RESPONSE_RIGHT = 1.5
 
 
 # get the firing rate 
@@ -282,5 +330,8 @@ def get_response_bg_firing(cue_times, spike_times):
         
         bg_firing.append(iti_count / (ITI_RIGHT - ITI_LEFT))
         response_mag.append(abs(response_count / (RESPONSE_RIGHT - RESPONSE_LEFT) - iti_count / (ITI_RIGHT - ITI_LEFT)))
+
+    response_mag = np.array(response_mag)
+    bg_firing = np.array(bg_firing)
 
     return response_mag, bg_firing

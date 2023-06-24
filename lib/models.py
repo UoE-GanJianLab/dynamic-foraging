@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from os.path import join as pjoin
 
-from scipy.optimize import minimize
-from scipy.stats import truncnorm, norm
+from scipy.optimize import minimize # type: ignore
+from scipy.stats import truncnorm, norm # type: ignore
 from lib.calculation import moving_window_mean
 
 class RW:
@@ -39,13 +39,11 @@ class RW:
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         else:
             pre_choice = self.choices[-1]
-            if pre_choice == 0:
-                pre_choice = -1
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice)) 
-        choice = np.random.binomial(1, p_r)
+        choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
 
-        return (0, 1 - p_r) if choice == 0 else (1, p_r)
+        return (choice, p_r)
 
 
     def nll(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
@@ -80,7 +78,7 @@ class RW:
         # the corresponding negative log likelihood
         # parameters: beta, kappa, b
         # RW_Simple simulation
-        fitted_parameters = None
+        fitted_parameters: List[float] = []
         nll_min = np.inf
 
         for i in range(10):
