@@ -9,6 +9,7 @@ import pandas as pd
 import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 from lib.calculation import moving_window_mean, get_relative_spike_times
 
@@ -97,18 +98,6 @@ def figure_3_panel_bc(reset=False):
                 signal_spike_times = np.histogram(signal_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 mvt_spike_times = np.histogram(mvt_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 reward_spike_times = np.histogram(reward_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                
-                
-                if not isfile(binned_file):
-                    total_spike_times = np.histogram(np.concatenate(relative_to_pfc), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                    # save the binned spike times
-                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
-
-
-                if not isfile(binned_file):
-                    total_spike_times = np.histogram(np.concatenate(relative_to_pfc), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                    # save the binned spike times
-                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
 
                 # convert to firing rate
                 signal_spike_times = np.divide(signal_spike_times, BIN_SIZE)
@@ -157,18 +146,6 @@ def figure_3_panel_bc(reset=False):
                 signal_spike_times = np.histogram(signal_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 mvt_spike_times = np.histogram(mvt_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 reward_spike_times = np.histogram(reward_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                
-                
-                if not isfile(binned_file):
-                    total_spike_times = np.histogram(np.concatenate(relative_to_str), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                    # save the binned spike times
-                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
-
-
-                if not isfile(binned_file):
-                    total_spike_times = np.histogram(np.concatenate(relative_to_str), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
-                    # save the binned spike times
-                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
 
                 # convert to firing rate
                 signal_spike_times = np.divide(signal_spike_times, BIN_SIZE)
@@ -214,8 +191,8 @@ def figure_3_panel_bc(reset=False):
 
 
     # plot the three binned spike times as line plots with error bars
-    fig_pfc, ax_pfc = plt.subplots(1, 1, figsize=(12, 5))
-    fig_dms, ax_dms = plt.subplots(1, 1, figsize=(12, 5))
+    fig_pfc, ax_pfc = plt.subplots(1, 1, figsize=(16, 4))
+    fig_dms, ax_dms = plt.subplots(1, 1, figsize=(16, 4))
 
     # set the title
     ax_pfc.set_title('PFC')
@@ -293,6 +270,15 @@ def figure_3_panel_bc_bottom():
     dms_mvt = dms_mvt_binned_mean - dms_signal_binned_mean
     dms_reward = dms_reward_binned_mean - dms_mvt_binned_mean
 
+    # scale the three regressors to have amplitude 1
+    pfc_signal_binned_mean = pfc_signal_binned_mean / np.max(np.abs(pfc_signal_binned_mean))
+    pfc_mvt = pfc_mvt / np.max(np.abs(pfc_mvt))
+    pfc_reward = pfc_reward / np.max(np.abs(pfc_reward))
+
+    dms_signal_binned_mean = dms_signal_binned_mean / np.max(np.abs(dms_signal_binned_mean))
+    dms_mvt = dms_mvt / np.max(np.abs(dms_mvt))
+    dms_reward = dms_reward / np.max(np.abs(dms_reward))
+
     # store the regressors in X
     X_pfc= np.column_stack((pfc_signal_binned_mean, pfc_mvt, pfc_reward))
     X_pfc = np.column_stack((np.ones(len(pfc_signal_binned_mean)), X_pfc))
@@ -336,8 +322,8 @@ def figure_3_panel_bc_bottom():
             dms_reward_coeffs.append(np.linalg.lstsq(X_dms, reward_spike_times, rcond=None)[0][1:])
 
     # plot the signal, mvt, and reward components
-    fig_pfc, ax_pfc = plt.subplots(1, 3, figsize=(12, 3.5))
-    fig_dms, ax_dms = plt.subplots(1, 3, figsize=(12, 3.5))
+    fig_pfc, ax_pfc = plt.subplots(1, 3, figsize=(16, 5))
+    fig_dms, ax_dms = plt.subplots(1, 3, figsize=(16, 5))
 
     # plot the pfc coeffs for the signal trials as bar plots with error bars
     # with each bar representing a coefficient
@@ -377,15 +363,50 @@ def figure_3_panel_bc_bottom():
     ax_pfc[0].set_xticklabels(['S', 'SM', 'SMR'])
     ax_pfc[0].set_ylabel('signal coeffs')
 
+    print('PFC')
+
+    print('signal coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_signal_coeffs, mvt_signal_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_signal_coeffs, reward_signal_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_signal_coeffs, reward_signal_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+
+
     ax_pfc[1].bar([0, 1, 2], [signal_mvt_coeffs_mean, mvt_mvt_coeffs_mean, reward_mvt_coeffs_mean], yerr=[signal_mvt_coeffs_err, mvt_mvt_coeffs_err, reward_mvt_coeffs_err], color='k')
     ax_pfc[1].set_xticks([0, 1, 2])
     ax_pfc[1].set_xticklabels(['S', 'SM', 'SMR'])
     ax_pfc[1].set_ylabel('mvt coeffs')
 
+    print('mvt coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_mvt_coeffs, mvt_mvt_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_mvt_coeffs, reward_mvt_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_mvt_coeffs, reward_mvt_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+
     ax_pfc[2].bar([0, 1, 2], [signal_reward_coeffs_mean, mvt_reward_coeffs_mean, reward_reward_coeffs_mean], yerr=[signal_reward_coeffs_err, mvt_reward_coeffs_err, reward_reward_coeffs_err], color='k')
     ax_pfc[2].set_xticks([0, 1, 2])
     ax_pfc[2].set_xticklabels(['S', 'SM', 'SMR'])
     ax_pfc[2].set_ylabel('reward coeffs')
+
+    print('reward coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_reward_coeffs, mvt_reward_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_reward_coeffs, reward_reward_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_reward_coeffs, reward_reward_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+
+    fig_pfc.suptitle('PFC')
 
     # Similarly for the dms coeffs
     signal_signal_coeffs = np.array(dms_signal_coeffs)[:, 0]
@@ -423,18 +444,54 @@ def figure_3_panel_bc_bottom():
     ax_dms[0].set_xticklabels(['S', 'SM', 'SMR'])
     ax_dms[0].set_ylabel('signal coeffs')
 
+    print('DMS')
+
+    print('signal coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_signal_coeffs, mvt_signal_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_signal_coeffs, reward_signal_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_signal_coeffs, reward_signal_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+
+
     ax_dms[1].bar([0, 1, 2], [signal_mvt_coeffs_mean, mvt_mvt_coeffs_mean, reward_mvt_coeffs_mean], yerr=[signal_mvt_coeffs_err, mvt_mvt_coeffs_err, reward_mvt_coeffs_err], color='k')
     ax_dms[1].set_xticks([0, 1, 2])
     ax_dms[1].set_xticklabels(['S', 'SM', 'SMR'])
     ax_dms[1].set_ylabel('mvt coeffs')
+
+    print('mvt coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_mvt_coeffs, mvt_mvt_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_mvt_coeffs, reward_mvt_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_mvt_coeffs, reward_mvt_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
     
     ax_dms[2].bar([0, 1, 2], [signal_reward_coeffs_mean, mvt_reward_coeffs_mean, reward_reward_coeffs_mean], yerr=[signal_reward_coeffs_err, mvt_reward_coeffs_err, reward_reward_coeffs_err], color='k')
     ax_dms[2].set_xticks([0, 1, 2])
     ax_dms[2].set_xticklabels(['S', 'SM', 'SMR'])
     ax_dms[2].set_ylabel('reward coeffs')
 
+    print('reward coeffs')
+
+    # do the t test for signal vs mvt and signal vs reward and reward vs mvt
+    t_stat, p_val = stats.ttest_ind(signal_reward_coeffs, mvt_reward_coeffs)
+    print('signal vs mvt t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(signal_reward_coeffs, reward_reward_coeffs)
+    print('signal vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+    t_stat, p_val = stats.ttest_ind(mvt_reward_coeffs, reward_reward_coeffs)
+    print('mvt vs reward t test: t = ' + str(t_stat) + ', p = ' + str(p_val))
+
     fig_dms.suptitle('DMS')
 
+    # make sure the y label does not overlap with figures
+    fig_pfc.tight_layout()
+    fig_dms.tight_layout()
 
     
 
