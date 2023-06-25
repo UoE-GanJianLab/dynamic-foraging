@@ -36,10 +36,11 @@ class RW:
     def get_choice(self) -> tuple[int, float]:
         if self.choices.size == 0:
             # if this is the first trial, choose without kappa term
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
         else:
             pre_choice = self.choices[-1]
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice)) 
+            # p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b + self.kappa * pre_choice))) 
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
         choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
 
