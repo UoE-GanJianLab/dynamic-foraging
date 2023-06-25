@@ -1,11 +1,10 @@
+# type: ignore
 from os.path import join as pjoin, isdir, isfile, basename
 from os import listdir, mkdir
 from shutil import rmtree
 from glob import glob
 
 import numpy as np
-np.seterr(all='raise')
-
 import pandas as pd
 import tqdm
 import matplotlib.pyplot as plt
@@ -289,6 +288,11 @@ def figure_3_panel_bc_bottom():
     # load the binned pfc spike times
     for pfc_file in glob(pjoin(spike_time_dir, 'figure_3', f'*pfc*')):
         signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times = np.load(pfc_file, allow_pickle=True)
+        # normalize the firing rates to 0 to 1
+        signal_spike_times = signal_spike_times / np.max(signal_spike_times)
+        mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
+        reward_spike_times = reward_spike_times / np.max(reward_spike_times)
+
         pfc_signal_coeffs.append(np.linalg.lstsq(X_pfc, signal_spike_times, rcond=None)[0])
         pfc_mvt_coeffs.append(np.linalg.lstsq(X_pfc, mvt_spike_times, rcond=None)[0])
         pfc_reward_coeffs.append(np.linalg.lstsq(X_pfc, reward_spike_times, rcond=None)[0])
@@ -298,6 +302,11 @@ def figure_3_panel_bc_bottom():
     # load the binned dms spike times
     for dms_file in glob(pjoin(spike_time_dir, 'figure_3', f'*str*')):
         signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times = np.load(dms_file, allow_pickle=True)
+        # normalize the firing rates to 0 to 1
+        signal_spike_times = signal_spike_times / np.max(signal_spike_times)
+        mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
+        reward_spike_times = reward_spike_times / np.max(reward_spike_times)
+
         dms_signal_coeffs.append(np.linalg.lstsq(X_dms, signal_spike_times, rcond=None)[0])
         dms_mvt_coeffs.append(np.linalg.lstsq(X_dms, mvt_spike_times, rcond=None)[0])
         dms_reward_coeffs.append(np.linalg.lstsq(X_dms, reward_spike_times, rcond=None)[0])
