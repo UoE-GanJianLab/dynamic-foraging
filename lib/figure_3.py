@@ -98,6 +98,13 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = np.histogram(mvt_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 reward_spike_times = np.histogram(reward_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 
+                
+                if not isfile(binned_file):
+                    total_spike_times = np.histogram(np.concatenate(relative_to_pfc), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
+                    # save the binned spike times
+                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
+
+
                 if not isfile(binned_file):
                     total_spike_times = np.histogram(np.concatenate(relative_to_pfc), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                     # save the binned spike times
@@ -112,6 +119,11 @@ def figure_3_panel_bc(reset=False):
                 signal_spike_times = np.divide(signal_spike_times, len(signal_idx))
                 mvt_spike_times = np.divide(mvt_spike_times, len(mvt_idx))
                 reward_spike_times = np.divide(reward_spike_times, len(reward_idx))
+
+                if not isfile(binned_file):
+                    total_spike_times = np.histogram(np.concatenate(relative_to_pfc), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
+                    # save the binned spike times
+                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
                 
                 # add the binned spike times to the total
                 pfc_signal_binned.append(signal_spike_times)
@@ -146,6 +158,13 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = np.histogram(mvt_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 reward_spike_times = np.histogram(reward_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 
+                
+                if not isfile(binned_file):
+                    total_spike_times = np.histogram(np.concatenate(relative_to_str), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
+                    # save the binned spike times
+                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
+
+
                 if not isfile(binned_file):
                     total_spike_times = np.histogram(np.concatenate(relative_to_str), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                     # save the binned spike times
@@ -160,6 +179,11 @@ def figure_3_panel_bc(reset=False):
                 signal_spike_times = np.divide(signal_spike_times, len(signal_idx))
                 mvt_spike_times = np.divide(mvt_spike_times, len(mvt_idx))
                 reward_spike_times = np.divide(reward_spike_times, len(reward_idx))
+
+                if not isfile(binned_file):
+                    total_spike_times = np.histogram(np.concatenate(relative_to_str), bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
+                    # save the binned spike times
+                    np.save(binned_file, [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times])
                 
                 # add the binned spike times to the total
                 dms_signal_binned.append(signal_spike_times)
@@ -181,8 +205,6 @@ def figure_3_panel_bc(reset=False):
         dms_mvt_binned_err = np.std(dms_mvt_binned, axis=0) / np.sqrt(str_count)
         dms_reward_binned_mean = np.mean(dms_reward_binned, axis=0)
         dms_reward_binned_err = np.std(dms_reward_binned, axis=0) / np.sqrt(str_count)
-
-
 
         # save the binned spike times
         np.save(signal_mvt_reward_file, [pfc_signal_binned_mean, pfc_signal_binned_err, pfc_mvt_binned_mean, pfc_mvt_binned_err, pfc_reward_binned_mean, pfc_reward_binned_err, dms_signal_binned_mean, dms_signal_binned_err, dms_mvt_binned_mean, dms_mvt_binned_err, dms_reward_binned_mean, dms_reward_binned_err])
@@ -288,28 +310,30 @@ def figure_3_panel_bc_bottom():
     # load the binned pfc spike times
     for pfc_file in glob(pjoin(spike_time_dir, 'figure_3', f'*pfc*')):
         signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times = np.load(pfc_file, allow_pickle=True)
-        # normalize the firing rates to 0 to 1
-        signal_spike_times = signal_spike_times / np.max(signal_spike_times)
-        mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
-        reward_spike_times = reward_spike_times / np.max(reward_spike_times)
 
-        pfc_signal_coeffs.append(np.linalg.lstsq(X_pfc, signal_spike_times, rcond=None)[0])
-        pfc_mvt_coeffs.append(np.linalg.lstsq(X_pfc, mvt_spike_times, rcond=None)[0])
-        pfc_reward_coeffs.append(np.linalg.lstsq(X_pfc, reward_spike_times, rcond=None)[0])
+        if not np.max(signal_spike_times) == 0:
+            signal_spike_times = signal_spike_times / np.max(signal_spike_times)
+            pfc_signal_coeffs.append(np.linalg.lstsq(X_pfc, signal_spike_times, rcond=None)[0][1:])
+        if not np.max(mvt_spike_times) == 0:
+            mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
+            pfc_mvt_coeffs.append(np.linalg.lstsq(X_pfc, mvt_spike_times, rcond=None)[0][1:])
+        if not np.max(reward_spike_times) == 0:
+            reward_spike_times = reward_spike_times / np.max(reward_spike_times)
+            pfc_reward_coeffs.append(np.linalg.lstsq(X_pfc, reward_spike_times, rcond=None)[0][1:])
 
-        print(np.linalg.lstsq(X_pfc, reward_spike_times, rcond=None))
-    
     # load the binned dms spike times
     for dms_file in glob(pjoin(spike_time_dir, 'figure_3', f'*str*')):
-        signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times = np.load(dms_file, allow_pickle=True)
-        # normalize the firing rates to 0 to 1
-        signal_spike_times = signal_spike_times / np.max(signal_spike_times)
-        mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
-        reward_spike_times = reward_spike_times / np.max(reward_spike_times)
+        signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times = np.load(dms_file, allow_pickle=True)        
 
-        dms_signal_coeffs.append(np.linalg.lstsq(X_dms, signal_spike_times, rcond=None)[0])
-        dms_mvt_coeffs.append(np.linalg.lstsq(X_dms, mvt_spike_times, rcond=None)[0])
-        dms_reward_coeffs.append(np.linalg.lstsq(X_dms, reward_spike_times, rcond=None)[0])
+        if not np.max(signal_spike_times) == 0:
+            signal_spike_times = signal_spike_times / np.max(signal_spike_times)
+            dms_signal_coeffs.append(np.linalg.lstsq(X_dms, signal_spike_times, rcond=None)[0][1:])
+        if not np.max(mvt_spike_times) == 0:
+            mvt_spike_times = mvt_spike_times / np.max(mvt_spike_times)
+            dms_mvt_coeffs.append(np.linalg.lstsq(X_dms, mvt_spike_times, rcond=None)[0][1:])
+        if not np.max(reward_spike_times) == 0:
+            reward_spike_times = reward_spike_times / np.max(reward_spike_times)
+            dms_reward_coeffs.append(np.linalg.lstsq(X_dms, reward_spike_times, rcond=None)[0][1:])
 
     # plot the signal, mvt, and reward components
     fig_pfc, ax_pfc = plt.subplots(1, 3, figsize=(12, 3.5))
@@ -319,33 +343,34 @@ def figure_3_panel_bc_bottom():
     # with each bar representing a coefficient
     signal_signal_coeffs = np.array(pfc_signal_coeffs)[:, 0]
     signal_signal_coeffs_mean = np.mean(signal_signal_coeffs)
-    signal_signal_coeffs_err = np.std(signal_signal_coeffs)
+    signal_signal_coeffs_err = np.std(signal_signal_coeffs) / np.sqrt(len(signal_signal_coeffs))
     signal_mvt_coeffs = np.array(pfc_signal_coeffs)[:, 1]
     signal_mvt_coeffs_mean = np.mean(signal_mvt_coeffs)
-    signal_mvt_coeffs_err = np.std(signal_mvt_coeffs)
+    signal_mvt_coeffs_err = np.std(signal_mvt_coeffs) / np.sqrt(len(signal_mvt_coeffs))
     signal_reward_coeffs = np.array(pfc_signal_coeffs)[:, 2]
     signal_reward_coeffs_mean = np.mean(signal_reward_coeffs)
-    signal_reward_coeffs_err = np.std(signal_reward_coeffs)
+    signal_reward_coeffs_err = np.std(signal_reward_coeffs) / np.sqrt(len(signal_reward_coeffs))
 
     mvt_signal_coeffs = np.array(pfc_mvt_coeffs)[:, 0]
     mvt_signal_coeffs_mean = np.mean(mvt_signal_coeffs)
-    mvt_signal_coeffs_err = np.std(mvt_signal_coeffs)
+    mvt_signal_coeffs_err = np.std(mvt_signal_coeffs) / np.sqrt(len(mvt_signal_coeffs))
     mvt_mvt_coeffs = np.array(pfc_mvt_coeffs)[:, 1]
     mvt_mvt_coeffs_mean = np.mean(mvt_mvt_coeffs)
-    mvt_mvt_coeffs_err = np.std(mvt_mvt_coeffs)
+    mvt_mvt_coeffs_err = np.std(mvt_mvt_coeffs) / np.sqrt(len(mvt_mvt_coeffs))
     mvt_reward_coeffs = np.array(pfc_mvt_coeffs)[:, 2]
     mvt_reward_coeffs_mean = np.mean(mvt_reward_coeffs)
-    mvt_reward_coeffs_err = np.std(mvt_reward_coeffs)
+    mvt_reward_coeffs_err = np.std(mvt_reward_coeffs) / np.sqrt(len(mvt_reward_coeffs))
 
     reward_signal_coeffs = np.array(pfc_reward_coeffs)[:, 0]
     reward_signal_coeffs_mean = np.mean(reward_signal_coeffs)
-    reward_signal_coeffs_err = np.std(reward_signal_coeffs)
+    # standard error of the mean
+    reward_signal_coeffs_err = np.std(reward_signal_coeffs) / np.sqrt(len(reward_signal_coeffs))
     reward_mvt_coeffs = np.array(pfc_reward_coeffs)[:, 1]
     reward_mvt_coeffs_mean = np.mean(reward_mvt_coeffs)
-    reward_mvt_coeffs_err = np.std(reward_mvt_coeffs)
+    reward_mvt_coeffs_err = np.std(reward_mvt_coeffs) / np.sqrt(len(reward_mvt_coeffs))
     reward_reward_coeffs = np.array(pfc_reward_coeffs)[:, 2]
     reward_reward_coeffs_mean = np.mean(reward_reward_coeffs)
-    reward_reward_coeffs_err = np.std(reward_reward_coeffs)
+    reward_reward_coeffs_err = np.std(reward_reward_coeffs)  /  np.sqrt(len(reward_reward_coeffs))
 
     ax_pfc[0].bar([0, 1, 2], [signal_signal_coeffs_mean, mvt_signal_coeffs_mean, reward_signal_coeffs_mean], yerr=[signal_signal_coeffs_err, mvt_signal_coeffs_err, reward_signal_coeffs_err], color='k')
     ax_pfc[0].set_xticks([0, 1, 2])
@@ -365,33 +390,33 @@ def figure_3_panel_bc_bottom():
     # Similarly for the dms coeffs
     signal_signal_coeffs = np.array(dms_signal_coeffs)[:, 0]
     signal_signal_coeffs_mean = np.mean(signal_signal_coeffs)
-    signal_signal_coeffs_err = np.std(signal_signal_coeffs)
+    signal_signal_coeffs_err = np.std(signal_signal_coeffs) / np.sqrt(len(signal_signal_coeffs))
     signal_mvt_coeffs = np.array(dms_signal_coeffs)[:, 1]
     signal_mvt_coeffs_mean = np.mean(signal_mvt_coeffs)
-    signal_mvt_coeffs_err = np.std(signal_mvt_coeffs)
+    signal_mvt_coeffs_err = np.std(signal_mvt_coeffs) / np.sqrt(len(signal_mvt_coeffs))
     signal_reward_coeffs = np.array(dms_signal_coeffs)[:, 2]
     signal_reward_coeffs_mean = np.mean(signal_reward_coeffs)
-    signal_reward_coeffs_err = np.std(signal_reward_coeffs)
+    signal_reward_coeffs_err = np.std(signal_reward_coeffs) / np.sqrt(len(signal_reward_coeffs))
 
     mvt_signal_coeffs = np.array(dms_mvt_coeffs)[:, 0]
     mvt_signal_coeffs_mean = np.mean(mvt_signal_coeffs)
-    mvt_signal_coeffs_err = np.std(mvt_signal_coeffs)
+    mvt_signal_coeffs_err = np.std(mvt_signal_coeffs) / np.sqrt(len(mvt_signal_coeffs))
     mvt_mvt_coeffs = np.array(dms_mvt_coeffs)[:, 1]
     mvt_mvt_coeffs_mean = np.mean(mvt_mvt_coeffs)
-    mvt_mvt_coeffs_err = np.std(mvt_mvt_coeffs)
+    mvt_mvt_coeffs_err = np.std(mvt_mvt_coeffs) /  np.sqrt(len(mvt_mvt_coeffs))
     mvt_reward_coeffs = np.array(dms_mvt_coeffs)[:, 2]
     mvt_reward_coeffs_mean = np.mean(mvt_reward_coeffs)
-    mvt_reward_coeffs_err = np.std(mvt_reward_coeffs)
+    mvt_reward_coeffs_err = np.std(mvt_reward_coeffs) / np.sqrt(len(mvt_reward_coeffs))
 
     reward_signal_coeffs = np.array(dms_reward_coeffs)[:, 0]
     reward_signal_coeffs_mean = np.mean(reward_signal_coeffs)
-    reward_signal_coeffs_err = np.std(reward_signal_coeffs)
+    reward_signal_coeffs_err = np.std(reward_signal_coeffs) / np.sqrt(len(reward_signal_coeffs))
     reward_mvt_coeffs = np.array(dms_reward_coeffs)[:, 1]
     reward_mvt_coeffs_mean = np.mean(reward_mvt_coeffs)
-    reward_mvt_coeffs_err = np.std(reward_mvt_coeffs)
+    reward_mvt_coeffs_err = np.std(reward_mvt_coeffs) / np.sqrt(len(reward_mvt_coeffs))
     reward_reward_coeffs = np.array(dms_reward_coeffs)[:, 2]
     reward_reward_coeffs_mean = np.mean(reward_reward_coeffs)
-    reward_reward_coeffs_err = np.std(reward_reward_coeffs)
+    reward_reward_coeffs_err = np.std(reward_reward_coeffs) / np.sqrt(len(reward_reward_coeffs))
     
     ax_dms[0].bar([0, 1, 2], [signal_signal_coeffs_mean, mvt_signal_coeffs_mean, reward_signal_coeffs_mean], yerr=[signal_signal_coeffs_err, mvt_signal_coeffs_err, reward_signal_coeffs_err], color='k')
     ax_dms[0].set_xticks([0, 1, 2])
