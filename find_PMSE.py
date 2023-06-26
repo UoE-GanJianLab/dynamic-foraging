@@ -126,7 +126,7 @@ def process_session(s, behaviour_path, strs, pfcs):
             peaks, properties = find_peaks(bins_in_window, height=heights)
             if len(peaks) > 0:
                 for peak in peaks:
-                    if bins[peak + left_ind] > mean[peak + left_ind] + 10:
+                    if bins[peak + left_ind] > mean[peak + left_ind] + 5:
                         # check full width at half maximum
                         left, right, counts = FWHM(peak + left_ind, bins)
                         if (right + left + 1) * (1/FREQ) <= 0.003:
