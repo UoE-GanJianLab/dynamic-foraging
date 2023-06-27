@@ -12,18 +12,8 @@ from lib.calculation import moving_window_mean, get_firing_rate_window, moving_w
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
 # reset means whether to recalculate the values disregarding the saved files
 def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False, reset: bool = False):
-    # if the relative spike time file for current session and cell already exists, load it
-    if os.path.exists(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy') and not reset:
-        pfc_relative_spike_times = np.load(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy')
-    else:
-        pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-        np.save(f'/data/spike_times/relative_spike_time_trials/{session_name}_{pfc_name}.npy', pfc_relative_spike_times)
-    
-    if os.path.exists(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy') and not reset:
-        str_relative_spike_times = np.load(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy')
-    else:
-        str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
-        np.save(f'/data/spike_times/relative_spike_time_trials/{session_name}_{str_name}.npy', str_relative_spike_times)
+    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
+    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
 
     # calculate the cross correlation
     cross_cors = []
@@ -44,16 +34,16 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
 
         for ind in indices:    
             # if the binnning file for current trial already exists, load it
-            if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{ind}.npy') and not reset:
+            if os.path.exists(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy') and not reset:
                 # load the binned array and add the respective counts to the histogram array
-                pfc_trial_times += np.load(f'/data/inter_trial_binned/10ms_{session_name}_{pfc_name}_{ind}.npy')
+                pfc_trial_times += np.load(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy')
             else:
                 # binning with bin size of 10ms using histogram
                 pfc_trial_times_cur = np.histogram(pfc_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
-                np.save(f'/data/cross_correlation/10ms_{session_name}_{pfc_name}_{ind}.npy', pfc_trial_times_cur)
+                np.save(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy', pfc_trial_times_cur)
                 pfc_trial_times += pfc_trial_times_cur
-            if os.path.exists(f'/data/inter_trial_binned/10ms_{session_name}_{str_name}_{ind}.npy') and not reset:
-                str_trial_times += np.load(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{ind}.npy')
+            if os.path.exists(f'/data/spike_times/figure_6/10ms_{session_name}_{str_name}_{ind}.npy') and not reset:
+                str_trial_times += np.load(f'/data/spike_times/figure_6/10ms_{session_name}_{str_name}_{ind}.npy')
             else:
                 str_trial_times_cur = np.histogram(str_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
                 np.save(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{ind}.npy', str_trial_times_cur)
@@ -143,17 +133,8 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
 # may be removed in the paper
 def figure_6_panel_e(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
     # if the relative spike time file for current session and cell already exists, load it
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy'):
-        pfc_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy')
-    else:
-        pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-        np.save(f'/data/relative_spike_time_trials/{session_name}_{pfc_name}.npy', pfc_relative_spike_times)
-    
-    if os.path.exists(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy'):
-        str_relative_spike_times = np.load(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy')
-    else:
-        str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
-        np.save(f'/data/relative_spike_time_trials/{session_name}_{str_name}.npy', str_relative_spike_times)
+    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5) 
+    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
 
     # calculate the cross correlation
     cross_cors = []
