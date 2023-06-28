@@ -1,6 +1,10 @@
 import os
+from os.path import join as pjoin, isfile, isdir, basename 
+from glob import glob
+from typing import List, Tuple, Dict
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -8,19 +12,23 @@ from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
 from scipy.signal import correlate # type: ignore
 
 from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times, get_normalized_cross_correlation, crosscorrelation
+from lib.file_utils import get_dms_pfc_paths_all, get_dms_pfc_paths_mono
+
+behaviour_root = pjoin('data', 'behaviour_data')
+spike_root = pjoin('data', 'spike_times', 'sessions')
+
 
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
-# reset means whether to recalculate the values disregarding the saved files
-def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False, reset: bool = False):
+def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reset: bool=False) -> np.ndarray:
     pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
+    dms_relative_spike_times = get_relative_spike_times(dms_times, cue_times, -1, -0.5)
 
     # calculate the cross correlation
-    cross_cors = []
+    interconnectivity_strength = []
     for i in range(len(cue_times)):
-        # get the 10 trials index before the current trial and the 10 trials index after the current trial
-        # if the current trial is within the first 10 trials or last 10 trials, use the incomplete window
-        # without padding
+        # get the 10 trials index before the current trial and the 10 trials index after 
+        # the current trial if the current trial is within the first 10 trials or last 10 
+        # trials, use the incomplete window without padding
         if i < 10:
             indices = np.arange(0, i + 11)
         elif i > len(cue_times) - 11:
@@ -29,243 +37,122 @@ def figure_6_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np
             indices = np.arange(i - 10, i + 11)
 
         # empty histogram array
-        pfc_trial_times = np.array([0] * 50)
-        str_trial_times = np.array([0] * 50)
+        pfc_trial_times = []
+        str_trial_times = []
 
         for ind in indices:    
-            # if the binnning file for current trial already exists, load it
-            if os.path.exists(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy') and not reset:
-                # load the binned array and add the respective counts to the histogram array
-                pfc_trial_times += np.load(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy')
-            else:
-                # binning with bin size of 10ms using histogram
-                pfc_trial_times_cur = np.histogram(pfc_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
-                np.save(f'/data/spike_times/figure_6/10ms_{session_name}_{pfc_name}_{ind}.npy', pfc_trial_times_cur)
-                pfc_trial_times += pfc_trial_times_cur
-            if os.path.exists(f'/data/spike_times/figure_6/10ms_{session_name}_{str_name}_{ind}.npy') and not reset:
-                str_trial_times += np.load(f'/data/spike_times/figure_6/10ms_{session_name}_{str_name}_{ind}.npy')
-            else:
-                str_trial_times_cur = np.histogram(str_relative_spike_times[ind], bins=np.arange(-1, -0.5, 0.01))[0]
-                np.save(f'/data/cross_correlation/10ms_{session_name}_{str_name}_{ind}.npy', str_trial_times_cur)
-                str_trial_times += str_trial_times_cur
+            pfc_trial_times += pfc_relative_spike_times[ind]
+            str_trial_times += dms_relative_spike_times[ind]
 
-
-        # if any of the array is empty, append 0
-        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
-            cross_cors.append(0)
-            continue
-        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 100)
-
-        # append the absolute maximum value of the cross correlation
-        cross_cors.append(np.max(np.abs(normalized_cross_corr)))
-
-    # reward proportion is the proportion of rewarded trials in the previous 10 trials
-    reward_proportion = moving_window_mean_prior(rewarded, 10)
-
-    # plot reward proportion vs cross correlation in twinx plot
-    fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
-    ax1.plot(reward_proportion, color='tab:blue')
-    ax1.set_xlabel('Trial')
-    ax1.set_ylabel('Reward proportion', color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    
-    ax2 = ax1.twinx()
-    ax2.plot(cross_cors, color='tab:red')
-    ax2.set_ylabel('Cross correlation', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-
-    # calculate pearson r and the p value, set it as figure title
-    r, p = pearsonr(reward_proportion, cross_cors)
-    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {str_name}')
-
-    # normalize cross correlation to 0-1, avoid divide by 0 error
-    if np.max(cross_cors) - np.min(cross_cors) == 0:
-        cross_cors = np.zeros(len(cross_cors))
-    else:
-        cross_cors = (cross_cors - np.min(cross_cors)) / (np.max(cross_cors) - np.min(cross_cors))
-
-    # calculate the overall cross correlation
-    overall_cross_cor = crosscorrelation(cross_cors, reward_proportion, maxlag=50)
-
-    # if the figures directory does not exist, create it
-    if not mono:
-        if not os.path.exists('figures/figure_6/panel_c'):
-            os.makedirs('figures/figure_6/panel_c')
-        if not os.path.exists('figures/figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
-        
-        # if not os.path.exists('figures/figure_6/panel_d'):
-        #     os.makedirs('figures/figure_6/panel_d')
-    else:
-        if not os.path.exists('figures/figure_6/panel_c'):
-            os.makedirs('figures/figure_6/panel_c')
-        if not os.path.exists('figures/figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
-        # if not os.path.exists('mono_figures/figure_6/panel_d'):
-        #     os.makedirs('mono_figures/figure_6/panel_d')
-
-    # save the figures
-    if not mono:
-        fig.savefig(f'figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
-        # fig_overall.savefig(f'figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation.png')
-    else:
-        fig.savefig(f'figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
-        # fig_overall.savefig(f'mono_figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
-
-    if p < 0.001:
-        if not mono:
-            # save the figures in significant folder
-            fig.savefig(f'figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant.png')
-            # fig_overall.savefig(f'figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant.png')
-        else:
-            # save the figures in significant folder
-            fig.savefig(f'mono_figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant_mono.png')
-            # fig_overall.savefig(f'mono_figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant_mono.png')
-
-    # close the figures
-    plt.close(fig)
-    # plt.close(fig_overall)
-
-    return fig
-
-
-# using firing during 1-3ms 
-# may be removed in the paper
-def figure_6_panel_e(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
-    # if the relative spike time file for current session and cell already exists, load it
-    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5) 
-    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
-
-    # calculate the cross correlation
-    cross_cors = []
-    for i in range(len(cue_times)):
-        pfc_trial_times = pfc_relative_spike_times[i]
-        str_trial_times = str_relative_spike_times[i]
-
-        # if any of the array is empty, append 0
-        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
-            cross_cors.append(0)
-            continue
-        # if the binnning file for current trial already exists, load it
-        if os.path.exists(f'/data/inter_trial_binned/1ms_{session_name}_{pfc_name}_{i}.npy'):
-            pfc_trial_times = np.load(f'/data/cross_correlation/1ms_{session_name}_{pfc_name}_{i}.npy')
-        else:
-            # binning with bin size of 10ms using histogram
-            pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-            np.save(f'/data/cross_correlation/1ms_{session_name}_{pfc_name}_{i}.npy', pfc_trial_times)
-        if os.path.exists(f'/data/inter_trial_binned/1ms_{session_name}_{str_name}_{i}.npy'):
-            str_trial_times = np.load(f'/data/cross_correlation/1ms_{session_name}_{str_name}_{i}.npy')
-        else:
-            str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-            np.save(f'/data/cross_correlation/1ms_{session_name}_{str_name}_{i}.npy', str_trial_times)
-
-        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 25)
-
-        # append the absolute maximum value of the cross correlation
-        cross_cors.append(np.max(np.mean(normalized_cross_corr[26:28])))
-
-    # smoothen the cross correlation
-    cross_cors = moving_window_mean(np.array(cross_cors), 20)
-
-    # reward proportion is the proportion of rewarded trials in the previous 10 trials
-    reward_proportion = moving_window_mean_prior(rewarded, 10)
-
-    # plot reward proportion vs cross correlation in twinx plot
-    fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
-    ax1.plot(reward_proportion, color='tab:blue')
-    ax1.set_xlabel('Trial')
-    ax1.set_ylabel('Reward proportion', color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    
-    ax2 = ax1.twinx()
-    ax2.plot(cross_cors, color='tab:red')
-    ax2.set_ylabel('Cross correlation', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-
-    # calculate pearson r and the p value, set it as figure title
-    r, p = pearsonr(reward_proportion, cross_cors)
-    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {str_name}')
-
-    # normalize cross correlation to 0-1, avoid divide by 0 error
-    if np.max(cross_cors) - np.min(cross_cors) == 0:
-        cross_cors = np.zeros(len(cross_cors))
-    else:
-        cross_cors = (cross_cors - np.min(cross_cors)) / (np.max(cross_cors) - np.min(cross_cors))
-
-    # calculate the overall cross correlation
-    overall_cross_cor = crosscorrelation(cross_cors, reward_proportion, maxlag=50)
-
-    # if the figures directory does not exist, create it
-    if not mono:
-        if not os.path.exists('figures/figure_6/panel_c'):
-            os.makedirs('figures/figure_6/panel_c')
-        if not os.path.exists('figures/figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
-        
-        # if not os.path.exists('figures/figure_6/panel_d'):
-        #     os.makedirs('figures/figure_6/panel_d')
-    else:
-        if not os.path.exists('figures/figure_6/panel_c'):
-            os.makedirs('figures/figure_6/panel_c')
-        if not os.path.exists('figures/figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
-        # if not os.path.exists('mono_figures/figure_6/panel_d'):
-        #     os.makedirs('mono_figures/figure_6/panel_d')
-
-    # save the figures
-    if not mono:
-        fig.savefig(f'figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
-        # fig_overall.savefig(f'figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation.png')
-    else:
-        fig.savefig(f'figures/figure_6/panel_c/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
-        # fig_overall.savefig(f'mono_figures/figure_6/panel_d/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_mono.png')
-
-    if p < 0.001:
-        if not mono:
-            # save the figures in significant folder
-            fig.savefig(f'figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant.png')
-            # fig_overall.savefig(f'figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant.png')
-        else:
-            # save the figures in significant folder
-            fig.savefig(f'mono_figures/figure_6/significant/6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_significant_mono.png')
-            # fig_overall.savefig(f'mono_figures/figure_6/significant/6d_{session_name}_{pfc_name}_{str_name}_overall_cross_correlation_significant_mono.png')
-
-    # close the figures
-    plt.close(fig)
-    # plt.close(fig_overall)
-
-    return fig
-
-def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, pfc_name: str, str_name: str, rewarded: np.ndarray, session_name: str, mono: bool = False):
-    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-    str_relative_spike_times = get_relative_spike_times(str_times, cue_times, -1, -0.5)
-
-    # calculate the cross correlation
-    cross_cors = []
-    for i in range(len(cue_times)):
-        pfc_trial_times = pfc_relative_spike_times[i]
-        str_trial_times = str_relative_spike_times[i]
-
-        # if any of the array is empty, append 0
-        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
-            cross_cors.append(0)
-            continue
-
-        # binning with bin size of 10ms using histogram
         pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
         str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
 
+
+        # if any of the array is empty, append 0
+        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
+            interconnectivity_strength.append(0)
+            continue
         normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 50)
+        interconnectivity_strength.append(normalized_cross_corr)
 
-        # append the absolute maximum value of the cross correlation
-        cross_cors.append(np.max(np.abs(normalized_cross_corr)))
+    interconnectivity_strength = np.array(interconnectivity_strength)
+    
+    return interconnectivity_strength
+    
+
+# reset means whether to recalculate the values disregarding the saved files
+def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False):
+    if isfile(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+        # load the interconnectivity strength
+        interconnectivity_strength = np.load(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) 
+    else:
+        # calculate the interconnectivity strength
+        interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_times, reset)
+        # load the interconnectivity strength
+        np.save(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength) 
 
 
-    # smoothen the cross correlation
-    # cross_cors = moving_window_mean(np.array(cross_cors), 20)
+    # plot reward proportion vs cross correlation in twinx plot
+    fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
+    ax1.plot(reward_proportion, color='tab:blue')
+    ax1.set_xlabel('Trial')
+    ax1.set_ylabel('Reward proportion', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    
+    ax2 = ax1.twinx()
+    ax2.plot(interconnectivity_strength, color='tab:red')
+    ax2.set_ylabel('Cross correlation', color='tab:red')
+    ax2.tick_params(axis='y', labelcolor='tab:red')
 
-    # reward proportion is the proportion of rewarded trials in the previous 10 trials
-    reward_proportion = moving_window_mean_prior(rewarded, 10)
+    # calculate pearson r and the p value, set it as figure title
+    r, p = pearsonr(reward_proportion, interconnectivity_strength)
+    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+
+    plt.close()
+
+    # calculate the overall cross correlation
+    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
+
+    return p, r, overall_cross_cor
+
+def get_figure_6_poster_panel_ab(mono: bool = False, reset: bool = False):
+    if mono:
+        str_pfc_paths = get_dms_pfc_paths_mono()
+        
+        for mono_pair in str_pfc_paths.iterrows():
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
+
+            # plot figure 6 poster panel ab
+            p, r, _ = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
+    else:
+        str_pfc_paths = get_dms_pfc_paths_all()
+
+        for session in str_pfc_paths:
+            session_name = session[0]
+            cue_time = session[1]
+            trial_reward = session[2]
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
+
+            for pair in session[3]:
+                pfc_path = pair[0]
+                dms_path = pair[1]
+            
+                pfc_name = basename(pfc_path).split('.')[0]
+                dms_name = basename(dms_path).split('.')[0]
+
+                pfc_times = np.load(pfc_path)
+                dms_times = np.load(dms_path)
+
+                # plot figure 6 poster panel ab
+                p, r, _ = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
+
+
+def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False):
+    # load the interconnectivity strength if it exists
+    if isfile(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+        interconnectivity_strength = np.load(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+    else:
+        # calculate the interconnectivity strength
+        interconnectivity_strength = get_interconnectivity_strength(pfc_times, str_times, cue_times)
+        # load the interconnectivity strength
+        np.save(pjoin('spike_times', 'figure_6', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+
+    # calculate the overall cross correlation
+    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
 
     discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0, 1, 0.2))
     discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
@@ -273,139 +160,127 @@ def figure_6_poster_panel_c(pfc_times: np.ndarray, str_times: np.ndarray, cue_ti
     # plot reward proportion vs cross correlation in twinx plot
     fig, ax = plt.subplots(1, 1, figsize=(15, 5))
     
-    # plot cross_cors against reward_proportion
-    sns.lineplot(x=discretized_reward_proportion, y=cross_cors, ax=ax, color='tab:blue', err_style='bars')
+    # plot interconnectivity_strength against reward_proportion
+    sns.lineplot(x=discretized_reward_proportion, y=interconnectivity_strength, ax=ax, color='tab:blue', err_style='bars')
     # set x axis tick label 
     ax.set_xticks(np.arange(0, 1, 0.2))
 
+    plt.close()
+
     # calculate pearson r and the p value, set it as figure title
-    r, p = pearsonr(reward_proportion, cross_cors)
-    # calculate spearman rank correlation and the p value
-    sr, sp = spearmanr(reward_proportion, cross_cors)
-    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {str_name}')
+    r, p = pearsonr(reward_proportion, interconnectivity_strength)
 
-    # if the figures directory does not exist, create it
-    if not mono:
-        if not os.path.exists('figures/figure_6/poster_panel_c'):
-            os.makedirs('figures/figure_6/poster_panel_c')
-        if not os.path.exists('figures/figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
+    return p, r, overall_cross_cor
+
+def get_figure_6_poster_panel_c(mono: bool = False, reset: bool = False):
+    if mono:
+        str_pfc_paths = get_dms_pfc_paths_mono()
+        
+        for mono_pair in str_pfc_paths.iterrows():
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
+
+            # plot figure 6 poster panel ab
+            p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
     else:
-        if not os.path.exists('figures/figure_6/poster_panel_c'):
-            os.makedirs('figures/figure_6/poster_panel_c')
-        if not os.path.exists('figures /figure_6/significant'):
-            os.makedirs('figures/figure_6/significant')
+        str_pfc_paths = get_dms_pfc_paths_all()
 
-    # save the figures
-    if not mono:
-        fig.savefig(f'figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation.png')
-    else:
-        fig.savefig(f'figures/figure_6/poster_panel_c/poster_6c_{session_name}_{pfc_name}_{str_name}_cross_correlation_mono.png')
+        for session in str_pfc_paths:
+            session_name = session[0]
+            cue_time = session[1]
+            trial_reward = session[2]
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
 
-    # close the figures
-    plt.close(fig)
+            for pair in session[3]:
+                pfc_path = pair[0]
+                dms_path = pair[1]
+            
+                pfc_name = basename(pfc_path).split('.')[0]
+                dms_name = basename(dms_path).split('.')[0]
 
-    return cross_cors, reward_proportion, p, r, sp, sr
+                pfc_times = np.load(pfc_path)
+                dms_times = np.load(dms_path)
+
+                # plot figure 6 poster panel ab
+                p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
 
 
-def figure_6_poster_panel_d(rs: np.ndarray, ps: np.ndarray, mono=False, spearman=False):
+def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
-    sig_rs_positive_percentages = []
-    sig_rs_negative_percentages = []
-
-    sig_size = 0
-
-    for i in range(len(rs)):
-        # get the significant rs and ps
-        sig_rs = rs[i][ps[i]<0.01]
-        sig_size += len(sig_rs)
-
-        sig_rs_positive = sig_rs[sig_rs>0]
-        sig_rs_negative = sig_rs[sig_rs<0]
+    if mono:
+        str_pfc_paths = get_dms_pfc_paths_mono()
         
-        print(f'{i}th session, positive: {len(sig_rs_positive)}, negative: {len(sig_rs_negative)}')
+        for mono_pair in str_pfc_paths.iterrows():
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
 
-        # calculate the percentage of positive and negative significant rs
-        sig_rs_positive_percentage = len(sig_rs_positive)/len(rs[i])
-        sig_rs_negative_percentage = len(sig_rs_negative)/len(rs[i])
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
 
-        # append the percentage to the list
-        sig_rs_positive_percentages.append(sig_rs_positive_percentage)
-        sig_rs_negative_percentages.append(sig_rs_negative_percentage)
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
 
-    print(f'num of significant rs: {sig_size}')
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
 
-    # t test to see if the percentage of positive and negative significant rs are different
-    t, p = ttest_ind(sig_rs_positive_percentages, sig_rs_negative_percentages, alternative='less')
-    print(f't: {t}, p: {p}')
-
-    # plot the bar plot with the average percentage of positive and negative significant rs
-    sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
-    axes.set_ylim(0, 1)
-
-    if not mono:
-        # if the figures directory does not exist, create it
-        if not os.path.exists('figures/figure_6'):
-            os.makedirs('figures/figure_6')
-        if not spearman:
-            # save the figures
-            fig.savefig(f'figures/figure_6/poster_6d.png')
-        else:
-            fig.savefig(f'figures/figure_6/poster_6d_spearman.png')
+            # plot figure 6 poster panel ab
+            p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
     else:
-        # if the figures directory does not exist, create it
-        if not os.path.exists('figures/figure_6'):
-            os.makedirs('figures/figure_6')
-        # save the figures
-        if not spearman:
-            fig.savefig(f'figures/figure_6/poster_6d_mono.png')
-        else:
-            fig.savefig(f'figures/figure_6/poster_6d_spearman_mono.png')
+        str_pfc_paths = get_dms_pfc_paths_all()
 
-def figure_6_poster_panel_d_mono_window(rs: np.ndarray, ps: np.ndarray, mono=False):
+        for session in str_pfc_paths:
+            session_name = session[0]
+            cue_time = session[1]
+            trial_reward = session[2]
+            reward_proportion = moving_window_mean_prior(trial_reward, 20)
+
+            for pair in session[3]:
+                pfc_path = pair[0]
+                dms_path = pair[1]
+            
+                pfc_name = basename(pfc_path).split('.')[0]
+                dms_name = basename(dms_path).split('.')[0]
+
+                pfc_times = np.load(pfc_path)
+                dms_times = np.load(dms_path)
+
+                # plot figure 6 poster panel ab
+                p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
+
+    # 
+
+    # # t test to see if the percentage of positive and negative significant rs are different
+    # t, p = ttest_ind(sig_rs_positive_percentages, sig_rs_negative_percentages, alternative='less')
+    # print(f't: {t}, p: {p}')
+
+    # # plot the bar plot with the average percentage of positive and negative significant rs
+    # sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
+    # axes.set_ylim(0, 1)
+
+def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
-    sig_rs_positive_percentages = []
-    sig_rs_negative_percentages = []
+    # 
 
-    sig_size = 0
+def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
-    for i in range(len(rs)):
-        # get the significant rs and ps
-        sig_rs = rs[i][ps[i]<0.01]
-        sig_size += len(sig_rs)
-
-        sig_rs_positive = sig_rs[sig_rs>0]
-        sig_rs_negative = sig_rs[sig_rs<0]
-        
-        print(f'{i}th session, positive: {len(sig_rs_positive)}, negative: {len(sig_rs_negative)}')
-
-        # calculate the percentage of positive and negative significant rs
-        sig_rs_positive_percentage = len(sig_rs_positive)/len(rs[i])
-        sig_rs_negative_percentage = len(sig_rs_negative)/len(rs[i])
-
-        # append the percentage to the list
-        sig_rs_positive_percentages.append(sig_rs_positive_percentage)
-        sig_rs_negative_percentages.append(sig_rs_negative_percentage)
-
-    print(f'num of significant rs: {sig_size}')
-
-    # t test to see if the percentage of positive and negative significant rs are different
-    t, p = ttest_ind(sig_rs_positive_percentages, sig_rs_negative_percentages, alternative='less')
-    print(f't: {t}, p: {p}')
-
-    # plot the bar plot with the average percentage of positive and negative significant rs
-    sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentages), np.mean(sig_rs_negative_percentages)], ax=axes)
-    axes.set_ylim(0, 1)
-
-    if not mono:
-        # if the figures directory does not exist, create it
-        if not os.path.exists('figures/figure_6'):
-            os.makedirs('figures/figure_6')
-
-        # save the figures
-        fig.savefig(f'figures/figure_6/poster_6d_mono_window.png')
-    else:
-        # save the figures
-        fig.savefig(f'figures/figure_6/poster_6d_mono_window.png')
+    #

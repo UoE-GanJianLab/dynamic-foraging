@@ -27,7 +27,7 @@ def get_str_pfc(session_name: str) -> Tuple[Dict, Dict]:
     return str_times, pfc_times
 
 # return the session_name, cue_times, and all pfc_str pairs' paths from each session
-def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
+def get_dms_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarray, List[List[str]]]]:
     session_names = get_session_names()
     str_pfc_pair_paths = []
     for session_name in session_names:
@@ -49,7 +49,7 @@ def get_str_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarra
     return str_pfc_pair_paths
 
 # return the session_name, cue_times, and all PMSE pfc_str pairs' paths from each session
-def get_str_pfc_paths_mono(no_nan=False) -> pd.DataFrame:
+def get_dms_pfc_paths_mono(no_nan=False) -> pd.DataFrame:
     # get all mono pairs
     mono_pairs = pd.read_csv(pjoin('data', 'mono_pairs.csv'))
 
