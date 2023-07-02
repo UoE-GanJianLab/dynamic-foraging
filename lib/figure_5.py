@@ -197,14 +197,6 @@ def fig_5_panel_e(phase_diffs_pdrp_pfc: List[float], phase_diff_pdrp_pfc_bg: Lis
 
     return fig
 
-    # Set the x-axis tick labels to pi
-    set_xticks_and_labels_pi(axes[0][0])
-    set_xticks_and_labels_pi(axes[0][1])
-    set_xticks_and_labels_pi(axes[1][0])
-    set_xticks_and_labels_pi(axes[1][1])
-
-    return fig
-
 
 def set_xticks_and_labels_pi(ax: plt.Axes):
     ax.set_xticks([-np.pi, 0, np.pi])
@@ -213,7 +205,6 @@ def set_xticks_and_labels_pi(ax: plt.Axes):
 def remove_top_and_right_spines(ax: plt.Axes):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-
 
 def phase_diff_pfc_str(pfc_mag, str_mag, pfc_bg, str_bg) -> Tuple[float, float]:
     session_length = len(pfc_mag)
