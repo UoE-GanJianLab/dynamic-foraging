@@ -338,7 +338,6 @@ def remove_top_and_right_spines(ax: plt.Axes):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
-
 def phase_diff_pfc_str(pfc_mag, str_mag, pfc_bg, str_bg) -> Tuple[float, float]:
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
