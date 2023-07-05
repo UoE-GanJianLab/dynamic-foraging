@@ -35,10 +35,10 @@ def get_dms_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarra
         session_data = pd.read_csv(session_data_path)
         if no_nan:
             session_data = session_data[session_data['trial_response_side'].notna()]
-        else:
-            session_data.fillna(0, inplace=True)
         cue_times = session_data['cue_time'].values
-        trial_reward = session_data['trial_reward'].values
+        # fill the nan with 0
+        trial_reward = np.array(session_data['trial_reward'].values)
+        trial_reward[np.isnan(trial_reward)] = 0
         session_root = pjoin(spike_data_root, session_name)
         cell_pairs = []
         for dms_cell in glob(pjoin(session_root, 'str_*')):
@@ -72,31 +72,31 @@ def get_dms_pfc_paths_mono(no_nan=False) -> pd.DataFrame:
     
     return result
 
-dmsong_corr_iti_path = pjoin('data', "delta_P_correlated_mono_pairs_background.csv")
-dmsong_corr_path = pjoin('data', "delta_P_correlated_mono_pairs_response.csv")
+strong_corr_iti_path = pjoin('data', "delta_P_correlated_mono_pairs_background.csv")
+strong_corr_path = pjoin('data', "delta_P_correlated_mono_pairs_response.csv")
 
 # using this instead of static path for compatibility with both windows and linux systems
 # returns two dataframe of cell pair data, first for iti, then for response window
 # instead of the 
-def get_dms_pfc_dmsong_corr_mono():
-    dmsong_corr_iti = pd.read_csv(dmsong_corr_iti_path)
-    dmsong_corr = pd.read_csv(dmsong_corr_path)
+def get_dms_pfc_strong_corr_mono():
+    strong_corr_iti = pd.read_csv(strong_corr_iti_path)
+    strong_corr = pd.read_csv(strong_corr_path)
 
-    dmsong_corr_iti["session_path"] = dmsong_corr_iti.apply(lambda row: pjoin(behaviour_root, row['session']), axis=1)
-    dmsong_corr["session_path"] = dmsong_corr.apply(lambda row: pjoin(behaviour_root, row['session']), axis=1)
-    dmsong_corr_iti["session_path"] = dmsong_corr_iti["session_path"] + '.csv'
-    dmsong_corr["session_path"] = dmsong_corr["session_path"] + '.csv'
+    strong_corr_iti["session_path"] = strong_corr_iti.apply(lambda row: pjoin(behaviour_root, row['session']), axis=1)
+    strong_corr["session_path"] = strong_corr.apply(lambda row: pjoin(behaviour_root, row['session']), axis=1)
+    strong_corr_iti["session_path"] = strong_corr_iti["session_path"] + '.csv'
+    strong_corr["session_path"] = strong_corr["session_path"] + '.csv'
 
-    dmsong_corr_iti["dms_path"] = dmsong_corr_iti["dms_name"] + '.npy'
-    dmsong_corr_iti["pfc_path"] = dmsong_corr_iti["pfc_name"] + '.npy'
+    strong_corr_iti["dms_path"] = strong_corr_iti["dms_name"] + '.npy'
+    strong_corr_iti["pfc_path"] = strong_corr_iti["pfc_name"] + '.npy'
 
-    dmsong_corr["dms_path"] = dmsong_corr["dms_name"] + '.npy'
-    dmsong_corr["pfc_path"] = dmsong_corr["pfc_name"] + '.npy'
+    strong_corr["dms_path"] = strong_corr["dms_name"] + '.npy'
+    strong_corr["pfc_path"] = strong_corr["pfc_name"] + '.npy'
 
-    dmsong_corr_iti["dms_path"] = dmsong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['dms_path']), axis=1)
-    dmsong_corr_iti["pfc_path"] = dmsong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
+    strong_corr_iti["dms_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['dms_path']), axis=1)
+    strong_corr_iti["pfc_path"] = strong_corr_iti.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
 
-    dmsong_corr["dms_path"] = dmsong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['dms_path']), axis=1)
-    dmsong_corr["pfc_path"] = dmsong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
+    strong_corr["dms_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['dms_path']), axis=1)
+    strong_corr["pfc_path"] = strong_corr.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)
 
-    return dmsong_corr_iti[['session_path', 'dms_path', 'pfc_path']], dmsong_corr[['session_path', 'dms_path', 'pfc_path']]
+    return strong_corr_iti[['session_path', 'dms_path', 'pfc_path']], strong_corr[['session_path', 'dms_path', 'pfc_path']]

@@ -9,7 +9,7 @@ from glob import glob
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
-
+from scipy.stats import chi2 # type: ignore
 
 from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
@@ -272,7 +272,7 @@ def get_session_performances() -> Tuple[Dict[str, float], float]:
         right_proportion = moving_window_mean((session_data['trial_response_side']==1).to_numpy(), 20)
         left_proportion = moving_window_mean((session_data['trial_response_side']==-1).to_numpy(), 20)
 
-        # # subtract the mean of each signal
+        # subtract the mean of each signal
         # right_prob = right_prob - np.mean(right_prob)
         # left_prob = left_prob - np.mean(left_prob)
         # right_proportion = right_proportion - np.mean(right_proportion)
@@ -335,3 +335,82 @@ def get_response_bg_firing(cue_times, spike_times):
     bg_firing = np.array(bg_firing)
 
     return response_mag, bg_firing
+
+def wrap_to_pi(angle):
+    """
+    Wrap an angle to the range [-pi, pi].
+
+    Parameters
+    ----------
+    angle : float or array_like
+        The angle(s) to wrap, in radians.
+
+    Returns
+    -------
+    wrapped_angle : float or ndarray
+        The angle(s) wrapped to the range [-pi, pi].
+
+    """
+    wrapped_angle = np.mod(angle + np.pi, 2*np.pi) - np.pi
+    return wrapped_angle
+
+def circmean(angles, weights=None):
+    """
+    Calculate the circular mean of a set of angles.
+
+    Parameters
+    ----------
+    angles : array_like
+        Input angles in radians.
+    weights : array_like, optional
+        Weights to apply to each angle. Must be the same shape as `angles`.
+
+    Returns
+    -------
+    mean_angle : float
+        The circular mean of the input angles.
+
+    """
+    if weights is None:
+        weights = np.ones_like(angles)
+
+    sin_sum = np.sum(weights * np.sin(angles))
+    cos_sum = np.sum(weights * np.cos(angles))
+
+    mean_angle = np.arctan2(sin_sum, cos_sum)
+    mean_angle = wrap_to_pi(mean_angle)
+
+    return mean_angle
+
+def circ_mtest(angles, mu, alpha=0.05):
+    """
+    Perform a one-sample test of circular mean direction against a specified null hypothesis.
+
+    Parameters
+    ----------
+    angles : array_like
+        Input angles in radians.
+    mu : float
+        The hypothesized mean direction.
+    alpha : float, optional
+        The significance level for the test.
+
+    Returns
+    -------
+    p_value : float
+        The p-value for the test.
+
+    """
+    angles = np.asarray(angles, dtype=np.float64)
+    n = len(angles)
+    r = np.sum(np.exp(1j * angles - 1j * mu))
+    R = np.abs(r) / n
+
+    # calculate the test statistic
+    test_stat = n * R**2
+
+    # calculate the p-value
+    df = 2
+    p_value = 1 - chi2.cdf(test_stat, df)
+
+    return p_value

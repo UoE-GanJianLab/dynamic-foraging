@@ -1,13 +1,21 @@
 import os
-from os.path import join as pjoin, isfile, isdir, basename 
+from os import mkdir
+from os.path import join as pjoin, isfile, isdir, basename
 from glob import glob
 from typing import List, Tuple, Dict
+import warnings
+# Suppress all warnings
+warnings.filterwarnings("ignore")
+from multiprocessing import Pool
+from functools import partial
+from shutil import rmtree
+
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import tqdm
 from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
 from scipy.signal import correlate # type: ignore
 
@@ -21,11 +29,15 @@ figure_6_data_root = pjoin('data', 'spike_times', 'figure_6')
 
 p_value_threshold = 0.05
 
+WINDOW_LEFT = -1
+WINDOW_RIGHT = 0
+BIN_SIZE = 0.01
+
 
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
 def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reset: bool=False) -> np.ndarray:
-    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, -1, -0.5)
-    dms_relative_spike_times = get_relative_spike_times(dms_times, cue_times, -1, -0.5)
+    pfc_relative_spike_times = get_relative_spike_times(pfc_times, cue_times, WINDOW_LEFT, WINDOW_RIGHT)
+    dms_relative_spike_times = get_relative_spike_times(dms_times, cue_times, WINDOW_LEFT, WINDOW_RIGHT)
 
     # calculate the cross correlation
     interconnectivity_strength = []
@@ -33,12 +45,13 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
         # get the 10 trials index before the current trial and the 10 trials index after 
         # the current trial if the current trial is within the first 10 trials or last 10 
         # trials, use the incomplete window without padding
-        if i < 10:
-            indices = np.arange(0, i + 11)
-        elif i > len(cue_times) - 11:
-            indices = np.arange(i - 10, len(cue_times))
-        else:
-            indices = np.arange(i - 10, i + 11)
+        # if i < 10:
+        #     indices = np.arange(0, i + 11)
+        # elif i > len(cue_times) - 11:
+        #     indices = np.arange(i - 10, len(cue_times))
+        # else:
+        #     indices = np.arange(i - 10, i + 11)
+        indices = [i]
 
         # empty histogram array
         pfc_trial_times = []
@@ -48,15 +61,19 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
             pfc_trial_times += pfc_relative_spike_times[ind]
             str_trial_times += dms_relative_spike_times[ind]
 
-        pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-        str_trial_times = np.histogram(str_trial_times, bins=np.arange(-1, -0.5, 0.01))[0]
-
-
         # if any of the array is empty, append 0
         if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
             interconnectivity_strength.append(0)
             continue
-        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 50)
+
+        pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT, BIN_SIZE))[0]
+        str_trial_times = np.histogram(str_trial_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT, BIN_SIZE))[0]
+
+        # normalize the histogram
+        pfc_trial_times = pfc_trial_times / len(indices)
+        str_trial_times = str_trial_times / len(indices)
+        
+        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 20)
         interconnectivity_strength.append(np.max(np.abs(normalized_cross_corr)))
 
     interconnectivity_strength = np.array(interconnectivity_strength)
@@ -65,7 +82,7 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     
 
 # reset means whether to recalculate the values disregarding the saved files
-def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False):
+def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         # load the interconnectivity strength
         interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) 
@@ -75,79 +92,40 @@ def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc
         # load the interconnectivity strength
         np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength) 
 
-
-    # plot reward proportion vs cross correlation in twinx plot
-    fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
-    ax1.plot(reward_proportion, color='tab:blue')
-    ax1.set_xlabel('Trial')
-    ax1.set_ylabel('Reward proportion', color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    
-    ax2 = ax1.twinx()
-    ax2.plot(interconnectivity_strength, color='tab:red')
-    ax2.set_ylabel('Cross correlation', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-
     # calculate pearson r and the p value, set it as figure title
-    r, p = pearsonr(reward_proportion, interconnectivity_strength)
-    fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", category=UserWarning)
+        try:
+            r, p = pearsonr(reward_proportion, interconnectivity_strength)
+        except (RuntimeWarning, UserWarning):
+            r, p = 0, 1
 
-    plt.close()
+    if plot:
+        # plot reward proportion vs cross correlation in twinx plot
+        fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
+        ax1.plot(reward_proportion, color='tab:blue')
+        ax1.set_xlabel('Trial')
+        ax1.set_ylabel('Reward proportion', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+        
+        ax2 = ax1.twinx()
+        ax2.plot(interconnectivity_strength, color='tab:red')
+        ax2.set_ylabel('Cross correlation', color='tab:red')
+        ax2.tick_params(axis='y', labelcolor='tab:red')
+
+        
+        # fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+
+        plt.close()
 
     # calculate the overall cross correlation
     overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
 
     return p, r, overall_cross_cor
 
-def get_figure_6_poster_panel_ab(mono: bool = False, reset: bool = False):
-    if mono:
-        str_pfc_paths = get_dms_pfc_paths_mono()
-        
-        for mono_pair in str_pfc_paths.iterrows():
-            session_path = mono_pair[1]['session_path']
-            pfc_path = mono_pair[1]['pfc_path']
-            dms_path = mono_pair[1]['dms_path']
-
-            session_name = basename(session_path).split('.')[0]
-            pfc_name = basename(pfc_path).split('.')[0]
-            dms_name = basename(dms_path).split('.')[0]
-
-            pfc_times = np.load(pfc_path)
-            dms_times = np.load(dms_path)
-
-            behaviour_data = pd.read_csv(session_path)
-            # ignore the nan trials
-            behaviour_data = behaviour_data[~np.isnan(behaviour_data['trial_reward'])]  
-            cue_time = np.array(behaviour_data['cue_time'].values)            
-            trial_reward = np.array(behaviour_data['trial_reward'].values)
-            reward_proportion = moving_window_mean_prior(trial_reward, 20)
-
-            # plot figure 6 poster panel ab
-            p, r, _ = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
-    else:
-        str_pfc_paths = get_dms_pfc_paths_all()
-
-        for session in str_pfc_paths:
-            session_name = session[0]
-            cue_time = session[1]
-            trial_reward = session[2]
-            reward_proportion = moving_window_mean_prior(trial_reward, 20)
-
-            for pair in session[3]:
-                pfc_path = pair[0]
-                dms_path = pair[1]
-            
-                pfc_name = basename(pfc_path).split('.')[0]
-                dms_name = basename(dms_path).split('.')[0]
-
-                pfc_times = np.load(pfc_path)
-                dms_times = np.load(dms_path)
-
-                # plot figure 6 poster panel ab
-                p, r, _ = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
 
 
-def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False):
+def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
@@ -163,18 +141,25 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
     discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0, 1, 0.2))
     discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
 
-    # plot reward proportion vs cross correlation in twinx plot
-    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-    
-    # plot interconnectivity_strength against reward_proportion
-    sns.lineplot(x=discretized_reward_proportion, y=interconnectivity_strength, ax=ax, color='tab:blue', err_style='bars')
-    # set x axis tick label 
-    ax.set_xticks(np.arange(0, 1, 0.2))
 
-    plt.close()
+    if plot:
+        # plot reward proportion vs cross correlation in line plot
+        fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+        
+        # plot interconnectivity_strength against reward_proportion
+        sns.lineplot(x=discretized_reward_proportion, y=interconnectivity_strength, ax=ax, color='tab:blue', err_style='bars')
+        # set x axis tick label 
+        ax.set_xticks(np.arange(0, 1, 0.2))
+
+        plt.close()
 
     # calculate pearson r and the p value, set it as figure title
-    r, p = pearsonr(reward_proportion, interconnectivity_strength)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", category=UserWarning)
+        try:
+            r, p = pearsonr(discretized_reward_proportion, interconnectivity_strength)
+        except (RuntimeWarning, UserWarning):
+            r, p = 0, 1
 
 
     return p, r, overall_cross_cor
@@ -185,16 +170,18 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     sig_rs_positive_percentage = []
     sig_rs_negative_percentage = []
 
+    if reset:
+        rmtree(figure_6_data_root)
+        mkdir(figure_6_data_root)
+
     if mono:
         str_pfc_paths = get_dms_pfc_paths_mono()
-
-        total = len(str_pfc_paths)
 
         session_total = {}
         session_sig_rs_positive = {}
         session_sig_rs_negative = {}
         
-        for mono_pair in str_pfc_paths.iterrows():
+        for mono_pair in tqdm.tqdm(str_pfc_paths.iterrows()):
             session_path = mono_pair[1]['session_path']
             pfc_path = mono_pair[1]['pfc_path']
             dms_path = mono_pair[1]['dms_path']
@@ -214,14 +201,14 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             dms_times = np.load(dms_path)
 
             behaviour_data = pd.read_csv(session_path)
-            # ignore the nan trials
-            behaviour_data = behaviour_data[~np.isnan(behaviour_data['trial_reward'])]
             cue_time = np.array(behaviour_data['cue_time'].values)
             trial_reward = np.array(behaviour_data['trial_reward'].values)
-            reward_proportion = moving_window_mean_prior(trial_reward, 20)
+            # fill the nan with 0
+            trial_reward[np.isnan(trial_reward)] = 0
+            reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
+            p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             if p < p_value_threshold:
                 if r > 0:
@@ -233,41 +220,15 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             sig_rs_positive_percentage.append(session_sig_rs_positive[session_name] / session_total[session_name])
             sig_rs_negative_percentage.append(session_sig_rs_negative[session_name] / session_total[session_name])
     else:
-        str_pfc_paths = get_dms_pfc_paths_all()
+        str_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
-        for session in str_pfc_paths:
-            session_sig_rs_positive = 0
-            session_sig_rs_negative = 0
-            session_name = session[0]
-            cue_time = session[1]
-            trial_reward = session[2]
-            reward_proportion = moving_window_mean_prior(trial_reward, 20)#
+        with Pool() as pool:
+            process_session_partial = partial(process_session, reset=reset)
+            results = list(tqdm.tqdm(pool.imap(process_session_partial, str_pfc_paths), total=len(str_pfc_paths)))
 
-            session_total = len(session[3])
-
-            for pair in session[3]:
-                pfc_path = pair[0]
-                dms_path = pair[1]
-            
-                pfc_name = basename(pfc_path).split('.')[0]
-                dms_name = basename(dms_path).split('.')[0]
-
-                pfc_times = np.load(pfc_path)
-                dms_times = np.load(dms_path)
-
-                # plot figure 6 poster panel ab
-                p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset)
-
-                if p < p_value_threshold:
-                    if r > 0:
-                        session_sig_rs_positive += 1
-                    else:
-                        session_sig_rs_negative += 1
-
-            # calculate the percentage of significant positive and negative r for each session
-            sig_rs_positive_percentage.append(session_sig_rs_positive / session_total)
-            sig_rs_negative_percentage.append(session_sig_rs_negative / session_total)
-
+        for result in results:
+            sig_rs_positive_percentage.append(result[0])
+            sig_rs_negative_percentage.append(result[1])
 
 
     # t test to see if the percentage of positive and negative significant rs are different
@@ -277,6 +238,42 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
     axes.set_ylim(0, 1)
+
+def process_session(session, reset=False):
+    session_sig_rs_positive = 0
+    session_sig_rs_negative = 0
+    session_name = session[0]
+    cue_time = session[1]
+    trial_reward = session[2]
+    reward_proportion = moving_window_mean_prior(trial_reward, 10)
+
+    session_total = len(session[3])
+
+    for pair in session[3]:
+        dms_path = pair[0]
+        pfc_path = pair[1]
+
+        pfc_name = basename(pfc_path).split('.')[0]
+        dms_name = basename(dms_path).split('.')[0]
+
+        pfc_times = np.load(pfc_path)
+        dms_times = np.load(dms_path)
+
+        # plot figure 6 poster panel ab
+        p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+
+        if p < p_value_threshold:
+            if r > 0:
+                session_sig_rs_positive += 1
+            else:
+                session_sig_rs_negative += 1
+
+    # calculate the percentage of significant positive and negative r for each session
+    sig_rs_positive_percentage = session_sig_rs_positive / session_total
+    sig_rs_negative_percentage = session_sig_rs_negative / session_total
+
+    return (sig_rs_positive_percentage, sig_rs_negative_percentage)
+
 
 def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
