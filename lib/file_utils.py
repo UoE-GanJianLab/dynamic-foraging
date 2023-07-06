@@ -20,7 +20,7 @@ def get_dms_pfc(session_name: str) -> Tuple[Dict, Dict]:
     dms_times = {}
     pfc_times = {}
     session_root = pjoin(spike_data_root, session_name)
-    for pfc_cell in glob(pjoin(session_root, 'pfc_*')):
+    for pfc_cell in glob(pjoin(session_root, 'dms_*')):
         pfc_times[basename(pfc_cell).split('.')[0]] = np.load(pfc_cell)
     for dms_cell in glob(pjoin(session_root, 'dms_*')):
         dms_times[basename(dms_cell).split('.')[0]] = np.load(dms_cell)
@@ -41,7 +41,7 @@ def get_dms_pfc_paths_all(no_nan=False) -> List[Tuple[str, np.ndarray, np.ndarra
         trial_reward[np.isnan(trial_reward)] = 0
         session_root = pjoin(spike_data_root, session_name)
         cell_pairs = []
-        for dms_cell in glob(pjoin(session_root, 'str_*')):
+        for dms_cell in glob(pjoin(session_root, 'dms_*')):
             for pfc_cell in glob(pjoin(session_root, 'pfc_*')):
                 cell_pair = [dms_cell, pfc_cell]
                 cell_pairs.append(cell_pair)
@@ -62,7 +62,7 @@ def get_dms_pfc_paths_mono(no_nan=False) -> pd.DataFrame:
     # do this using apply
     mono_pairs["session_path"] = mono_pairs.apply(lambda row: pjoin(behaviour_root, row['session']), axis=1)
     mono_pairs["session_path"] = mono_pairs["session_path"] + '.csv'
-    mono_pairs["dms_path"] = mono_pairs["str"] + '.npy'
+    mono_pairs["dms_path"] = mono_pairs["dms"] + '.npy'
     mono_pairs["pfc_path"] = mono_pairs["pfc"] + '.npy'
     mono_pairs["dms_path"] = mono_pairs.apply(lambda row: pjoin(spike_data_root, row['session'], row['dms_path']), axis=1)
     mono_pairs["pfc_path"] = mono_pairs.apply(lambda row: pjoin(spike_data_root, row['session'], row['pfc_path']), axis=1)

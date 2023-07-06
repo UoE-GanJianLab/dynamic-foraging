@@ -55,25 +55,25 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
 
         # empty histogram array
         pfc_trial_times = []
-        str_trial_times = []
+        dms_trial_times = []
 
         for ind in indices:    
             pfc_trial_times += pfc_relative_spike_times[ind]
-            str_trial_times += dms_relative_spike_times[ind]
+            dms_trial_times += dms_relative_spike_times[ind]
 
         # if any of the array is empty, append 0
-        if len(pfc_trial_times) == 0 or len(str_trial_times) == 0:
+        if len(pfc_trial_times) == 0 or len(dms_trial_times) == 0:
             interconnectivity_strength.append(0)
             continue
 
         pfc_trial_times = np.histogram(pfc_trial_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT, BIN_SIZE))[0]
-        str_trial_times = np.histogram(str_trial_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT, BIN_SIZE))[0]
+        dms_trial_times = np.histogram(dms_trial_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT, BIN_SIZE))[0]
 
         # normalize the histogram
         pfc_trial_times = pfc_trial_times / len(indices)
-        str_trial_times = str_trial_times / len(indices)
+        dms_trial_times = dms_trial_times / len(indices)
         
-        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, str_trial_times, 20)
+        normalized_cross_corr = get_normalized_cross_correlation(pfc_trial_times, dms_trial_times, 20)
         interconnectivity_strength.append(np.max(np.abs(normalized_cross_corr)))
 
     interconnectivity_strength = np.array(interconnectivity_strength)
@@ -125,13 +125,13 @@ def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc
 
 
 
-def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, str_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
+def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
     else:
         # calculate the interconnectivity strength
-        interconnectivity_strength = get_interconnectivity_strength(pfc_times, str_times, cue_times)
+        interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_times)
         # load the interconnectivity strength
         np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
 
@@ -175,13 +175,13 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
         mkdir(figure_6_data_root)
 
     if mono:
-        str_pfc_paths = get_dms_pfc_paths_mono()
+        dms_pfc_paths = get_dms_pfc_paths_mono()
 
         session_total = {}
         session_sig_rs_positive = {}
         session_sig_rs_negative = {}
         
-        for mono_pair in tqdm.tqdm(str_pfc_paths.iterrows()):
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
             session_path = mono_pair[1]['session_path']
             pfc_path = mono_pair[1]['pfc_path']
             dms_path = mono_pair[1]['dms_path']
@@ -220,11 +220,11 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             sig_rs_positive_percentage.append(session_sig_rs_positive[session_name] / session_total[session_name])
             sig_rs_negative_percentage.append(session_sig_rs_negative[session_name] / session_total[session_name])
     else:
-        str_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
+        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
         with Pool() as pool:
             process_session_partial = partial(process_session, reset=reset)
-            results = list(tqdm.tqdm(pool.imap(process_session_partial, str_pfc_paths), total=len(str_pfc_paths)))
+            results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
         for result in results:
             sig_rs_positive_percentage.append(result[0])

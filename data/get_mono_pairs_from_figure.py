@@ -16,8 +16,9 @@ if len(sys.argv) < 2:
     sys.exit(1)
 figure_dir = sys.argv[1]
 
+
 # Define the regular expression pattern to extract the session, str, and pfc names
-pattern = r'(\w+)_str_(\d+)_pfc_(\d+)\.png'
+pattern = r'(\w+)_(str|dms)_(\d+)_pfc_(\d+)\.png'
 
 # Create a list to store the mono pairs
 mono_pairs = []
@@ -30,13 +31,13 @@ for filename in os.listdir(figure_dir):
         match = re.match(pattern, filename)
         if match:
             session = match.group(1)
-            str_name = 'str_' + match.group(2)
-            pfc_name = 'pfc_' + match.group(3)
+            dms_name = 'dms_' + match.group(3)
+            pfc_name = 'pfc_' + match.group(4)
             # Add the mono pair to the list
-            mono_pairs.append((session, str_name, pfc_name))
+            mono_pairs.append((session, dms_name, pfc_name))
 
 # Write the mono pairs to a CSV file
 with open('mono_pairs.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(['session', 'str', 'pfc'])
+    writer.writerow(['session', 'dms', 'pfc'])
     writer.writerows(mono_pairs)
