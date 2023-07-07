@@ -4,8 +4,6 @@ from os.path import join as pjoin, isfile, isdir, basename
 from glob import glob
 from typing import List, Tuple, Dict
 import warnings
-# Suppress all warnings
-warnings.filterwarnings("ignore")
 from multiprocessing import Pool
 from functools import partial
 from shutil import rmtree
@@ -21,6 +19,9 @@ from scipy.signal import correlate # type: ignore
 
 from lib.calculation import moving_window_mean, get_firing_rate_window, moving_window_mean_prior, get_relative_spike_times, get_normalized_cross_correlation, crosscorrelation
 from lib.file_utils import get_dms_pfc_paths_all, get_dms_pfc_paths_mono
+
+# ignore constant input warning from scipy
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 behaviour_root = pjoin('data', 'behaviour_data')
 spike_root = pjoin('data', 'spike_times', 'sessions')
@@ -96,7 +97,7 @@ def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=UserWarning)
         try:
-            r, p = pearsonr(reward_proportion, interconnectivity_strength)
+            r, p = pearsonr(reward_proportion, interconnectivity_strength) # type: ignore
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
 
@@ -135,9 +136,6 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
         # load the interconnectivity strength
         np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
 
-    # calculate the overall cross correlation
-    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
-
     discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0, 1, 0.2))
     discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
 
@@ -157,10 +155,14 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=UserWarning)
         try:
-            r, p = pearsonr(discretized_reward_proportion, interconnectivity_strength)
+            r, p = pearsonr(discretized_reward_proportion, interconnectivity_strength) # type: ignore
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
-
+    
+    # normalize the interconnectivity strength to 0-1
+    interconnectivity_strength = (interconnectivity_strength - np.min(interconnectivity_strength)) / (np.max(interconnectivity_strength) - np.min(interconnectivity_strength))
+    # calculate the overall cross correlation
+    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
 
     return p, r, overall_cross_cor
 
@@ -223,7 +225,7 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
         dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
         with Pool() as pool:
-            process_session_partial = partial(process_session, reset=reset)
+            process_session_partial = partial(process_session_panel_d, reset=reset)
             results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
         for result in results:
@@ -239,7 +241,63 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
     axes.set_ylim(0, 1)
 
-def process_session(session, reset=False):
+def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+
+    # 
+
+def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+
+    if reset:
+        rmtree(figure_6_data_root)
+        mkdir(figure_6_data_root)
+
+    if mono:
+        dms_pfc_paths = get_dms_pfc_paths_mono()
+
+        overall_crosscors = []
+        
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+            
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+            # fill the nan with 0
+            trial_reward[np.isnan(trial_reward)] = 0
+            reward_proportion = moving_window_mean_prior(trial_reward, 10)
+
+            # plot figure 6 poster panel ab
+            p, r, overall_crosscor = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+
+            overall_crosscors.append(overall_crosscor)
+    else:
+        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
+
+        with Pool() as pool:
+            process_session_partial = partial(process_session_panel_f, reset=reset)
+            overall_crosscors = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
+
+    print(overall_crosscors)
+    overall_crosscors = np.mean(overall_crosscors, axis=0)
+    print(overall_crosscors)
+
+    # plot overall crosscor
+    sns.lineplot(x=np.arange(-50, 50, 1), y=overall_crosscors, color='black', linewidth=0.5)
+    axes.set_xlabel('Trial Lag')
+
+
+def process_session_panel_d(session, reset=False):
     session_sig_rs_positive = 0
     session_sig_rs_negative = 0
     session_name = session[0]
@@ -274,13 +332,30 @@ def process_session(session, reset=False):
 
     return (sig_rs_positive_percentage, sig_rs_negative_percentage)
 
+def process_session_panel_f(session, reset=False):
+    session_name = session[0]
+    cue_time = session[1]
+    trial_reward = session[2]
+    reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
-def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
-    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+    overall_crosscors = []
+    session_total = len(session[3])
 
-    # 
+    for pair in session[3]:
+        dms_path = pair[0]
+        pfc_path = pair[1]
 
-def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
-    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+        pfc_name = basename(pfc_path).split('.')[0]
+        dms_name = basename(dms_path).split('.')[0]
 
-    #
+        pfc_times = np.load(pfc_path)
+        dms_times = np.load(dms_path)
+
+        # plot figure 6 poster panel ab
+        p, r, overall_crosscor = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+
+        overall_crosscors.append(overall_crosscor)
+    
+    overall_crosscors = np.mean(overall_crosscors, axis=0)
+
+    return overall_crosscors
