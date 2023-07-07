@@ -29,28 +29,29 @@ spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
 relative_value_root = pjoin('data', 'prpd')
 
-def fig_5_panel_b(pfc_mag, str_mag):
+# TODO add relative value signal
+def fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
     fig, axes = plt.subplots(3, 1, figsize=(15, 20))
     axes_2 = axes[0].twinx()
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=str_mag, ax=axes[0], color='green')
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=dms_mag, ax=axes[0], color='green')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=pfc_mag, ax=axes_2, color='black')
     axes[0].tick_params(axis='y', colors='green')
 
     # low_pass filter
     b, a = butter(N=4, Wn=10/session_length, btype='low', output='ba')
     filtered_pfc = filter_signal(pfc_mag, b, a)
-    filtered_str = filter_signal(str_mag, b, a)
+    filtered_dms = filter_signal(dms_mag, b, a)
 
     # plot filtered signal
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_str, ax=axes[1], color='green')
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_dms, ax=axes[1], color='green')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_pfc, ax=axes[1], color='black')
 
     # hilbert transform
     phase_pfc = hilbert_transform(filtered_pfc)
-    phase_str = hilbert_transform(filtered_str)
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_str, ax=axes[2], color='green')
+    phase_dms = hilbert_transform(filtered_dms)
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_dms, ax=axes[2], color='green')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_pfc, ax=axes[2], color='black')
 
     plt.show()
@@ -179,9 +180,9 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     phase_diff_response_dms = []
 
     if mono:
-        str_pfc_paths = get_dms_pfc_paths_mono()
+        dms_pfc_paths = get_dms_pfc_paths_mono()
         
-        for mono_pair in tqdm.tqdm(str_pfc_paths.iterrows()):
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
             session_path = mono_pair[1]['session_path']
             pfc_path = mono_pair[1]['pfc_path']
             dms_path = mono_pair[1]['dms_path']
@@ -338,21 +339,21 @@ def remove_top_and_right_spines(ax: plt.Axes):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
-def phase_diff_pfc_str(pfc_mag, str_mag, pfc_bg, str_bg) -> Tuple[float, float]:
+def phase_diff_pfc_dms(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[float, float]:
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
     # low_pass filter
     b, a = butter(N=4, Wn=10/session_length, btype='low', output='ba')
     filtered_pfc = filter_signal(pfc_mag, b, a)
-    filtered_str = filter_signal(str_mag, b, a)
-    phase_pfc, phase_str = hilbert_transform(filtered_pfc), hilbert_transform(filtered_str)
+    filtered_dms = filter_signal(dms_mag, b, a)
+    phase_pfc, phase_dms = hilbert_transform(filtered_pfc), hilbert_transform(filtered_dms)
 
     filtered_pfc_bg = filter_signal(pfc_bg, b, a)
-    filtered_str_bg = filter_signal(str_bg, b, a)
-    phase_pfc_bg, phase_str_bg = hilbert_transform(filtered_pfc_bg), hilbert_transform(filtered_str_bg)
+    filtered_dms_bg = filter_signal(dms_bg, b, a)
+    phase_pfc_bg, phase_dms_bg = hilbert_transform(filtered_pfc_bg), hilbert_transform(filtered_dms_bg)
 
-    phase_diff = circmean(phase_pfc - phase_str, high=np.pi, low=-np.pi)
-    phase_diff_bg = circmean(phase_pfc_bg - phase_str_bg, high=np.pi, low=-np.pi)
+    phase_diff = circmean(phase_pfc - phase_dms, high=np.pi, low=-np.pi)
+    phase_diff_bg = circmean(phase_pfc_bg - phase_dms_bg, high=np.pi, low=-np.pi)
     # phase_diff = circmean(phase_pfc - phase_str)
     # phase_diff_bg = circmean(phase_pfc_bg - phase_str_bg)
 

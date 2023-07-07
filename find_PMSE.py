@@ -11,19 +11,19 @@ from functools import partial
 import time
 
 import numpy as np
-from tqdm import tqdm 
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from scipy.signal import find_peaks # type: ignore
+from scipy.signal import find_peaks  # type: ignore
 from lib.calculation import get_spikes_in_window, get_spikes_outside_window, get_relative_spike_times_flat
 
 # relative time window before pfc time
 LEFT = -0.025
 # relative time window after pfc time
 RIGHT = 0.025
-FREQ=2000
+FREQ = 2000
 PMSE_WINDOW = [0.0005, 0.007]
 std_multiplier = 2.5
 
@@ -33,25 +33,31 @@ RESPONSE_LEFT = 0
 RESPONSE_RIGHT = 1.5
 
 
-def jitter(str_spikes):
-    return np.add(str_spikes, np.random.uniform(low = -0.005, high=0.005, size=len(str_spikes)))
+def jitter(dms_spikes):
+    return np.add(dms_spikes, np.random.uniform(low=-0.005, high=0.005, size=len(dms_spikes)))
 
 # returns the mean of the jittered performance as well as 3 std
-def get_mean(pfc_spikes, str_spikes):
+
+
+def get_mean(pfc_spikes, dms_spikes):
     jittered_array = []
 
     for i in range(500):
-        jittered_str = jitter(str_spikes)
-        relative_times = get_relative_spike_times_flat(spike_times= jittered_str, cue_times= pfc_spikes, window_left=LEFT, window_right=RIGHT)
-        # relative_times = get_relative_times(pfc_spikes, jittered_str)
-        bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
+        jittered_dms = jitter(dms_spikes)
+        relative_times = get_relative_spike_times_flat(
+            spike_times=jittered_dms, cue_times=pfc_spikes, window_left=LEFT, window_right=RIGHT)
+        # relative_times = get_relative_times(pfc_spikes, jittered_dms)
+        bins = np.histogram(relative_times, bins=np.arange(
+            start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
 
         jittered_array.append(bins)
-    
+
     mean_array = np.mean(a=jittered_array, axis=0)
-    std_array = np.add(np.std(a=jittered_array, axis=0)*std_multiplier, mean_array)
+    std_array = np.add(np.std(a=jittered_array, axis=0)
+                       * std_multiplier, mean_array)
 
     return mean_array, std_array
+
 
 def FWHM(peak, bins):
     left, right = 0, 0
@@ -61,7 +67,7 @@ def FWHM(peak, bins):
     while peak - left > 0 and bins[peak - left] >= HM:
         left += 1
         counts += bins[left]
-        
+
     while peak + right < len(bins) and bins[peak + right] >= HM:
         right += 1
         counts += bins[right]
@@ -70,9 +76,9 @@ def FWHM(peak, bins):
 
 
 # Define the function to process a single session
-def process_session(s, behaviour_path, strs, pfcs):
+def process_session(s, behaviour_path, dmss, pfcs):
     session_all = []
-    str_all = []
+    dms_all = []
     pfc_all = []
     peak_all = []
     peak_width_all = []
@@ -84,30 +90,36 @@ def process_session(s, behaviour_path, strs, pfcs):
     behaviour_data = pd.read_csv(behaviour_path)
     cue_time = np.array(behaviour_data['cue_time'])
 
-    for st in strs:
-        str_name = basename(st).split('.')[0]
-        str_data = np.load(st)
+    for st in dmss:
+        dms_name = basename(st).split('.')[0]
+        dms_data = np.load(st)
 
-        # str_data = get_spikes_in_window(cue_times=cue_time, spike_times=str_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
-        str_data = get_spikes_outside_window(cue_times=cue_time, spike_times=str_data, window_left=RESPONSE_LEFT, window_right=RESPONSE_RIGHT)
+        # dms_data = get_spikes_in_window(cue_times=cue_time, spike_times=dms_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
+        dms_data = get_spikes_outside_window(
+            cue_times=cue_time, spike_times=dms_data, window_left=RESPONSE_LEFT, window_right=RESPONSE_RIGHT)
 
         for pfc in pfcs:
             pfc_name = basename(pfc).split('.')[0]
             pfc_data = np.load(pfc)
 
             # pfc_data = get_spikes_in_window(cue_times=cue_time, spike_times=pfc_data, window_left=ITI_LEFT, window_right=ITI_RIGHT)
-            pfc_data = get_spikes_outside_window(cue_times=cue_time, spike_times=pfc_data, window_left=RESPONSE_LEFT, window_right=RESPONSE_RIGHT)
+            pfc_data = get_spikes_outside_window(
+                cue_times=cue_time, spike_times=pfc_data, window_left=RESPONSE_LEFT, window_right=RESPONSE_RIGHT)
 
-            relative_times = get_relative_spike_times_flat(spike_times=str_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
+            relative_times = get_relative_spike_times_flat(
+                spike_times=dms_data, cue_times=pfc_data, window_left=LEFT, window_right=RIGHT)
 
-            if isfile(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy")):
-                data = np.load(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"))
+            if isfile(pjoin('data', 'PMSE', s, f"{dms_name}_{pfc_name}.npy")):
+                data = np.load(
+                    pjoin('data', 'PMSE', s, f"{dms_name}_{pfc_name}.npy"))
                 mean, std, bins = data
             else:
-                bins = np.histogram(relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
+                bins = np.histogram(relative_times, bins=np.arange(
+                    start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ))[0]
                 # times of the left edge of the bin
-                mean, std  = get_mean(pfc_data, str_data)
-                np.save(pjoin('data', 'PMSE', s, f"{str_name}_{pfc_name}.npy"), arr=[mean, std, bins])
+                mean, std = get_mean(pfc_data, dms_data)
+                np.save(pjoin('data', 'PMSE', s, f"{dms_name}_{pfc_name}.npy"), arr=[
+                        mean, std, bins])
 
             # percentage over the average needs to be greater than 30%
             higher_than_mean = np.greater(bins, mean)
@@ -119,7 +131,7 @@ def process_session(s, behaviour_path, strs, pfcs):
             # Method 4
             left_ind = int((PMSE_WINDOW[0] - LEFT) * FREQ)
             right_ind = int((PMSE_WINDOW[1] - LEFT) * FREQ)
-            
+
             real_peaks = []
             bins_in_window = bins[left_ind: right_ind]
             heights = std[left_ind: right_ind]
@@ -132,34 +144,42 @@ def process_session(s, behaviour_path, strs, pfcs):
                         if (right + left + 1) * (1/FREQ) <= 0.003:
                             real_peaks.append(peak + left_ind)
                             session_all.append(s)
-                            str_all.append(str(str_name))
-                            pfc_all.append(str(pfc_name))
+                            dms_all.append(dms(dms_name))
+                            pfc_all.append(dms(pfc_name))
                             peak_all.append(peak+left_ind)
-                            peak_width_all.append((left + right + 1) * (1/FREQ))
+                            peak_width_all.append(
+                                (left + right + 1) * (1/FREQ))
                             counts_in_peak_all.append(counts)
-                            
-                        
+
             if len(real_peaks) > 0:
                 fig, ax = plt.subplots()
-                sns.histplot(x=relative_times, bins=np.arange(start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ), ax=ax) # type: ignore
-                sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=bins, ax=ax)
-                sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=mean, ax=ax)
-                sns.lineplot(x=np.arange(start=LEFT+1/(2* FREQ), stop=RIGHT, step=1/FREQ), y=std, ax=ax)
+                sns.histplot(x=relative_times, bins=np.arange(
+                    start=LEFT, stop=RIGHT + 1/(2*FREQ), step=1/FREQ), ax=ax)  # type: ignore
+                sns.lineplot(x=np.arange(start=LEFT+1/(2 * FREQ),
+                             stop=RIGHT, step=1/FREQ), y=bins, ax=ax)
+                sns.lineplot(x=np.arange(start=LEFT+1/(2 * FREQ),
+                             stop=RIGHT, step=1/FREQ), y=mean, ax=ax)
+                sns.lineplot(x=np.arange(start=LEFT+1/(2 * FREQ),
+                             stop=RIGHT, step=1/FREQ), y=std, ax=ax)
                 for peak in real_peaks:
-                    ax.plot(LEFT + 1/(2*FREQ) + peak * (1/FREQ), bins[peak], 'ro')
+                    ax.plot(LEFT + 1/(2*FREQ) + peak *
+                            (1/FREQ), bins[peak], 'ro')
 
                 ax.axvline(x=PMSE_WINDOW[0])
                 ax.axvline(x=PMSE_WINDOW[1])
 
-                fig.savefig(pjoin('data', 'PMSE', 'qualified', f"{s}_{str_name}_{pfc_name}.png"), dpi=400)
+                fig.savefig(pjoin('data', 'PMSE', 'qualified',
+                            f"{s}_{dms_name}_{pfc_name}.png"), dpi=400)
                 plt.close(fig)
 
-    return (session_all, str_all, pfc_all, peak_all, peak_width_all, counts_in_peak_all)
+    return (session_all, dms_all, pfc_all, peak_all, peak_width_all, counts_in_peak_all)
 
 # Define the function to process a group of sessions
+
+
 def process_session_group(sessions):
     session_all = []
-    str_all = []
+    dms_all = []
     pfc_all = []
     peak_all = []
     peak_width_all = []
@@ -168,20 +188,22 @@ def process_session_group(sessions):
     for s in sessions:
         behaviour_path = pjoin('data', 'behaviour_data', s+'.csv')
         session_path = pjoin('data', 'spike_times', 'sessions', s)
-        strs = glob(pjoin(session_path, 'str_*'))
+        dmss = glob(pjoin(session_path, 'dms_*'))
         pfcs = glob(pjoin(session_path, 'pfc_*'))
 
-        results = process_session(s, behaviour_path, strs, pfcs)
+        results = process_session(s, behaviour_path, dmss, pfcs)
         session_all.extend(results[0])
-        str_all.extend(results[1])
+        dms_all.extend(results[1])
         pfc_all.extend(results[2])
         peak_all.extend(results[3])
         peak_width_all.extend(results[4])
         counts_in_peak_all.extend(results[5])
 
-    return (session_all, str_all, pfc_all, peak_all, peak_width_all, counts_in_peak_all)
+    return (session_all, dms_all, pfc_all, peak_all, peak_width_all, counts_in_peak_all)
 
 # Define the main function
+
+
 def find_PMSE_parallel(reset=False):
     sessions = listdir(pjoin('data', 'spike_times', 'sessions'))
 
@@ -207,26 +229,29 @@ def find_PMSE_parallel(reset=False):
         for result in tqdm(pool.imap_unordered(process_session_group, session_groups), total=len(sessions)):
             results.append(result)
             elapsed_time = time.time() - start_time
-            remaining_time = elapsed_time / len(results) * (len(sessions) - len(results))
+            remaining_time = elapsed_time / \
+                len(results) * (len(sessions) - len(results))
             tqdm.write(f'Remaining time: {remaining_time:.2f} seconds')
 
     # Combine the results from all processes
     session_all = []
-    str_all = []
+    dms_all = []
     pfc_all = []
     peak_all = []
     peak_width_all = []
     counts_in_peak_all = []
     for result in results:
         session_all.extend(result[0])
-        str_all.extend(result[1])
+        dms_all.extend(result[1])
         pfc_all.extend(result[2])
         peak_all.extend(result[3])
         peak_width_all.extend(result[4])
         counts_in_peak_all.extend(result[5])
 
     # Write the results to a CSV file
-    results_df = pd.DataFrame({'session': session_all, 'str': str_all, 'pfc': pfc_all, 'peak': peak_all, 'peak_width': peak_width_all, 'counts_in_peak': counts_in_peak_all})
+    results_df = pd.DataFrame({'session': session_all, 'dms': dms_all, 'pfc': pfc_all,
+                              'peak': peak_all, 'peak_width': peak_width_all, 'counts_in_peak': counts_in_peak_all})
     results_df.to_csv(pjoin('data', 'mono_pairs.csv'), index=False)
+
 
 find_PMSE_parallel(reset=False)
