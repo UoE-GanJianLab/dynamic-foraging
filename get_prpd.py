@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from glob import glob
 
+#TODO craniotomy side
+
 # load the data from the sessions folder
 sessions_folder = "data/behaviour_data"
 sessions_data = []
@@ -13,14 +15,16 @@ prpd_folder = "data/prpd"
 if not exists(prpd_folder):
     makedirs(prpd_folder)
 for behaviour_file in glob(pjoin(sessions_folder, "*.csv")):
+    craniotomy_side = "R"
     session_data = pd.read_csv(behaviour_file)
     session_name = basename(behaviour_file).split(".")[0]
-    # remove the nan values
-    # session_data = session_data[~session_data['trial_response_side'].isna()]
+
+    if session_name[:6] == "AKED01":
+        craniotomy_side = "L"
+    # fill the nan with 0
+    session_data = session_data.fillna(0)
     trial_response_side = session_data['trial_response_side']
     trial_reward = np.array(session_data['trial_reward'])
-    # fill the nan with 0
-    trial_reward[np.isnan(trial_reward)] = 0
 
     leftward_index = np.where(trial_response_side == -1)[0]
     rightward_index = np.where(trial_response_side == 1)[0]
@@ -55,8 +59,10 @@ for behaviour_file in glob(pjoin(sessions_folder, "*.csv")):
             rightward_mean = 0
         else:
             rightward_mean = np.mean(trial_reward[rightward_trials])
-
-        prpd.append(leftward_mean - rightward_mean)
+        if craniotomy_side == "R":
+            prpd.append(leftward_mean - rightward_mean)
+        else:
+            prpd.append(rightward_mean - leftward_mean)
 
         if row['trial_response_side'] == -1:
             left_ptr += 1

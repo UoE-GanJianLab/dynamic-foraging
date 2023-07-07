@@ -241,7 +241,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 phase_diff_bg_pfc.append(phase_diff_bg)
             
             # load the dms cells
-            for dms_path in glob(pjoin(session_path, 'str_*.npy')):
+            for dms_path in glob(pjoin(session_path, 'dms_*.npy')):
                 dms_times = np.load(dms_path)
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
