@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 from glob import glob
 
-#TODO craniotomy side
-
 # load the data from the sessions folder
 sessions_folder = "data/behaviour_data"
 sessions_data = []

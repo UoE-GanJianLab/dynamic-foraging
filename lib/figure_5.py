@@ -13,7 +13,7 @@ import seaborn as sns
 from scipy.signal import butter, filtfilt, hilbert, detrend # type: ignore
 from lib.calculation import circ_mtest
 from scipy.stats import circmean # type: ignore
-
+from pingouin import circ_corrcl
 import tqdm
 
 from lib.file_utils import get_dms_pfc_paths_mono, get_dms_pfc_paths_all
@@ -233,12 +233,11 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 pfc_times = np.load(pfc_path)
                 pfc_name = basename(pfc_path).split('.')[0]
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
-
-                # calculate the phase difference wrt relative value
+            
                 phase_diff_mag = phase_diff(pfc_mag, relative_values)
-                phase_diff_bg = phase_diff(pfc_bg, relative_values)
-
                 phase_diff_response_pfc.append(phase_diff_mag)
+                
+                phase_diff_bg = phase_diff(pfc_bg, relative_values)
                 phase_diff_bg_pfc.append(phase_diff_bg)
             
             # load the dms cells
@@ -247,11 +246,10 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-                # calculate the phase difference wrt relative value
                 phase_diff_mag = phase_diff(dms_mag, relative_values)
-                phase_diff_bg = phase_diff(dms_bg, relative_values)
-
                 phase_diff_response_dms.append(phase_diff_mag)
+
+                phase_diff_bg = phase_diff(dms_bg, relative_values)
                 phase_diff_bg_dms.append(phase_diff_bg)
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
@@ -294,16 +292,16 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
 
     # calculate the circular mean for each group
     mean = circmean(phase_diff_response_pfc, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_response_pfc, mean)
+    p_value = circ_mtest(phase_diff_response_pfc, 0)
     print(f'PFC response: {mean} {p_value}')
     mean = circmean(phase_diff_bg_pfc, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_bg_pfc, mean)
+    p_value = circ_mtest(phase_diff_bg_pfc, 0)
     print(f'PFC bg: {mean} {p_value}')
     mean = circmean(phase_diff_response_dms, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_response_dms, mean)
+    p_value = circ_mtest(phase_diff_response_dms, 0)
     print(f'DMS response: {mean} {p_value}')
     mean = circmean(phase_diff_bg_dms,  low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_bg_dms, mean)
+    p_value = circ_mtest(phase_diff_bg_dms, 0)
     print(f'DMS bg: {mean} {p_value}')
 
 

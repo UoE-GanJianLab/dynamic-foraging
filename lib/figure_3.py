@@ -10,6 +10,7 @@ import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as stats
+from scipy.stats import ttest_ind
 
 from lib.calculation import moving_window_mean, get_relative_spike_times, moving_window_mean_prior
 from lib.figure_utils import remove_top_and_right_spines
@@ -57,21 +58,6 @@ def figure_3_panel_bc(reset=False):
         dms_reward_binned = []
         dms_signal_binned = []
 
-        pfc_signal_binned_high = []
-        pfc_mvt_binned_high = []
-        pfc_reward_binned_high = []
-
-        pfc_signal_binned_low = []
-        pfc_mvt_binned_low = []
-        pfc_reward_binned_low = []
-
-        dms_mvt_binned_high = []
-        dms_reward_binned_high = []
-        dms_signal_binned_high = []
-
-        dms_mvt_binned_low = []
-        dms_reward_binned_low = []
-        dms_signal_binned_low = []
 
         # iterate through the sessions
         for session_name in tqdm.tqdm(listdir(behaviour_root)):
@@ -98,9 +84,6 @@ def figure_3_panel_bc(reset=False):
             reward_idx = np.where(reward)[0]
 
             session_name = session_name.split('.')[0]
-            high_prp, low_prp = get_high_low_prp_index(session_name)
-
-            pfc_session = pfc_count
 
             # load the pfc spike times
             for pfc_times in glob(pjoin(spike_time_dir, 'sessions', session_name, 'pfc_*')):
@@ -118,13 +101,6 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = [relative_to_pfc[idx] for idx in mvt_idx]
                 reward_spike_times = [relative_to_pfc[idx] for idx in reward_idx]
 
-                signal_spike_times_high = compute_component_prp_spike_times(signal_idx, high_prp, relative_to_pfc)
-                mvt_spike_times_high = compute_component_prp_spike_times(mvt_idx, high_prp, relative_to_pfc)
-                reward_spike_times_high = compute_component_prp_spike_times(reward_idx, high_prp, relative_to_pfc)
-
-                signal_spike_times_low = compute_component_prp_spike_times(signal_idx, low_prp, relative_to_pfc)
-                mvt_spike_times_low = compute_component_prp_spike_times(mvt_idx, low_prp, relative_to_pfc)
-                reward_spike_times_low = compute_component_prp_spike_times(reward_idx, low_prp, relative_to_pfc)
 
                 # concatenate the spike times of each trial type
                 signal_spike_times = np.concatenate(signal_spike_times)
@@ -132,7 +108,7 @@ def figure_3_panel_bc(reset=False):
                 reward_spike_times = np.concatenate(reward_spike_times)
 
 
-                # bin the spike times using histoplot 10ms bins
+                # bin the spike times using histoplot
                 signal_spike_times = np.histogram(signal_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 mvt_spike_times = np.histogram(mvt_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
                 reward_spike_times = np.histogram(reward_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
@@ -156,21 +132,11 @@ def figure_3_panel_bc(reset=False):
                     binned_data_np[:] = binned_data
                     # save the binned spike times
                     np.save(binned_file, binned_data_np)
-                
+
                 # add the binned spike times to the total
                 pfc_signal_binned.append(signal_spike_times)
                 pfc_mvt_binned.append(mvt_spike_times)
                 pfc_reward_binned.append(reward_spike_times)
-
-                pfc_signal_binned_high.append(signal_spike_times_high)
-                pfc_mvt_binned_high.append(mvt_spike_times_high)
-                pfc_reward_binned_high.append(reward_spike_times_high)
-
-                pfc_signal_binned_low.append(signal_spike_times_low)
-                pfc_mvt_binned_low.append(mvt_spike_times_low)
-                pfc_reward_binned_low.append(reward_spike_times_low)
-
-            dms_session = dms_count
 
             # load the pfc spike times
             for dms_times in glob(pjoin(spike_time_dir, 'sessions', session_name, 'dms_*')):
@@ -208,16 +174,9 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = np.divide(mvt_spike_times, len(mvt_idx))
                 reward_spike_times = np.divide(reward_spike_times, len(reward_idx))
 
-                signal_spike_times_high = compute_component_prp_spike_times(signal_idx, high_prp, relative_to_dms)
-                mvt_spike_times_high = compute_component_prp_spike_times(mvt_idx, high_prp, relative_to_dms)
-                reward_spike_times_high = compute_component_prp_spike_times(reward_idx, high_prp, relative_to_dms)
-
-                signal_spike_times_low = compute_component_prp_spike_times(signal_idx, low_prp, relative_to_dms)
-                mvt_spike_times_low = compute_component_prp_spike_times(mvt_idx, low_prp, relative_to_dms)
-                reward_spike_times_low = compute_component_prp_spike_times(reward_idx, low_prp, relative_to_dms)
 
                 if not isfile(binned_file):
-                    total_spike_times = [np.divide(np.histogram(relative_trial_spikes, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0], BIN_SIZE) for relative_trial_spikes in relative_to_pfc]
+                    total_spike_times = [np.divide(np.histogram(relative_trial_spikes, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0], BIN_SIZE) for relative_trial_spikes in relative_to_dms]
                     binned_data = [signal_spike_times, mvt_spike_times, reward_spike_times, total_spike_times]
                     binned_data_np = np.empty(len(binned_data), dtype=object)
                     binned_data_np[:] = binned_data
@@ -229,14 +188,6 @@ def figure_3_panel_bc(reset=False):
                 dms_mvt_binned.append(mvt_spike_times)
                 dms_reward_binned.append(reward_spike_times)
 
-                dms_signal_binned_high.append(signal_spike_times_high)
-                dms_mvt_binned_high.append(mvt_spike_times_high)
-                dms_reward_binned_high.append(reward_spike_times_high)
-
-                dms_signal_binned_low.append(signal_spike_times_low)
-                dms_mvt_binned_low.append(mvt_spike_times_low)
-                dms_reward_binned_low.append(reward_spike_times_low)
-
 
         # take the mean of the binned spike times, recording the standard error
         pfc_signal_binned_mean = np.mean(pfc_signal_binned, axis=0) 
@@ -246,14 +197,6 @@ def figure_3_panel_bc(reset=False):
         pfc_reward_binned_mean = np.mean(pfc_reward_binned, axis=0)
         pfc_reward_binned_err = np.std(pfc_reward_binned, axis=0) / np.sqrt(pfc_count)
 
-        pfc_signal_binned_high_mean = np.mean(pfc_signal_binned_high, axis=0)
-        pfc_mvt_binned_high_mean = np.mean(pfc_mvt_binned_high, axis=0)
-        pfc_reward_binned_high_mean = np.mean(pfc_reward_binned_high, axis=0)
-
-        pfc_signal_binned_low_mean = np.mean(pfc_signal_binned_low, axis=0)
-        pfc_mvt_binned_low_mean = np.mean(pfc_mvt_binned_low, axis=0)
-        pfc_reward_binned_low_mean = np.mean(pfc_reward_binned_low, axis=0)
-
         dms_signal_binned_mean = np.mean(dms_signal_binned, axis=0)
         dms_signal_binned_err = np.std(dms_signal_binned, axis=0) / np.sqrt(dms_count)
         dms_mvt_binned_mean = np.mean(dms_mvt_binned, axis=0)
@@ -261,19 +204,8 @@ def figure_3_panel_bc(reset=False):
         dms_reward_binned_mean = np.mean(dms_reward_binned, axis=0)
         dms_reward_binned_err = np.std(dms_reward_binned, axis=0) / np.sqrt(dms_count)
 
-        dms_signal_binned_high_mean = np.mean(dms_signal_binned_high, axis=0)
-        dms_mvt_binned_high_mean = np.mean(dms_mvt_binned_high, axis=0)
-        dms_reward_binned_high_mean = np.mean(dms_reward_binned_high, axis=0)
-
-        dms_signal_binned_low_mean = np.mean(dms_signal_binned_low, axis=0)
-        dms_mvt_binned_low_mean = np.mean(dms_mvt_binned_low, axis=0)
-        dms_reward_binned_low_mean = np.mean(dms_reward_binned_low, axis=0)
-
         # save the binned spike times
         np.save(signal_mvt_reward_file, [pfc_signal_binned_mean, pfc_signal_binned_err, pfc_mvt_binned_mean, pfc_mvt_binned_err, pfc_reward_binned_mean, pfc_reward_binned_err, dms_signal_binned_mean, dms_signal_binned_err, dms_mvt_binned_mean, dms_mvt_binned_err, dms_reward_binned_mean, dms_reward_binned_err])
-
-        # save the high and low binned spike times
-        np.save(signal_mvt_reward_high_low_file, [pfc_signal_binned_high_mean, pfc_mvt_binned_high_mean, pfc_reward_binned_high_mean, dms_signal_binned_high_mean, dms_mvt_binned_high_mean, dms_reward_binned_high_mean, pfc_signal_binned_low_mean, pfc_mvt_binned_low_mean, pfc_reward_binned_low_mean, dms_signal_binned_low_mean, dms_mvt_binned_low_mean, dms_reward_binned_low_mean])
     else:
         # load the binned spike times
         pfc_signal_binned_mean, pfc_signal_binned_err, pfc_mvt_binned_mean, pfc_mvt_binned_err, pfc_reward_binned_mean, pfc_reward_binned_err, dms_signal_binned_mean, dms_signal_binned_err, dms_mvt_binned_mean, dms_mvt_binned_err, dms_reward_binned_mean, dms_reward_binned_err = np.load(signal_mvt_reward_file)
@@ -627,10 +559,10 @@ def figure_3_panel_d():
         total_spike_times = np.array(total_spike_times)
         
         session_name = basename(pfc_file).split('_')[0]
-        high_prp, low_prp = get_high_low_prp_index(session_name, reset=True)
+        high_prp, low_prp = get_high_low_prp_index(session_name, reset=False)
 
-        spike_times_high = np.sum(total_spike_times[high_prp], axis=0) / len(total_spike_times[high_prp])
-        spike_times_low = np.sum(total_spike_times[low_prp], axis=0) / len(total_spike_times[low_prp])
+        spike_times_high = np.sum(total_spike_times[high_prp], axis=0)
+        spike_times_low = np.sum(total_spike_times[low_prp], axis=0)
 
         if not np.max(spike_times_high) == 0:
             spike_times_high = spike_times_high / np.max(spike_times_high)
@@ -646,10 +578,10 @@ def figure_3_panel_d():
         total_spike_times = np.array(total_spike_times)
         
         session_name = basename(dms_file).split('_')[0]
-        high_prp, low_prp = get_high_low_prp_index(session_name, reset=True)
+        high_prp, low_prp = get_high_low_prp_index(session_name, reset=False)
 
-        spike_times_high = np.sum(total_spike_times[high_prp], axis=0) / len(total_spike_times[high_prp])
-        spike_times_low = np.sum(total_spike_times[low_prp], axis=0) / len(total_spike_times[low_prp])
+        spike_times_high = np.sum(total_spike_times[high_prp], axis=0)
+        spike_times_low = np.sum(total_spike_times[low_prp], axis=0)
 
         if not np.max(spike_times_high) == 0:
             spike_times_high = spike_times_high / np.max(spike_times_high)
@@ -741,6 +673,24 @@ def figure_3_panel_d():
     for ax in ax_dms:
         remove_top_and_right_spines(ax)
 
+    # do the t test for each pair of high and low coefficients
+    # for each component
+    pfc_signal_t, pfc_signal_p = ttest_ind(pfc_signals_high, pfc_signals_low)
+    pfc_mvt_t, pfc_mvt_p = ttest_ind(pfc_mvt_high, pfc_mvt_low)
+    pfc_reward_t, pfc_reward_p = ttest_ind(pfc_reward_high, pfc_reward_low)
+
+    dms_signal_t, dms_signal_p = ttest_ind(dms_signals_high, dms_signals_low)
+    dms_mvt_t, dms_mvt_p = ttest_ind(dms_mvt_high, dms_mvt_low)
+    dms_reward_t, dms_reward_p = ttest_ind(dms_reward_high, dms_reward_low)
+
+    # print the t test results
+    print('PFC signal t test: t = {}, p = {}'.format(pfc_signal_t, pfc_signal_p))
+    print('PFC movement t test: t = {}, p = {}'.format(pfc_mvt_t, pfc_mvt_p))
+    print('PFC reward t test: t = {}, p = {}'.format(pfc_reward_t, pfc_reward_p))
+
+    print('DMS signal t test: t = {}, p = {}'.format(dms_signal_t, dms_signal_p))
+    print('DMS movement t test: t = {}, p = {}'.format(dms_mvt_t, dms_mvt_p))
+    print('DMS reward t test: t = {}, p = {}'.format(dms_reward_t, dms_reward_p))
 
 def get_high_low_prp_index(session_name: str, reset: bool = False):
     if isfile(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy')) and not reset:
@@ -752,11 +702,14 @@ def get_high_low_prp_index(session_name: str, reset: bool = False):
         trial_reward = np.array(behaviour_data['trial_reward'])
         # fill in the nan values
         trial_reward[np.isnan(trial_reward)] = 0
-        prp = moving_window_mean_prior(trial_reward, 20)
+        prp = moving_window_mean_prior(trial_reward, 10)
         # get the index of prp > 0.5 and prp < 0.5 and reward == 1
-        high_prp = np.where((prp >= 0.5))[0]
-        low_prp = np.where((prp < 0.5))[0]
+        high_prp = np.where((prp >= 0.5) & (trial_reward==1))[0]
+        low_prp = np.where((prp < 0.5) & (trial_reward==1))[0]
         np.save(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy'), high_prp)
         np.save(pjoin(spike_time_dir, 'figure_3', session_name+'_low.npy'), low_prp)
-
+    # truncate the high_prp and low_prp to the same length
+    # TODO why is this necessary?
+    high_prp = high_prp[:min(len(high_prp), len(low_prp))]
+    low_prp = low_prp[:min(len(high_prp), len(low_prp))]
     return high_prp, low_prp
