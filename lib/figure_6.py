@@ -159,10 +159,11 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
     
-    # normalize the interconnectivity strength to 0-1
-    interconnectivity_strength = (interconnectivity_strength - np.min(interconnectivity_strength)) / (np.max(interconnectivity_strength) - np.min(interconnectivity_strength))
+    # calculate the z score for interconnectivity strength and reward proportion
+    interconnectivity_strength_z_score = (interconnectivity_strength - np.mean(interconnectivity_strength)) / np.std(interconnectivity_strength)
+    reward_proportion_z_score = (reward_proportion - np.mean(reward_proportion)) / np.std(reward_proportion)
     # calculate the overall cross correlation
-    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
+    overall_cross_cor = crosscorrelation(interconnectivity_strength_z_score, reward_proportion_z_score, maxlag=50)
 
     return p, r, overall_cross_cor
 
@@ -232,7 +233,6 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             sig_rs_positive_percentage.append(result[0])
             sig_rs_negative_percentage.append(result[1])
 
-
     # t test to see if the percentage of positive and negative significant rs are different
     t, p = ttest_ind(sig_rs_positive_percentage, sig_rs_negative_percentage, alternative='less')
     print(f't: {t}, p: {p}')
@@ -288,12 +288,12 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
             process_session_partial = partial(process_session_panel_f, reset=reset)
             overall_crosscors = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
-    print(overall_crosscors)
-    overall_crosscors = np.mean(overall_crosscors, axis=0)
-    print(overall_crosscors)
+    # print the length of arrays in overall_crosscors
+    overall_crosscors = np.array(overall_crosscors, dtype=np.float32)
+    overall_crosscors = np.nanmean(overall_crosscors, axis=0)
 
     # plot overall crosscor
-    sns.lineplot(x=np.arange(-50, 50, 1), y=overall_crosscors, color='black', linewidth=0.5)
+    sns.lineplot(x=np.arange(-50, 51, 1), y=overall_crosscors, color='black', linewidth=0.5)
     axes.set_xlabel('Trial Lag')
 
 
