@@ -15,6 +15,9 @@ from lib.calculation import circ_mtest
 from scipy.stats import circmean # type: ignore
 from pingouin import circ_corrcl
 import tqdm
+# suppress warning
+import warnings
+warnings.filterwarnings("ignore")
 
 from lib.file_utils import get_dms_pfc_paths_mono, get_dms_pfc_paths_all
 from lib.calculation import get_response_bg_firing
@@ -217,10 +220,20 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
             phase_diff_response_dms.append(phase_diff_mag)
             phase_diff_bg_dms.append(phase_diff_bg)
     else:
+        pfc_response_sig_count = 0
+        pfc_bg_sig_count = 0
+
+        dms_response_sig_count = 0
+        dms_bg_sig_count = 0
+
+        pfc_count = 0
+        dms_count = 0
+
         for session_name in tqdm.tqdm(listdir(spike_data_root)):
             session_path = pjoin(spike_data_root, session_name)
             relative_value_path = pjoin(relative_value_root, session_name + '.npy')
             relative_values = np.load(relative_value_path)
+            phase_relative_values = get_phase(relative_values)
             behaviour_path = pjoin(behaviour_root, session_name + '.csv')
             behaviour_data = pd.read_csv(behaviour_path)
             # remove all the nan trials
@@ -230,27 +243,38 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
 
             # load the pfc cells
             for pfc_path in glob(pjoin(session_path, 'pfc_*.npy')):
+                pfc_count += 1
                 pfc_times = np.load(pfc_path)
                 pfc_name = basename(pfc_path).split('.')[0]
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
-            
-                phase_diff_mag = phase_diff(pfc_mag, relative_values)
-                phase_diff_response_pfc.append(phase_diff_mag)
                 
-                phase_diff_bg = phase_diff(pfc_bg, relative_values)
-                phase_diff_bg_pfc.append(phase_diff_bg)
+                pfc_mag_phase = get_phase(pfc_mag) 
+                if circ_corrcl(pfc_mag_phase, phase_relative_values)[1] < 0.05:
+                    pfc_response_sig_count += 1
+                    phase_diff_mag = phase_diff(pfc_mag, relative_values)
+                    phase_diff_response_pfc.append(phase_diff_mag)
+                
+                if circ_corrcl(pfc_bg, phase_relative_values)[1] < 0.05:
+                    pfc_bg_sig_count += 1
+                    phase_diff_bg = phase_diff(pfc_bg, relative_values)
+                    phase_diff_bg_pfc.append(phase_diff_bg)
             
             # load the dms cells
             for dms_path in glob(pjoin(session_path, 'dms_*.npy')):
+                dms_count += 1
                 dms_times = np.load(dms_path)
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-                phase_diff_mag = phase_diff(dms_mag, relative_values)
-                phase_diff_response_dms.append(phase_diff_mag)
-
-                phase_diff_bg = phase_diff(dms_bg, relative_values)
-                phase_diff_bg_dms.append(phase_diff_bg)
+                if circ_corrcl(dms_mag, phase_relative_values)[1] < 0.05:
+                    dms_response_sig_count += 1
+                    phase_diff_mag = phase_diff(dms_mag, relative_values)
+                    phase_diff_response_dms.append(phase_diff_mag)
+                
+                if circ_corrcl(dms_bg, phase_relative_values)[1] < 0.05:
+                    dms_bg_sig_count += 1
+                    phase_diff_bg = phase_diff(dms_bg, relative_values)
+                    phase_diff_bg_dms.append(phase_diff_bg)
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
     if zero_ymin:
@@ -303,6 +327,12 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     mean = circmean(phase_diff_bg_dms,  low=-np.pi, high=np.pi)
     p_value = circ_mtest(phase_diff_bg_dms, 0)
     print(f'DMS bg: {mean} {p_value}')
+
+    print(f'PFC response: {pfc_response_sig_count} / {pfc_count}')
+    print(f'PFC bg: {pfc_bg_sig_count} / {pfc_count}')
+    print(f'DMS response: {dms_response_sig_count} / {dms_count}')
+    print(f'DMS bg: {dms_bg_sig_count} / {dms_count}')
+
 
 
     # set y label
@@ -376,6 +406,14 @@ def filter_signal(signal, b, a) -> np.ndarray:
 
 # hilbert transform
 def hilbert_transform(signal) -> np.ndarray:
+    hilbert_signal = hilbert(signal)
+    phase = np.angle(hilbert_signal)
+    return phase
+
+def get_phase(signal) -> np.ndarray:
+    length = len(signal)
+    b, a = butter(N=4, Wn=10/length, btype='low', output='ba')
+    signal = filter_signal(signal, b, a)
     hilbert_signal = hilbert(signal)
     phase = np.angle(hilbert_signal)
     return phase
