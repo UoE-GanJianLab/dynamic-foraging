@@ -9,8 +9,8 @@ from glob import glob
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
-from scipy.stats import chi2 # type: ignore
-
+from scipy.stats import circmean # type: ignore
+from astropy.stats import rayleightest
 from lib.conversion import one_to_zero_cell, zero_to_one_cell
 
 behaviour_root = pjoin("data", "behaviour_data")
@@ -20,6 +20,7 @@ ITI_LEFT = -1
 ITI_RIGHT = -0.5
 RESPONSE_LEFT = 0
 RESPONSE_RIGHT = 1.5
+
 
 # calculate the mean of a centered moving window, if window is not complete, 
 # use the available data without padding
@@ -229,6 +230,35 @@ def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray
     return relative_spike_times
 
 
+def get_spike_times_in_window(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
+    spike_ptr = 0
+
+    relative_spike_times = []
+
+    for cue in cue_times:
+        window_left_cur = cue + window_left
+        window_right_cur = cue + window_right
+
+        cur_spikes = []
+
+        # backtrack in case of overlapping cue time windows
+        while spike_ptr > 0 and spike_times[spike_ptr-1] > window_left_cur:
+            spike_ptr -= 1
+
+        # move the pointers into window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
+            spike_ptr += 1
+        
+        # count the amount of spikes in window
+        while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_right_cur:
+            cur_spikes.append(spike_times[spike_ptr])
+            spike_ptr += 1
+
+        relative_spike_times.append(cur_spikes)
+                
+    return relative_spike_times
+
+
 def get_relative_spike_times_brute_force(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
     # use O(n^2) algorithm to calculate relative spike times
     relative_spike_times = []
@@ -354,63 +384,12 @@ def wrap_to_pi(angle):
     wrapped_angle = np.mod(angle + np.pi, 2*np.pi) - np.pi
     return wrapped_angle
 
-def circmean(angles, weights=None):
-    """
-    Calculate the circular mean of a set of angles.
 
-    Parameters
-    ----------
-    angles : array_like
-        Input angles in radians.
-    weights : array_like, optional
-        Weights to apply to each angle. Must be the same shape as `angles`.
+def circ_mtest(angles, mu):
+    # Calculate the circular mean
+    mean_angle = circmean(angles, low=-np.pi, high=np.pi)
 
-    Returns
-    -------
-    mean_angle : float
-        The circular mean of the input angles.
-
-    """
-    if weights is None:
-        weights = np.ones_like(angles)
-
-    sin_sum = np.sum(weights * np.sin(angles))
-    cos_sum = np.sum(weights * np.cos(angles))
-
-    mean_angle = np.arctan2(sin_sum, cos_sum)
-    mean_angle = wrap_to_pi(mean_angle)
-
-    return mean_angle
-
-def circ_mtest(angles, mu, alpha=0.05):
-    """
-    Perform a one-sample test of circular mean direction against a specified null hypothesis.
-
-    Parameters
-    ----------
-    angles : array_like
-        Input angles in radians.
-    mu : float
-        The hypothesized mean direction.
-    alpha : float, optional
-        The significance level for the test.
-
-    Returns
-    -------
-    p_value : float
-        The p-value for the test.
-
-    """
-    angles = np.asarray(angles, dtype=np.float64)
-    n = len(angles)
-    r = np.sum(np.exp(1j * angles - 1j * mu))
-    R = np.abs(r) / n
-
-    # calculate the test statistic
-    test_stat = n * R**2
-
-    # calculate the p-value
-    df = 2
-    p_value = 1 - chi2.cdf(test_stat, df)
+    # Perform the one-sample circular mean test
+    p_value = rayleightest(angles - mean_angle)
 
     return p_value

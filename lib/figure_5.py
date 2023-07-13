@@ -1,8 +1,7 @@
-# type: ignore
 from os.path import join as pjoin
 from os import listdir, mkdir
 from os.path import basename
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from glob import glob
 
 import pandas as pd
@@ -12,15 +11,17 @@ from matplotlib.figure import Figure
 import seaborn as sns
 from scipy.signal import butter, filtfilt, hilbert, detrend # type: ignore
 from lib.calculation import circ_mtest
-from scipy.stats import circmean # type: ignore
-from pingouin import circ_corrcl
-import tqdm
+from scipy.stats import circmean, ttest_1samp # type: ignore]
+from scipy.io import savemat # type: ignore
+from pingouin import circ_corrcc
+from tqdm import tqdm
 # suppress warning
 import warnings
 warnings.filterwarnings("ignore")
 
+
 from lib.file_utils import get_dms_pfc_paths_mono, get_dms_pfc_paths_all
-from lib.calculation import get_response_bg_firing
+from lib.calculation import get_response_bg_firing, get_session_performances, moving_window_mean_prior
 
 # relative positions to cue_time
 ITI_LEFT = -1
@@ -30,7 +31,7 @@ RESPONSE_RIGHT = 1.5
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
-relative_value_root = pjoin('data', 'prpd')
+relative_value_root = pjoin('data', 'relative_values')
 
 # TODO add relative value signal
 def fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
@@ -59,7 +60,6 @@ def fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
 
     plt.show()
     return fig
-
 
 def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
@@ -101,10 +101,116 @@ def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_siz
 
     return fig
 
-# def get_figure_5_panel_d(mono: bool = False, bin_size: int, zero_ymin: bool = True):
+def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool = True):
+    # iti correlated
+    phase_diffs = []
+    phase_diffs_bg = []
+    phase_diffs_bad = []
+    phase_diffs_bg_bad = []
 
+    phase_diffs_session_mean = []
+    phase_diffs_session_mean_bg = []
+    phase_diffs_session_mean_bad = []
+    phase_diffs_session_mean_bg_bad = []
 
-def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
+    performances, cutoff = get_session_performances()
+
+    if mono:
+        session_phase_diffs_good: Dict[str, List] = {}
+        session_phase_diffs_good_bg: Dict[str, List] = {}
+        session_phase_diffs_bad: Dict[str, List] = {}
+        session_phase_diffs_bad_bg: Dict[str, List] = {}
+
+        mono_pairs = get_dms_pfc_paths_mono()
+
+        for ind, row in mono_pairs.iterrows():
+            behaviour_data = pd.read_csv(row['session_path'])
+            pfc_times = np.load(row['pfc_path'])
+            str_times = np.load(row['dms_path'])
+
+            session_name = basename(row['session_path']).split('.')[0]
+
+            # create an entry for the session in the dictionary if it doesn't exist
+            if session_name not in session_phase_diffs_good.keys():
+                session_phase_diffs_good[session_name] = []
+                session_phase_diffs_bad[session_name] = []
+                session_phase_diffs_good_bg[session_name] = []
+                session_phase_diffs_bad_bg[session_name] = []
+
+            cue_times = behaviour_data['cue_time'].tolist()
+            pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+            dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times)
+
+            phase_d, phase_d_bg = phase_diff_pfc_dms(pfc_mag=pfc_mag, pfc_bg=pfc_bg, dms_mag=dms_mag, dms_bg=dms_bg)
+            if performances[session_name] > cutoff:
+                phase_diffs.append(phase_d)
+                phase_diffs_bg.append(phase_d_bg)
+
+                session_phase_diffs_good[session_name].append(phase_d)
+                session_phase_diffs_good_bg[session_name].append(phase_d_bg)
+            else:
+                phase_diffs_bad.append(phase_d)
+                phase_diffs_bg_bad.append(phase_d_bg)
+
+                session_phase_diffs_bad[session_name].append(phase_d)
+                session_phase_diffs_bad_bg[session_name].append(phase_d_bg)
+            
+        # calculate the number of good bad pairs for each session
+        for session_name in session_phase_diffs_good.keys():
+            if session_phase_diffs_good[session_name]:
+                phase_diffs_session_mean.append(circmean(session_phase_diffs_good[session_name], low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg.append(circmean(session_phase_diffs_good_bg[session_name], low=-np.pi, high=np.pi))
+            if session_phase_diffs_bad[session_name]:
+                phase_diffs_session_mean_bad.append(circmean(session_phase_diffs_bad[session_name], low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg_bad.append(circmean(session_phase_diffs_bad_bg[session_name], low=-np.pi, high=np.pi))
+    else:
+        for session_name in tqdm(listdir(spike_data_root)):
+            behaviour = pjoin(behaviour_root, session_name + '.csv')
+            behaviour_data = pd.read_csv(behaviour)
+            cue_times = behaviour_data['cue_time'].tolist()
+
+            cur_good = []
+            cur_good_bg = []
+            cur_bad = []
+            cur_bad_bg = []
+
+            good = performances[session_name] > cutoff
+
+            for pfc in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
+                pfc_times = np.load(pfc)
+                pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+                for dms in glob(pjoin(spike_data_root, session_name, 'dms_*')):
+                    str_times = np.load(dms)
+                    str_mag, str_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times)            
+                    phase_d, phase_d_bg = phase_diff_pfc_dms(pfc_mag=pfc_mag, pfc_bg=pfc_bg, dms_mag=str_mag, dms_bg=str_bg)
+                    if good:
+                        phase_diffs.append(phase_d)
+                        phase_diffs_bg.append(phase_d_bg)
+
+                        cur_good.append(phase_d)
+                        cur_good_bg.append(phase_d_bg)
+                    else:
+                        phase_diffs_bad.append(phase_d)
+                        phase_diffs_bg_bad.append(phase_d_bg)
+
+                        cur_bad.append(phase_d)
+                        cur_bad_bg.append(phase_d_bg)
+
+            if good:
+                phase_diffs_session_mean.append(circmean(cur_good, low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg.append(circmean(cur_good_bg, low=-np.pi, high=np.pi))
+            else:
+                phase_diffs_session_mean_bad.append(circmean(cur_bad, low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg_bad.append(circmean(cur_bad_bg, low=-np.pi, high=np.pi))
+
+    if mono:    
+        savemat('circular_data_panel_d_mono.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})   
+    else:
+        savemat('circular_data_panel_d_all.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})
+
+    fig = draw_fig_5_panel_d(phase_diffs=phase_diffs, phase_diffs_bg=phase_diffs_bg, phase_diffs_bad=phase_diffs_bad, phase_diffs_bg_bad=phase_diffs_bg_bad, bin_size=36, zero_ymin=zero_ymin)
+
+def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     mid = int(bin_size / 2)
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
     hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
@@ -140,7 +246,6 @@ def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_d
     y_max = np.max(hist) * 1.05
     axes[1][1].set_ylim(y_min, y_max)
 
-
     sns.histplot(phase_diffs, ax=axes[0][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='blue', kde=True) # type: ignore
     sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='blue', kde=True) # type: ignore
     sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='red', kde=True) # type: ignore
@@ -170,27 +275,50 @@ def fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_d
 
     return fig
 
-def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False) -> Figure:
+def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
 
     bin_size = 36
     mid = int(bin_size / 2)
-    zero_ymin = False
 
     phase_diff_bg_pfc = []
     phase_diff_bg_dms = []
     phase_diff_response_pfc = []
     phase_diff_response_dms = []
 
+    pfc_response_sig_count = 0
+    pfc_bg_sig_count = 0
+
+    dms_response_sig_count = 0
+    dms_bg_sig_count = 0
+
+    pfc_count = 0
+    dms_count = 0
+
     if mono:
         dms_pfc_paths = get_dms_pfc_paths_mono()
+
+        pfc_count = len(dms_pfc_paths)
+        dms_count = pfc_count
+
+        session_phase_diffs_pfc: Dict[str, List] = {}
+        session_phase_diffs_pfc_bg: Dict[str, List] = {}
+        session_phase_diffs_dms: Dict[str, List] = {}
+        session_phase_diffs_dms_bg: Dict[str, List] = {}
         
-        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
+        for mono_pair in tqdm(dms_pfc_paths.iterrows()):
             session_path = mono_pair[1]['session_path']
             pfc_path = mono_pair[1]['pfc_path']
             dms_path = mono_pair[1]['dms_path']
 
             session_name = basename(session_path).split('.')[0]
+
+            # create an entry for the session in the dictionary if it doesn't exist
+            if session_name not in session_phase_diffs_pfc.keys():
+                session_phase_diffs_pfc[session_name] = []
+                session_phase_diffs_pfc_bg[session_name] = []
+                session_phase_diffs_dms[session_name] = []
+                session_phase_diffs_dms_bg[session_name] = []
 
             pfc_times = np.load(pfc_path)
             dms_times = np.load(dms_path)
@@ -203,36 +331,47 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
             
             relative_value_path = pjoin(relative_value_root, session_name + '.npy')
             relative_values = np.load(relative_value_path)
+            if no_nan:
+                # smoothen relative values
+                relative_values = moving_window_mean_prior(relative_values, 10)
+
+            phase_relative_values = get_phase(relative_values)
 
             pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
             dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-            # calculate the phase difference wrt relative value
-            phase_diff_mag = phase_diff(pfc_mag, relative_values)
-            phase_diff_bg = phase_diff(pfc_bg, relative_values)
+            phase_pfc_mag = get_phase(pfc_mag)
+            if circ_corrcc(phase_pfc_mag, phase_relative_values)[1] < 0.01:
+                pfc_response_sig_count += 1
+                # calculate the phase difference wrt relative value
+                phase_diff_mag = phase_diff(relative_values, pfc_mag)
+                phase_diff_response_pfc.append(phase_diff_mag)
 
-            phase_diff_response_pfc.append(phase_diff_mag)
-            phase_diff_bg_pfc.append(phase_diff_bg)
+            phase_pfc_bg = get_phase(pfc_bg)
+            if circ_corrcc(phase_pfc_bg, phase_relative_values)[1] < 0.01:
+                pfc_bg_sig_count += 1
+                phase_diff_bg = phase_diff(relative_values, pfc_bg)
+                phase_diff_bg_pfc.append(phase_diff_bg)
 
-            phase_diff_mag = phase_diff(dms_mag, relative_values)
-            phase_diff_bg = phase_diff(dms_bg, relative_values)
-
-            phase_diff_response_dms.append(phase_diff_mag)
-            phase_diff_bg_dms.append(phase_diff_bg)
+            phase_dms_mag = get_phase(dms_mag)
+            if circ_corrcc(phase_dms_mag, phase_relative_values)[1] < 0.01:
+                dms_response_sig_count += 1
+                phase_diff_mag = phase_diff(relative_values, dms_mag)
+                phase_diff_response_dms.append(phase_diff_mag)
+            
+            phase_dms_bg = get_phase(dms_bg)
+            if circ_corrcc(phase_dms_bg, phase_relative_values)[1] < 0.01:
+                dms_bg_sig_count += 1
+                phase_diff_bg = phase_diff(relative_values, dms_bg)
+                phase_diff_bg_dms.append(phase_diff_bg)
     else:
-        pfc_response_sig_count = 0
-        pfc_bg_sig_count = 0
-
-        dms_response_sig_count = 0
-        dms_bg_sig_count = 0
-
-        pfc_count = 0
-        dms_count = 0
-
-        for session_name in tqdm.tqdm(listdir(spike_data_root)):
+        for session_name in tqdm(listdir(spike_data_root)):
             session_path = pjoin(spike_data_root, session_name)
             relative_value_path = pjoin(relative_value_root, session_name + '.npy')
             relative_values = np.load(relative_value_path)
+            if no_nan:
+                # smoothen relative values
+                relative_values = moving_window_mean_prior(relative_values, 10)
             phase_relative_values = get_phase(relative_values)
             behaviour_path = pjoin(behaviour_root, session_name + '.csv')
             behaviour_data = pd.read_csv(behaviour_path)
@@ -249,14 +388,15 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
                 
                 pfc_mag_phase = get_phase(pfc_mag) 
-                if circ_corrcl(pfc_mag_phase, phase_relative_values)[1] < 0.05:
+                if circ_corrcc(pfc_mag_phase, phase_relative_values)[1] < 0.01:
                     pfc_response_sig_count += 1
-                    phase_diff_mag = phase_diff(pfc_mag, relative_values)
+                    phase_diff_mag = phase_diff(relative_values, pfc_mag)
                     phase_diff_response_pfc.append(phase_diff_mag)
                 
-                if circ_corrcl(pfc_bg, phase_relative_values)[1] < 0.05:
+                pfc_bg_phase = get_phase(pfc_bg)
+                if circ_corrcc(pfc_bg_phase, phase_relative_values)[1] < 0.01:
                     pfc_bg_sig_count += 1
-                    phase_diff_bg = phase_diff(pfc_bg, relative_values)
+                    phase_diff_bg = phase_diff(relative_values, pfc_bg)
                     phase_diff_bg_pfc.append(phase_diff_bg)
             
             # load the dms cells
@@ -266,14 +406,16 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-                if circ_corrcl(dms_mag, phase_relative_values)[1] < 0.05:
+                dms_mag_phase = get_phase(dms_mag)
+                if circ_corrcc(dms_mag_phase, phase_relative_values)[1] < 0.01:
                     dms_response_sig_count += 1
-                    phase_diff_mag = phase_diff(dms_mag, relative_values)
+                    phase_diff_mag = phase_diff(relative_values, dms_mag)
                     phase_diff_response_dms.append(phase_diff_mag)
                 
-                if circ_corrcl(dms_bg, phase_relative_values)[1] < 0.05:
+                dms_bg_phase = get_phase(dms_bg)
+                if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < 0.01:
                     dms_bg_sig_count += 1
-                    phase_diff_bg = phase_diff(dms_bg, relative_values)
+                    phase_diff_bg = phase_diff(relative_values, dms_bg)
                     phase_diff_bg_dms.append(phase_diff_bg)
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
@@ -309,6 +451,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     y_max = np.max(hist) * 1.05
     axes[1][1].set_ylim(y_min, y_max)
 
+
     sns.histplot(phase_diff_response_pfc, ax=axes[0][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
     sns.histplot(phase_diff_bg_pfc, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
     sns.histplot(phase_diff_response_dms, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
@@ -316,17 +459,18 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
 
     # calculate the circular mean for each group
     mean = circmean(phase_diff_response_pfc, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_response_pfc, 0)
-    print(f'PFC response: {mean} {p_value}')
+    print(f'PFC response: {mean}')
     mean = circmean(phase_diff_bg_pfc, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_bg_pfc, 0)
-    print(f'PFC bg: {mean} {p_value}')
+    print(f'PFC bg: {mean}')
     mean = circmean(phase_diff_response_dms, low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_response_dms, 0)
-    print(f'DMS response: {mean} {p_value}')
+    print(f'DMS response: {mean}')
     mean = circmean(phase_diff_bg_dms,  low=-np.pi, high=np.pi)
-    p_value = circ_mtest(phase_diff_bg_dms, 0)
-    print(f'DMS bg: {mean} {p_value}')
+    print(f'DMS bg: {mean}')
+
+    if mono:
+        savemat('circular_data_panel_e_mono.mat', {'array_1': phase_diff_response_pfc, 'array_2': phase_diff_bg_pfc, 'array_3': phase_diff_response_dms, 'array_4': phase_diff_bg_dms})
+    else:
+        savemat('circular_data_panel_e_all.mat', {'array_1': phase_diff_response_pfc, 'array_2': phase_diff_bg_pfc, 'array_3': phase_diff_response_dms, 'array_4': phase_diff_bg_dms})
 
     print(f'PFC response: {pfc_response_sig_count} / {pfc_count}')
     print(f'PFC bg: {pfc_bg_sig_count} / {pfc_count}')
@@ -357,6 +501,10 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     remove_top_and_right_spines(axes[1][0])
     remove_top_and_right_spines(axes[1][1])
 
+    return fig
+
+# def get_figure_5_panel_extra(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
+#     # divide the
 
 
 def set_xticks_and_labels_pi(ax: plt.Axes):
