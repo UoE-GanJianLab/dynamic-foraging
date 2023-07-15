@@ -31,7 +31,7 @@ RESPONSE_RIGHT = 1.5
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
-relative_value_root = pjoin('data', 'relative_values')
+relative_value_root = pjoin('data', 'prpd')
 
 # TODO add relative value signal
 def fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
@@ -341,26 +341,26 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
             dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
             phase_pfc_mag = get_phase(pfc_mag)
-            if circ_corrcc(phase_pfc_mag, phase_relative_values)[1] < 0.01:
+            if circ_corrcc(phase_pfc_mag, phase_relative_values)[1] < 0.05:
                 pfc_response_sig_count += 1
                 # calculate the phase difference wrt relative value
                 phase_diff_mag = phase_diff(relative_values, pfc_mag)
                 phase_diff_response_pfc.append(phase_diff_mag)
 
             phase_pfc_bg = get_phase(pfc_bg)
-            if circ_corrcc(phase_pfc_bg, phase_relative_values)[1] < 0.01:
+            if circ_corrcc(phase_pfc_bg, phase_relative_values)[1] < 0.05:
                 pfc_bg_sig_count += 1
                 phase_diff_bg = phase_diff(relative_values, pfc_bg)
                 phase_diff_bg_pfc.append(phase_diff_bg)
 
             phase_dms_mag = get_phase(dms_mag)
-            if circ_corrcc(phase_dms_mag, phase_relative_values)[1] < 0.01:
+            if circ_corrcc(phase_dms_mag, phase_relative_values)[1] < 0.05:
                 dms_response_sig_count += 1
                 phase_diff_mag = phase_diff(relative_values, dms_mag)
                 phase_diff_response_dms.append(phase_diff_mag)
             
             phase_dms_bg = get_phase(dms_bg)
-            if circ_corrcc(phase_dms_bg, phase_relative_values)[1] < 0.01:
+            if circ_corrcc(phase_dms_bg, phase_relative_values)[1] < 0.05:
                 dms_bg_sig_count += 1
                 phase_diff_bg = phase_diff(relative_values, dms_bg)
                 phase_diff_bg_dms.append(phase_diff_bg)
@@ -372,6 +372,8 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
             if no_nan:
                 # smoothen relative values
                 relative_values = moving_window_mean_prior(relative_values, 10)
+            # get the z score of the relative values
+            relative_values = (relative_values - np.mean(relative_values)) / np.std(relative_values)
             phase_relative_values = get_phase(relative_values)
             behaviour_path = pjoin(behaviour_root, session_name + '.csv')
             behaviour_data = pd.read_csv(behaviour_path)
@@ -387,36 +389,43 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 pfc_name = basename(pfc_path).split('.')[0]
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
                 
-                pfc_mag_phase = get_phase(pfc_mag) 
-                if circ_corrcc(pfc_mag_phase, phase_relative_values)[1] < 0.01:
-                    pfc_response_sig_count += 1
-                    phase_diff_mag = phase_diff(relative_values, pfc_mag)
-                    phase_diff_response_pfc.append(phase_diff_mag)
+                if np.std(pfc_mag) != 0:
+                    pfc_mag = (pfc_mag - np.mean(pfc_mag)) / np.std(pfc_mag)
+                    pfc_mag_phase = get_phase(pfc_mag) 
+                    if circ_corrcc(pfc_mag_phase, phase_relative_values)[1] < 0.05:
+                        pfc_response_sig_count += 1
+                        phase_diff_mag = phase_diff(relative_values, pfc_mag)
+                        phase_diff_response_pfc.append(phase_diff_mag)
+
+                if np.std(pfc_bg) != 0:
+                    pfc_bg = (pfc_bg - np.mean(pfc_bg)) / np.std(pfc_bg)
+                    pfc_bg_phase = get_phase(pfc_bg)
+                    if circ_corrcc(pfc_bg_phase, phase_relative_values)[1] < 0.05:
+                        pfc_bg_sig_count += 1
+                        phase_diff_bg = phase_diff(relative_values, pfc_bg)
+                        phase_diff_bg_pfc.append(phase_diff_bg)
                 
-                pfc_bg_phase = get_phase(pfc_bg)
-                if circ_corrcc(pfc_bg_phase, phase_relative_values)[1] < 0.01:
-                    pfc_bg_sig_count += 1
-                    phase_diff_bg = phase_diff(relative_values, pfc_bg)
-                    phase_diff_bg_pfc.append(phase_diff_bg)
-            
             # load the dms cells
             for dms_path in glob(pjoin(session_path, 'dms_*.npy')):
                 dms_count += 1
                 dms_times = np.load(dms_path)
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
-
-                dms_mag_phase = get_phase(dms_mag)
-                if circ_corrcc(dms_mag_phase, phase_relative_values)[1] < 0.01:
-                    dms_response_sig_count += 1
-                    phase_diff_mag = phase_diff(relative_values, dms_mag)
-                    phase_diff_response_dms.append(phase_diff_mag)
-                
-                dms_bg_phase = get_phase(dms_bg)
-                if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < 0.01:
-                    dms_bg_sig_count += 1
-                    phase_diff_bg = phase_diff(relative_values, dms_bg)
-                    phase_diff_bg_dms.append(phase_diff_bg)
+                if np.std(dms_mag) != 0:
+                    # get the z score of the firing rates
+                    dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
+                    dms_mag_phase = get_phase(dms_mag)
+                    if circ_corrcc(dms_mag_phase, phase_relative_values)[1] < 0.05:
+                        dms_response_sig_count += 1
+                        phase_diff_mag = phase_diff(relative_values, dms_mag)
+                        phase_diff_response_dms.append(phase_diff_mag)
+                if np.std(dms_bg) != 0:
+                    dms_bg = (dms_bg - np.mean(dms_bg)) / np.std(dms_bg)
+                    dms_bg_phase = get_phase(dms_bg)
+                    if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < 0.05:
+                        dms_bg_sig_count += 1
+                        phase_diff_bg = phase_diff(relative_values, dms_bg)
+                        phase_diff_bg_dms.append(phase_diff_bg)
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
     if zero_ymin:

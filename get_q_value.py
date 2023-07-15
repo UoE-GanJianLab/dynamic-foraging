@@ -1,5 +1,6 @@
 from glob import glob
-from os.path import join as pjoin
+from os.path import join as pjoin, basename
+from os import cpu_count
 import numpy as np
 import pandas as pd
 import tqdm
@@ -11,7 +12,9 @@ from lib.models import RW
 BEHAVIOUR_ROOT = 'data/behaviour_data/'
 RELATIVE_VALUE_ROOT = 'data/relative_values/'
 
-def fit_and_save(session, reset=True):
+def fit_and_save(session: str, reset=True):
+    crainotomy_side = 'R'
+    session_name = basename(session).split('.')[0]
     session_data = pd.read_csv(session)
     # remove nan trials
     session_data = session_data[~session_data['trial_response_side'].isna()]
@@ -19,6 +22,9 @@ def fit_and_save(session, reset=True):
     # convert choices of -1 to 0
     choices[choices == -1] = 0
     rewards = np.array(session_data['trial_reward'].values)
+
+    if session_name[:6] == "AKED01":
+        crainotomy_side = 'L'
 
     # fit the models
     rw = RW()
@@ -30,6 +36,9 @@ def fit_and_save(session, reset=True):
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
 
+    if crainotomy_side == 'L':
+        relative_values = -relative_values
+
     # save the relative values
     np.save(pjoin(RELATIVE_VALUE_ROOT, session_name+'.npy'), relative_values)
 
@@ -37,7 +46,8 @@ def fit_and_save(session, reset=True):
 sessions = glob(pjoin(BEHAVIOUR_ROOT, '*.csv'))
 
 # set the number of processes to use
-n_processes = 4
+n_processes = cpu_count() - 1
+print(n_processes)
 
 # create a Pool object with the specified number of processes
 pool = Pool(n_processes)
