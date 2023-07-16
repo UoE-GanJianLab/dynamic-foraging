@@ -36,11 +36,11 @@ class RW:
     def get_choice(self) -> tuple[int, float]:
         if self.choices.size == 0:
             # if this is the first trial, choose without kappa term
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         else:
             pre_choice = self.choices[-1]
-            # p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b + self.kappa * pre_choice))) 
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice))
+            # p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
         choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
 
@@ -84,7 +84,8 @@ class RW:
 
         for i in range(10):
             x0 = self.sample_parameters()
-            bounds = [(0.00001, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.00001, 1), (0.00001, 1)]
+            # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
+            bounds = [(0, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.001, 1), (0.001, 1)]
 
             params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
@@ -105,8 +106,8 @@ class RW:
         beta = np.random.uniform(1, 10)
         kappa = np.random.uniform(-1, 1)
         b = np.random.uniform(-1, 1)
-        alpha = np.random.uniform(0, 1)
-        gamma = np.random.uniform(0, 1)
+        alpha = np.random.uniform(0.1, 1)
+        gamma = np.random.uniform(0.1, 1)
         return [beta, kappa, b, alpha,gamma]
     
     # v_r - v_l
@@ -142,15 +143,15 @@ class RW:
 
         return delta_V
 
-    # simulate according to a session of real behaviour
-    def simulate(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
-        self.assign_parameters(parameters)
-        self.choices = np.array([])
+    # # simulate according to a session of real behaviour
+    # def simulate(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
+    #     self.assign_parameters(parameters)
+    #     self.choices = np.array([])
         
-        neg_log_likelihood = 0
-        self.v0, self.v1 = 0, 0
+    #     neg_log_likelihood = 0
+    #     self.v0, self.v1 = 0, 0
 
-        for i in range(choices_real.size):
-            choice = choices_real[i]
-            c, prob = self.get_choice()
-            self.choices[-1] = choice
+    #     for i in range(choices_real.size):
+    #         choice = choices_real[i]
+    #         c, prob = self.get_choice()
+    #         self.choices[-1] = choice
