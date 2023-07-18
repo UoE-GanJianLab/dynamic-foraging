@@ -245,11 +245,15 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     axes.set_ylim(0, 1)
 
 
-
+# TODO: complete this
+# split into rewarded and non_rewarded trials
 def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     # 
+# TODO: Complete this
+def figure_6_plateau_transition(mono: bool = False, reset: bool = False):
+    pass
 
 def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
