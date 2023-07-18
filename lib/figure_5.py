@@ -647,8 +647,8 @@ def get_figure_5_panel_extra(mono: bool=False, reset: bool=False, no_nan: bool=F
                 transition_trial_indices += (range(switch, switch+20))
 
             for cell_pair in all_pairs:
-                pfc_path = cell_pair[0]
-                dms_path = cell_pair[1]
+                pfc_path = cell_pair[1]
+                dms_path = cell_pair[0]
 
                 pfc_time = np.load(pfc_path)
                 dms_time = np.load(dms_path)
