@@ -128,7 +128,6 @@ def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc
     return p, r, overall_cross_cor
 
 
-
 def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
@@ -245,15 +244,150 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     axes.set_ylim(0, 1)
 
 
-# TODO: complete this
 # split into rewarded and non_rewarded trials
 def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
-    # 
-# TODO: Complete this
-def figure_6_plateau_transition(mono: bool = False, reset: bool = False):
-    pass
+    rewarded_strength = []
+    non_rewarded_strength = []
+
+    if reset:
+        rmtree(figure_6_data_root)
+        mkdir(figure_6_data_root)
+    
+    if mono:
+        dms_pfc_paths = get_dms_pfc_paths_mono()
+        
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+
+            rewarded_trials = np.where(trial_reward == 1)[0]
+            non_rewarded_trials = np.where(trial_reward == 0)[0]
+
+            if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+                interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+            else:
+                pfc_times = np.load(pfc_path)
+                dms_times = np.load(dms_path)
+                # calculate the interconnectivity strength
+                interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
+                # load the interconnectivity strength
+                np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+
+            rewarded_strength.append(interconnectivity_strength[rewarded_trials])
+            non_rewarded_strength.append(interconnectivity_strength[non_rewarded_trials])
+    else:
+        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
+
+        with Pool() as pool:
+            process_session_partial = partial(process_session_panel_e, reset=reset)
+            results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
+
+        for result in results:
+            rewarded_strength += result[0]
+            non_rewarded_strength += result[1]
+
+    # plot the bar plot with the average percentage of rewarded and non-rewarded strength
+    sns.barplot(x=['rewarded', 'non-rewarded'], y=[np.mean(rewarded_strength), np.mean(non_rewarded_strength)], ax=axes)
+
+    # t test to see if the percentage of rewarded and non-rewarded strength are different
+    t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
+    print(f't: {t}, p: {p}')
+
+
+
+# similar to panel e, but split into plateau and transition trials instead of 
+# rewarded and non-rewarded trials
+def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool = False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+
+    plateau_strength = []
+    transition_strength = []
+
+    if reset:
+        rmtree(figure_6_data_root)
+        mkdir(figure_6_data_root)
+
+    if mono:
+        dms_pfc_paths = get_dms_pfc_paths_mono()
+        
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            leftP = np.array(behaviour_data['leftP'].values)
+
+            # get the switches
+            switches = find_switch(leftP)
+            # find the plateau and transition trials
+            plateau_trial_indices = []
+            transition_trial_indices = []
+
+            # if there are less than 20 trials before or after the switch
+            # skip the switch
+            for switch in switches:
+                if switch < 20 or switch > len(leftP) - 20:
+                    continue
+                plateau_trial_indices += (range(switch-20, switch))
+                transition_trial_indices += (range(switch, switch+20))
+
+            plateau_trial_indices = np.array(plateau_trial_indices)
+            transition_trial_indices = np.array(transition_trial_indices)
+
+            if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+                interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+            else:
+                pfc_times = np.load(pfc_path)
+                dms_times = np.load(dms_path)
+                # calculate the interconnectivity strength
+                interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
+                # load the interconnectivity strength
+                np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+            
+            plateau_strength.extend(interconnectivity_strength[plateau_trial_indices])
+            transition_strength.extend(interconnectivity_strength[transition_trial_indices])
+    else:
+        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
+
+        with Pool() as pool:
+            process_session_partial = partial(process_session_panel_e_plateau_transition, reset=reset)
+            results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
+
+        for result in results:
+            plateau_strength += result[0]
+            transition_strength += result[1]
+
+    # # store the data into a dataframe, with a column indicating the type of trial
+    # plateau_strength = pd.DataFrame({'strength': plateau_strength, 'trial_type': 'plateau'})
+    # transition_strength = pd.DataFrame({'strength': transition_strength, 'trial_type': 'transition'})
+    # plateau_strength = plateau_strength.append(transition_strength)
+
+    # # plot the plateau and transitioning trials as box plots
+    # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
+    sns.barplot(x=['plateau', 'transition'], y=[np.mean(plateau_strength), np.mean(transition_strength)], ax=axes)
+
+    
+    # t test to see if the percentage of rewarded and non-rewarded strength are different
+    t, p = ttest_ind(plateau_strength, transition_strength)
+    print(f't: {t}, p: {p}')
+
 
 def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
@@ -345,6 +479,87 @@ def process_session_panel_d(session, reset=False):
 
     return (sig_rs_positive_percentage, sig_rs_negative_percentage)
 
+
+def process_session_panel_e(session, reset=False):
+    session_name = session[0]
+    cue_time = session[1]
+    trial_reward = session[2]
+
+    rewarded_interconnectivity = []
+    non_rewarded_interconnectivity = []
+
+    for pair in session[3]:
+        dms_path = pair[0]
+        pfc_path = pair[1]
+
+        pfc_name = basename(pfc_path).split('.')[0]
+        dms_name = basename(dms_path).split('.')[0]
+
+        if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+            interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+        else:
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+            # calculate the interconnectivity strength
+            interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
+            # load the interconnectivity strength
+            np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+        
+        rewarded_interconnectivity.extend(interconnectivity_strength[trial_reward == 1])
+        non_rewarded_interconnectivity.extend(interconnectivity_strength[trial_reward == 0])
+
+    return (rewarded_interconnectivity, non_rewarded_interconnectivity)
+
+
+def process_session_panel_e_plateau_transition(session, reset=False):
+    session_name = session[0]
+    cue_time = session[1]
+    trial_reward = session[2]
+
+    behaviour_data = pd.read_csv(pjoin(behaviour_root, session_name + '.csv'))
+    leftP = np.array(behaviour_data['leftP'])
+
+    switches = find_switch(leftP)
+    # find the plateau and transition trials
+    plateau_trial_indices = []
+    transition_trial_indices = []
+
+    # if there are less than 20 trials before or after the switch
+    # skip the switch
+    for switch in switches:
+        if switch < 20 or switch > len(leftP) - 20:
+            continue
+        plateau_trial_indices += (range(switch-20, switch))
+        transition_trial_indices += (range(switch, switch+20))
+
+    plateau_trial_indices = np.array(plateau_trial_indices)
+    transition_trial_indices = np.array(transition_trial_indices)
+
+    plateau_interconnectivity = []
+    transition_interconnectivity = []
+
+    for pair in session[3]:
+        dms_path = pair[0]
+        pfc_path = pair[1]
+
+        pfc_name = basename(pfc_path).split('.')[0]
+        dms_name = basename(dms_path).split('.')[0]
+
+        if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+            interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+        else:
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+            # calculate the interconnectivity strength
+            interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
+            # load the interconnectivity strength
+            np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+        
+        plateau_interconnectivity.extend(interconnectivity_strength[plateau_trial_indices])
+        transition_interconnectivity.extend(interconnectivity_strength[transition_trial_indices])
+
+    return (plateau_interconnectivity, transition_interconnectivity)
+
 def process_session_panel_f(session, reset=False):
     session_name = session[0]
     cue_time = session[1]
@@ -371,3 +586,12 @@ def process_session_panel_f(session, reset=False):
     
 
     return overall_crosscors
+
+
+# return the indices of the trials where the high reward side switches
+def find_switch(leftP: np.ndarray) -> List[int]:
+    switch_indices = []
+    for i in range(len(leftP)-1):
+        if leftP[i] != leftP[i+1]:
+            switch_indices.append(i)
+    return switch_indices

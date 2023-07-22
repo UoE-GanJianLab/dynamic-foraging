@@ -602,14 +602,14 @@ def get_figure_5_panel_extra(mono: bool=False, reset: bool=False, no_nan: bool=F
             pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=np.load(pfc_path))
             dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=np.load(dms_path))
 
-            swithes = find_switch(leftP)
+            switches = find_switch(leftP)
 
             plateau_trial_indices = []
             transition_trial_indices = []
 
             # if there are less than 20 trials before or after the switch
             # skip the switch
-            for switch in swithes:
+            for switch in switches:
                 if switch < 20 or switch > len(leftP) - 20:
                     continue
                 plateau_trial_indices += (range(switch-20, switch))
