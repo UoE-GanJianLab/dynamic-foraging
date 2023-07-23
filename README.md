@@ -26,12 +26,14 @@ response magnitude: response time window firing - background firing
 
 PRP: prior reward probability
 
-## figure_data
+### figure_data
+
+Organized data used for plotting the figures.
 
 The figure_data are named according to the names on the poster. 
 
-### Figure 3
-#### Panel A B
+#### Figure 3
+1. Panel A B
 
 Panel A B are for PFC and DMS repectively. These panels contain the firing rates of signal trials, mvt trials and reward trials with the error bar dipicting standard error ploted agains cue time. The Data is organized as follows:
 
@@ -39,7 +41,7 @@ Panel A B are for PFC and DMS repectively. These panels contain the firing rates
 |---|---|---|---|---|---|---|
 |relative time to cue time, center of the 20ms bin|The firing rate line for the signal trials averaged across all PFC/DMS cells| The standard error of the firing rates of signal trials across all PFC/DMS cels|The firing rate line for the mvt trials averaged across all PFC/DMS cells| The standard error of the firing rates of mvt trials across all PFC/DMS cels|The firing rate line for the reward trials averaged across all PFC/DMS cells| The standard error of the firing rates of reward trials across all PFC/DMS cels|
 
-#### Panel C D
+2. Panel C D
 
 Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt and reward regressors ploted against the relative time to cue time in the range of $[-0.5, 1.5]$. The data is organized as follows:
 
@@ -47,9 +49,21 @@ Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt
 |---|---|---|---|
 |relative time to cue time, center of the 20ms bin|The signal regressor(signal trials firing rate)|The mvt regressor(mvt trials firing rate - signal trials firing rate)|The reward regressor(reward trials firing rate - mvt trials firing rate)| 
 
-#### Panel E F
+3. Panel E F
 
-Again, panel E F are for PFC and DMS respectively. 
+Again, panel E F are for PFC and DMS respectively. These panels show the result of applying the regressors from panel C D to multiple linear regression to the firing rate during signal, mvt and reward trials of individual PFC/DMS cell. The data is organized as follows:
+
+|coefficient_type|signal_trials|signal_trials_err|mvt_trials|mvt_trials_err|reward_trials|reward_trials_err|
+|---|---|---|---|---|---|---|
+|The type of coefficient|The coefficients for regression result of signal trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of signal trials across all PFC/DMS cells|The coefficients for regression result of mvt trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of mvt trials across all PFC/DMS cells|The coefficients for regression result of reward trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of reward trials across all PFC/DMS cells|
+
+#### Figure 4 
+Panel A B are for PFC and DMS respectively. These panels show the result of applying the regressors from figure 3 panel C D to multiple linear regression of PFC/DMS trials with prior reward probability(prp) $\geq 0.5$ or $<0.5$, each subfigure compares the regressed coefficient for the high and low reward trials. The data is organize as follows:
+
+|trial_type|signal_coeffs|signal_coeffs_err|mvt_coeffs|mvt_coeffs_err|reward_coeffs|reward_coeffs_err|
+|---|---|---|---|---|---|---|
+|high or low prp trials|regressed coefficient for signal regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for signal regressor across all PFC/DMS cells|regressed coefficient for mvt regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for mvt regressor across all PFC/DMS cells|regressed coefficient for reward regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for reward regressor across all PFC/DMS cells|
+
 
 
 ## repository structure
@@ -75,6 +89,8 @@ Normalized cross correlation as defined by Wei Xu and the cross correlation metr
 
 
 # figures
+
+Figures below are named according to the first draft of the manuscript.
 
 ## figure 1
 
