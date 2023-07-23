@@ -51,7 +51,7 @@ def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
 
             session_name = basename(row['session_path']).split('.')[0]
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
-            if nonan:
+            if relative_value_root == pjoin('data', 'relative_values'):
                 # smoothen the relative value
                 relative_value = moving_window_mean_prior(relative_value, 10)
 
@@ -73,7 +73,7 @@ def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
             behaviour_data = pd.read_csv(behaviour)
             cue_times = behaviour_data['cue_time'].tolist()
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
-            if nonan:
+            if relative_value_root == pjoin('data', 'relative_values'):
                 # smoothen the relative value
                 relative_value = moving_window_mean_prior(relative_value, 10)
 
@@ -735,9 +735,11 @@ def set_xticks_and_labels_pi(ax: plt.Axes):
     ax.set_xticks([-np.pi, 0, np.pi])
     ax.set_xticklabels([r'$-\pi$', '0', r'$\pi$'])
 
+
 def remove_top_and_right_spines(ax: plt.Axes):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+
 
 def phase_diff_pfc_dms(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[float, float]:
     session_length = len(pfc_mag)
@@ -754,10 +756,9 @@ def phase_diff_pfc_dms(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[float, float]:
 
     phase_diff = circmean(phase_pfc - phase_dms, high=np.pi, low=-np.pi)
     phase_diff_bg = circmean(phase_pfc_bg - phase_dms_bg, high=np.pi, low=-np.pi)
-    # phase_diff = circmean(phase_pfc - phase_str)
-    # phase_diff_bg = circmean(phase_pfc_bg - phase_str_bg)
 
     return phase_diff, phase_diff_bg
+
 
 def phase_diff_pfc_dms_array(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[np.ndarray, np.ndarray]:
     session_length = len(pfc_mag)
@@ -776,6 +777,7 @@ def phase_diff_pfc_dms_array(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[np.ndarr
     phase_diff_bg = phase_pfc_bg - phase_dms_bg
 
     return np.array(phase_diff), np.array(phase_diff_bg)
+
 
 def phase_diff(sig1, sig2) -> float:
     length = len(sig1)

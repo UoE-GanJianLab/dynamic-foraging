@@ -25,6 +25,16 @@ behaviour_root = pjoin('data', 'behaviour_data')
 signal_mvt_reward_file = pjoin(spike_time_dir, 'figure_3', 'signal_mvt_reward.npy')
 signal_mvt_reward_high_low_file = pjoin(spike_time_dir, 'figure_3', 'signal_mvt_reward_high_low.npy')
 
+figure_3_data_root = pjoin('figure_data', 'figure_3')
+if not isdir(figure_3_data_root):
+    print('Creating ' + figure_3_data_root)
+    mkdir(figure_3_data_root)
+
+figure_4_data_root = pjoin('figure_data', 'figure_4')
+if not isdir(figure_4_data_root):
+    print('Creating ' + figure_4_data_root)
+    mkdir(figure_4_data_root)
+
 def compute_component_prp_spike_times(component_idx, prp_idx, relative_to_pfc, window_left=WINDOW_LEFT, window_right=WINDOW_RIGHT, bin_size=BIN_SIZE):
     component_spike_times = [relative_to_pfc[idx] for idx in component_idx if idx in prp_idx]
     if len(component_spike_times) == 0:
@@ -37,7 +47,6 @@ def compute_component_prp_spike_times(component_idx, prp_idx, relative_to_pfc, w
 
 # poster panel a,b of figure 3
 def figure_3_panel_bc(reset=False):
-
     dms_count = 0
     pfc_count = 0
 
@@ -48,7 +57,6 @@ def figure_3_panel_bc(reset=False):
         rmtree(pjoin('data', 'spike_times', 'figure_3'))
         mkdir(pjoin('data', 'spike_times', 'figure_3'))
 
-    
     if not isfile(signal_mvt_reward_file):
         pfc_signal_binned = []
         pfc_mvt_binned = []
@@ -57,7 +65,6 @@ def figure_3_panel_bc(reset=False):
         dms_mvt_binned = []
         dms_reward_binned = []
         dms_signal_binned = []
-
 
         # iterate through the sessions
         for session_name in tqdm.tqdm(listdir(behaviour_root)):
@@ -101,12 +108,10 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = [relative_to_pfc[idx] for idx in mvt_idx]
                 reward_spike_times = [relative_to_pfc[idx] for idx in reward_idx]
 
-
                 # concatenate the spike times of each trial type
                 signal_spike_times = np.concatenate(signal_spike_times)
                 mvt_spike_times = np.concatenate(mvt_spike_times)
                 reward_spike_times = np.concatenate(reward_spike_times)
-
 
                 # bin the spike times using histoplot
                 signal_spike_times = np.histogram(signal_spike_times, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0]
@@ -118,12 +123,10 @@ def figure_3_panel_bc(reset=False):
                 mvt_spike_times = np.divide(mvt_spike_times, BIN_SIZE)
                 reward_spike_times = np.divide(reward_spike_times, BIN_SIZE)
 
-
                 # normalize by the number of trials
                 signal_spike_times = np.divide(signal_spike_times, len(signal_idx))
                 mvt_spike_times = np.divide(mvt_spike_times, len(mvt_idx))
                 reward_spike_times = np.divide(reward_spike_times, len(reward_idx))
-
 
                 if not isfile(binned_file):
                     total_spike_times = [np.divide(np.histogram(relative_trial_spikes, bins=np.arange(WINDOW_LEFT, WINDOW_RIGHT+BIN_SIZE, BIN_SIZE))[0], BIN_SIZE) for relative_trial_spikes in relative_to_pfc]
@@ -188,7 +191,6 @@ def figure_3_panel_bc(reset=False):
                 dms_mvt_binned.append(mvt_spike_times)
                 dms_reward_binned.append(reward_spike_times)
 
-
         # take the mean of the binned spike times, recording the standard error
         pfc_signal_binned_mean = np.mean(pfc_signal_binned, axis=0) 
         pfc_signal_binned_err = np.std(pfc_signal_binned, axis=0) / np.sqrt(pfc_count)
@@ -209,6 +211,14 @@ def figure_3_panel_bc(reset=False):
     else:
         # load the binned spike times
         pfc_signal_binned_mean, pfc_signal_binned_err, pfc_mvt_binned_mean, pfc_mvt_binned_err, pfc_reward_binned_mean, pfc_reward_binned_err, dms_signal_binned_mean, dms_signal_binned_err, dms_mvt_binned_mean, dms_mvt_binned_err, dms_reward_binned_mean, dms_reward_binned_err = np.load(signal_mvt_reward_file)
+
+    # store the data for figure 3 panel A(PFC) and B(DMS) as csv files
+    figure_3_panel_A_data = pd.DataFrame({'x_values': np.arange(WINDOW_LEFT+BIN_SIZE/2, WINDOW_RIGHT, BIN_SIZE), 'signal_mean': pfc_signal_binned_mean, 'signal_err': pfc_signal_binned_err, 'mvt_mean': pfc_mvt_binned_mean, 'mvt_err': pfc_mvt_binned_err, 'reward_mean': pfc_reward_binned_mean, 'reward_err': pfc_reward_binned_err})
+    figure_3_panel_B_data = pd.DataFrame({'x_values': np.arange(WINDOW_LEFT+BIN_SIZE/2, WINDOW_RIGHT, BIN_SIZE), 'signal_mean': dms_signal_binned_mean, 'signal_err': dms_signal_binned_err, 'mvt_mean': dms_mvt_binned_mean, 'mvt_err': dms_mvt_binned_err, 'reward_mean': dms_reward_binned_mean, 'reward_err': dms_reward_binned_err})
+    figure_3_panel_A_data['x_values'] = figure_3_panel_A_data['x_values'].round(2)
+    figure_3_panel_B_data['x_values'] = figure_3_panel_B_data['x_values'].round(2)
+    figure_3_panel_A_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_A_data.csv'), index=False)
+    figure_3_panel_B_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_B_data.csv'), index=False)
 
 
     # plot the three binned spike times as line plots with error bars
@@ -259,6 +269,14 @@ def figure_3_panel_bc_mid():
 
     dms_mvt = dms_mvt_binned_mean - dms_signal_binned_mean
     dms_reward = dms_reward_binned_mean - dms_mvt_binned_mean
+
+    # save the csv files for panel C and D
+    figure_3_panel_C_data = pd.DataFrame({'x_values': np.arange(WINDOW_LEFT+BIN_SIZE/2, WINDOW_RIGHT, BIN_SIZE),'signal': pfc_signal_binned_mean, 'mvt': pfc_mvt, 'reward': pfc_reward})
+    figure_3_panel_D_data = pd.DataFrame({'x_values': np.arange(WINDOW_LEFT+BIN_SIZE/2, WINDOW_RIGHT, BIN_SIZE), 'signal': dms_signal_binned_mean, 'mvt': dms_mvt, 'reward': dms_reward})
+    figure_3_panel_C_data['x_values'] = figure_3_panel_C_data['x_values'].round(2)
+    figure_3_panel_D_data['x_values'] = figure_3_panel_D_data['x_values'].round(2)
+    figure_3_panel_C_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_C_data.csv'), index=False)
+    figure_3_panel_D_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_D_data.csv'), index=False)
 
     # plot the signal, mvt, and reward components
     fig_pfc, ax_pfc = plt.subplots(1, 3, figsize=(12, 3.5))
@@ -380,6 +398,9 @@ def figure_3_panel_bc_bottom():
     reward_reward_coeffs_mean = np.mean(reward_reward_coeffs)
     reward_reward_coeffs_err = np.std(reward_reward_coeffs)  /  np.sqrt(len(reward_reward_coeffs))
 
+    figure_3_panel_E_data = pd.DataFrame({'coefficient_type': ['signal', 'mvt', 'reward'], 'signal_trials': [signal_signal_coeffs_mean, signal_mvt_coeffs_mean, signal_reward_coeffs_mean], 'signal_trials_err': [signal_signal_coeffs_err, signal_mvt_coeffs_err, signal_reward_coeffs_err], 'mvt_trials': [mvt_signal_coeffs_mean, mvt_mvt_coeffs_mean, mvt_reward_coeffs_mean], 'mvt_trials_err': [mvt_signal_coeffs_err, mvt_mvt_coeffs_err, mvt_reward_coeffs_err], 'reward_trials': [reward_signal_coeffs_mean, reward_mvt_coeffs_mean, reward_reward_coeffs_mean], 'reward_trials_err': [reward_signal_coeffs_err, reward_mvt_coeffs_err, reward_reward_coeffs_err]})
+    figure_3_panel_E_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_E_data.csv'), index=False)
+
     ax_pfc[0].bar([0, 1, 2], [signal_signal_coeffs_mean, mvt_signal_coeffs_mean, reward_signal_coeffs_mean], yerr=[signal_signal_coeffs_err, mvt_signal_coeffs_err, reward_signal_coeffs_err], color='k')
     ax_pfc[0].set_xticks([0, 1, 2])
     ax_pfc[0].set_xticklabels(['S', 'SM', 'SMR'])
@@ -460,6 +481,9 @@ def figure_3_panel_bc_bottom():
     reward_reward_coeffs = np.array(dms_reward_coeffs)[:, 2]
     reward_reward_coeffs_mean = np.mean(reward_reward_coeffs)
     reward_reward_coeffs_err = np.std(reward_reward_coeffs) / np.sqrt(len(reward_reward_coeffs))
+
+    figure_3_panel_F_data = pd.DataFrame({'coefficient_type': ['signal', 'mvt', 'reward'], 'signal_trials': [signal_signal_coeffs_mean, signal_mvt_coeffs_mean, signal_reward_coeffs_mean], 'signal_trials_err': [signal_signal_coeffs_err, signal_mvt_coeffs_err, signal_reward_coeffs_err], 'mvt_trials': [mvt_signal_coeffs_mean, mvt_mvt_coeffs_mean, mvt_reward_coeffs_mean], 'mvt_trials_err': [mvt_signal_coeffs_err, mvt_mvt_coeffs_err, mvt_reward_coeffs_err], 'reward_trials': [reward_signal_coeffs_mean, reward_mvt_coeffs_mean, reward_reward_coeffs_mean], 'reward_trials_err': [reward_signal_coeffs_err, reward_mvt_coeffs_err, reward_reward_coeffs_err]})
+    figure_3_panel_F_data.to_csv(pjoin(figure_3_data_root, 'figure_3_panel_F_data.csv'), index=False)
     
     ax_dms[0].bar([0, 1, 2], [signal_signal_coeffs_mean, mvt_signal_coeffs_mean, reward_signal_coeffs_mean], yerr=[signal_signal_coeffs_err, mvt_signal_coeffs_err, reward_signal_coeffs_err], color='k')
     ax_dms[0].set_xticks([0, 1, 2])
@@ -640,6 +664,11 @@ def figure_3_panel_d():
 
     dms_reward_high_err = np.std(dms_reward_high, axis=0) / np.sqrt(len(dms_reward_high))
     dms_reward_low_err = np.std(dms_reward_low, axis=0) / np.sqrt(len(dms_reward_low))
+
+    figure_4_panel_A_data = pd.DataFrame({'trial_type': ['prp $\geq$ 0.5', 'prp < 0.5'], 'signal_coeffs': [np.mean(pfc_signals_high), np.mean(pfc_signals_low)], 'signal_coeffs_err': [pfc_signals_high_err, pfc_signals_low_err], 'mvt_coeffs': [np.mean(pfc_mvt_high), np.mean(pfc_mvt_low)], 'mvt_coeffs_err': [pfc_mvt_high_err, pfc_mvt_low_err], 'reward_coeffs': [np.mean(pfc_reward_high), np.mean(pfc_reward_low)], 'reward_coeffs_err': [pfc_reward_high_err, pfc_reward_low_err]})
+    figure_4_panel_A_data.to_csv(pjoin(figure_4_data_root, 'figure_4_panel_A_data.csv'), index=False)
+    figure_4_panel_B_data = pd.DataFrame({'trial_type': ['prp $\geq$ 0.5', 'prp < 0.5'], 'signal_coeffs': [np.mean(dms_signals_high), np.mean(dms_signals_low)], 'signal_coeffs_err': [dms_signals_high_err, dms_signals_low_err], 'mvt_coeffs': [np.mean(dms_mvt_high), np.mean(dms_mvt_low)], 'mvt_coeffs_err': [dms_mvt_high_err, dms_mvt_low_err], 'reward_coeffs': [np.mean(dms_reward_high), np.mean(dms_reward_low)], 'reward_coeffs_err': [dms_reward_high_err, dms_reward_low_err]})
+    figure_4_panel_B_data.to_csv(pjoin(figure_4_data_root, 'figure_4_panel_B_data.csv'), index=False)
 
     # plot the high and low coefficients for each component using bar plots, with error bars using std
     ax_pfc[0].bar(['prp$\geq$0.5', 'prp<0.5'], [np.mean(pfc_signals_high), np.mean(pfc_signals_low)], yerr=[pfc_signals_high_err, pfc_signals_low_err])

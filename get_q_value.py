@@ -8,6 +8,7 @@ from functools import partial
 from multiprocessing import Pool
 
 from lib.models import RW
+from lib.calculation import moving_window_mean_prior
 
 BEHAVIOUR_ROOT = 'data/behaviour_data/'
 RELATIVE_VALUE_ROOT = 'data/relative_values/'
@@ -16,6 +17,9 @@ def fit_and_save(session: str, reset=True):
     crainotomy_side = 'R'
     session_name = basename(session).split('.')[0]
     session_data = pd.read_csv(session)
+
+    # get the index of the nan trials
+    nan_trials = session_data[session_data['trial_response_side'].isna()].index
     # remove nan trials
     session_data = session_data[~session_data['trial_response_side'].isna()]
     choices = np.array(session_data['trial_response_side'].values)
@@ -29,12 +33,26 @@ def fit_and_save(session: str, reset=True):
     # fit the models
     rw = RW()
     parameters = rw.fit(choices_real=choices, rewards_real=rewards)[0]
-    
+    # print the fitted parameters with their names: beta, kappa, b, alpha, accurate to 3 decimal places
+    print(f'{session_name}: beta: {parameters[0]:.3f}, b: {parameters[1]:.3f}, alpha: {parameters[2]:.3f}')
+    # print out the fitted 
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values
     relative_values = rw.get_delta_V(parameters, choices, rewards, session_name)
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
+
+    # for each nan trial, insert a value equal to previous relative value
+    # into the relative values
+    for nan_trial in nan_trials:
+        relative_values = np.insert(relative_values, nan_trial, relative_values[nan_trial-1])
+
+    # smoothen the relative values
+    relative_values = moving_window_mean_prior(relative_values, 10)
+
+    # scale relative values to the range of -1 to 1
+    relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
+
 
     if crainotomy_side == 'L':
         relative_values = -relative_values
@@ -44,10 +62,11 @@ def fit_and_save(session: str, reset=True):
 
 # create a list of session paths to process
 sessions = glob(pjoin(BEHAVIOUR_ROOT, '*.csv'))
+# sort the session names
+sessions = sorted(sessions)
 
 # set the number of processes to use
 n_processes = cpu_count() - 1
-print(n_processes)
 
 # create a Pool object with the specified number of processes
 pool = Pool(n_processes)
@@ -59,7 +78,7 @@ reset = True
 fit_and_save_reset = partial(fit_and_save, reset=reset)
 
 # use pool.imap to run the fit_and_save_reset function on each session path in parallel
-results = list(tqdm.tqdm(pool.imap(fit_and_save_reset, sessions), total=len(sessions)))
+results = list(pool.imap(fit_and_save_reset, sessions))
 
 # close the pool to free up resources
 pool.close()

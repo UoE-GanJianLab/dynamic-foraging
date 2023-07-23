@@ -16,15 +16,37 @@ Task data:
     - 2: init 
     - 3: reward 
     - 5, 6: rotary 3, 2(0 indexed)
-        - 1024 ticks around per 360&deg
+        - 1024 ticks around per $360\deg$
 
-Response time window: 0 - 1.5s
+Response time window: $[0s, 1.5s]$
 
-Background firing (intertrial period): -1 - -0.5s
+Background firing (intertrial period): $[-1s, -0.5s]$
 
 response magnitude: response time window firing - background firing
 
 PRP: prior reward probability
+
+## figure_data
+
+The figure_data are named according to the names on the poster. 
+
+### Figure 3
+#### Panel A B
+
+Panel A B are for PFC and DMS repectively. These panels contain the firing rates of signal trials, mvt trials and reward trials with the error bar dipicting standard error ploted agains cue time. The Data is organized as follows:
+
+|x_values|signal_mean|signal_err|mvt_mean|mvt_err|reward_mean|reward_err|
+|---|---|---|---|---|---|---|
+|relative time to cue time, center of the 20ms bin|The firing rate line for the signal trials averaged across all PFC/DMS cells| The standard error of the firing rates of signal trials across all PFC/DMS cels|The firing rate line for the mvt trials averaged across all PFC/DMS cells| The standard error of the firing rates of mvt trials across all PFC/DMS cels|The firing rate line for the reward trials averaged across all PFC/DMS cells| The standard error of the firing rates of reward trials across all PFC/DMS cels|
+
+#### Panel C D
+
+Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt and reward regressors ploted against the relative time to cue time in the range of $[-0.5, 1.5]$. The data is organized as follows:
+
+|x_values|signal|mvt|reward|
+
+
+
 
 ## repository structure
 
@@ -53,6 +75,8 @@ Normalized cross correlation as defined by Wei Xu and the cross correlation metr
 ## figure 2
 
 ## figure 3
+
+Values are digitized using 20ms bins
 
 ## figure 4
 
