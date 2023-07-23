@@ -44,8 +44,12 @@ Panel A B are for PFC and DMS repectively. These panels contain the firing rates
 Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt and reward regressors ploted against the relative time to cue time in the range of $[-0.5, 1.5]$. The data is organized as follows:
 
 |x_values|signal|mvt|reward|
+|---|---|---|---|
+|relative time to cue time, center of the 20ms bin|The signal regressor(signal trials firing rate)|The mvt regressor(mvt trials firing rate - signal trials firing rate)|The reward regressor(reward trials firing rate - mvt trials firing rate)| 
 
+#### Panel E F
 
+Again, panel E F are for PFC and DMS respectively. 
 
 
 ## repository structure
@@ -74,13 +78,25 @@ Normalized cross correlation as defined by Wei Xu and the cross correlation metr
 
 ## figure 2
 
+![Alt text](figures/manuscript_figures/figure_2.jpg?raw=true "Manuscript figure 2")
+
+
 ## figure 3
+
+![Alt text](figures/manuscript_figures/figure_3.jpg?raw=true "Manuscript figure 3")
+
 
 Values are digitized using 20ms bins
 
 ## figure 4
 
+![Alt text](figures/manuscript_figures/figure_4.jpg?raw=true "Manuscript figure 4")
+
+
 ## figure 5
+
+![Alt text](figures/manuscript_figures/figure_5.jpg?raw=true "Manuscript figure 5")
+
 
 ### fig_5_panel_b
 
@@ -96,5 +112,7 @@ The circular-mean phase differences between each prefrontal-striatal neuron pair
 The performance of a trial is the xcorr between rightP and proportion of choices made towards the right side. Proportion of rewarded trials and proportion of responses towards the high probability side (advantageous responses) were calculated using a centred moving 20-trial long window.  Perceived reward probability was gauged by calculating, for each side, the proportion of rewarded trials in the previous 10 trials of responses made to that side.  
 
 ## figure 6
+
+![Alt text](figures/manuscript_figures/figure_6.jpg?raw=true "Manuscript figure 6")
 
 
