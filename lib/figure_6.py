@@ -172,15 +172,14 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
     # proportion bin as well as std error
     interconnectivity_strength_binned = []
     interconnectivity_strength_binned_err = []
-    for i in range(1, 5):
+    for i in range(1, 6):
         interconnectivity_strength_binned.append(np.mean(interconnectivity_strength[discretized_reward_proportion == i]))
         interconnectivity_strength_binned_err.append(np.std(interconnectivity_strength[discretized_reward_proportion == i]) / np.sqrt(np.sum(discretized_reward_proportion == i)))
     discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
     
-    
     if plot:
         panel_c_data = pd.DataFrame({'discretized_reward_proportion': np.arange(0.1, 1, 0.2), 'interconnectivity_strength_mean': interconnectivity_strength_binned, 'interconnectivity_strength_err': interconnectivity_strength_binned_err})
-        panel_c_data.to_csv(pjoin(panel_c_data_root, 'panel_c', f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
+        panel_c_data.to_csv(pjoin(panel_c_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
 
         # plot reward proportion vs cross correlation in line plot
         fig, ax = plt.subplots(1, 1, figsize=(15, 5))
@@ -281,6 +280,9 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     # t test to see if the percentage of positive and negative significant rs are different
     t, p = ttest_ind(sig_rs_positive_percentage, sig_rs_negative_percentage, alternative='less')
     print(f't: {t}, p: {p}')
+
+    figure_6_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [sig_rs_positive_percentage, sig_rs_negative_percentage]})
+    figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_6_panel_d_data.csv'))
 
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
@@ -523,6 +525,7 @@ def process_session_panel_d(session, reset=False):
     # calculate the percentage of significant positive and negative r for each session
     sig_rs_positive_percentage = session_sig_rs_positive / session_total
     sig_rs_negative_percentage = session_sig_rs_negative / session_total
+
 
     return (sig_rs_positive_percentage, sig_rs_negative_percentage)
 
