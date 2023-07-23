@@ -32,10 +32,20 @@ Organized data used for plotting the figures.
 
 The figure_data are named according to the names on the poster. 
 
+#### Figure 1
+
+1. Panel D
+
+Panel D describes the percentage of choices made to the advantageous side as well as the percentage of rewarded trials relative to each switch from all sessions. The data are organized as follows:
+
+|relative_trial_index|rewarded_percentage|high_reward_percentage|
+|---|---|---|
+|trial index relative to the switch|percentage of rewarded trials in the 50 trials before and after the switch, averaged across all switches|percentage of choices made to the high reward side in the 50 trials before and after the switch, averaged across all switches|
+
 #### Figure 3
 1. Panel A B
 
-Panel A B are for PFC and DMS repectively. These panels contain the firing rates of signal trials, mvt trials and reward trials with the error bar dipicting standard error ploted agains cue time. The Data is organized as follows:
+Panel A B are for PFC and DMS repectively. These panels contain the firing rates of signal trials, mvt trials and reward trials with the error bar dipicting standard error ploted agains cue time. The data are organized as follows:
 
 |x_values|signal_mean|signal_err|mvt_mean|mvt_err|reward_mean|reward_err|
 |---|---|---|---|---|---|---|
@@ -43,7 +53,7 @@ Panel A B are for PFC and DMS repectively. These panels contain the firing rates
 
 2. Panel C D
 
-Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt and reward regressors ploted against the relative time to cue time in the range of $[-0.5, 1.5]$. The data is organized as follows:
+Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt and reward regressors ploted against the relative time to cue time in the range of $[-0.5, 1.5]$. The data are organized as follows:
 
 |x_values|signal|mvt|reward|
 |---|---|---|---|
@@ -51,14 +61,14 @@ Panel C D are for PFC and DMS respectively. These panels contain the signal, mvt
 
 3. Panel E F
 
-Again, panel E F are for PFC and DMS respectively. These panels show the result of applying the regressors from panel C D to multiple linear regression to the firing rate during signal, mvt and reward trials of individual PFC/DMS cell. The data is organized as follows:
+Again, panel E F are for PFC and DMS respectively. These panels show the result of applying the regressors from panel C D to multiple linear regression to the firing rate during signal, mvt and reward trials of individual PFC/DMS cell. The data are organized as follows:
 
 |coefficient_type|signal_trials|signal_trials_err|mvt_trials|mvt_trials_err|reward_trials|reward_trials_err|
 |---|---|---|---|---|---|---|
 |The type of coefficient|The coefficients for regression result of signal trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of signal trials across all PFC/DMS cells|The coefficients for regression result of mvt trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of mvt trials across all PFC/DMS cells|The coefficients for regression result of reward trials, averaged across all PFC/DMS cells| The standard error for the coefficients for regression result of reward trials across all PFC/DMS cells|
 
 #### Figure 4 
-Panel A B are for PFC and DMS respectively. These panels show the result of applying the regressors from figure 3 panel C D to multiple linear regression of PFC/DMS trials with prior reward probability(prp) $\geq 0.5$ or $<0.5$, each subfigure compares the regressed coefficient for the high and low reward trials. The data is organize as follows:
+Panel A B are for PFC and DMS respectively. These panels show the result of applying the regressors from figure 3 panel C D to multiple linear regression of PFC/DMS trials with prior reward probability(prp) $\geq 0.5$ or $<0.5$, each subfigure compares the regressed coefficient for the high and low reward trials. The data are organize as follows:
 
 |trial_type|signal_coeffs|signal_coeffs_err|mvt_coeffs|mvt_coeffs_err|reward_coeffs|reward_coeffs_err|
 |---|---|---|---|---|---|---|
