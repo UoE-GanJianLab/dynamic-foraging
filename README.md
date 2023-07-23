@@ -76,26 +76,31 @@ Normalized cross correlation as defined by Wei Xu and the cross correlation metr
 
 # figures
 
+## figure 1
+
+![Alt text](figures/manuscript_figures/figure_1.png?raw=true "Manuscript figure 1")
+
+
 ## figure 2
 
-![Alt text](figures/manuscript_figures/figure_2.jpg?raw=true "Manuscript figure 2")
+![Alt text](figures/manuscript_figures/figure_2.png?raw=true "Manuscript figure 2")
 
 
 ## figure 3
 
-![Alt text](figures/manuscript_figures/figure_3.jpg?raw=true "Manuscript figure 3")
+![Alt text](figures/manuscript_figures/figure_3.png?raw=true "Manuscript figure 3")
 
 
 Values are digitized using 20ms bins
 
 ## figure 4
 
-![Alt text](figures/manuscript_figures/figure_4.jpg?raw=true "Manuscript figure 4")
+![Alt text](figures/manuscript_figures/figure_4.png?raw=true "Manuscript figure 4")
 
 
 ## figure 5
 
-![Alt text](figures/manuscript_figures/figure_5.jpg?raw=true "Manuscript figure 5")
+![Alt text](figures/manuscript_figures/figure_5.png?raw=true "Manuscript figure 5")
 
 
 ### fig_5_panel_b
@@ -113,6 +118,6 @@ The performance of a trial is the xcorr between rightP and proportion of choices
 
 ## figure 6
 
-![Alt text](figures/manuscript_figures/figure_6.jpg?raw=true "Manuscript figure 6")
+![Alt text](figures/manuscript_figures/figure_6.png?raw=true "Manuscript figure 6")
 
 
