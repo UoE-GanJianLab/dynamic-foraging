@@ -259,8 +259,11 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     t, p = ttest_ind(sig_rs_positive_percentage, sig_rs_negative_percentage, alternative='less')
     print(f't: {t}, p: {p}')
 
-    figure_6_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [sig_rs_positive_percentage, sig_rs_negative_percentage]})
-    figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_6_panel_d_data.csv'))
+    figure_6_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)]})
+    if mono:
+        figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data_mono.csv'), index=False)
+    else:
+        figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data.csv'), index=False)
 
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
@@ -306,8 +309,8 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
                 # load the interconnectivity strength
                 np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
 
-            rewarded_strength.append(interconnectivity_strength[rewarded_trials])
-            non_rewarded_strength.append(interconnectivity_strength[non_rewarded_trials])
+            rewarded_strength.extend(interconnectivity_strength[rewarded_trials])
+            non_rewarded_strength.extend(interconnectivity_strength[non_rewarded_trials])
     else:
         dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
@@ -319,7 +322,12 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
             rewarded_strength += result[0]
             non_rewarded_strength += result[1]
 
-    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['rewarded', 'non-rewarded'], 'interconnectivity_strength': [rewarded_strength, non_rewarded_strength]})
+    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['rewarded', 'non-rewarded'], 'interconnectivity_strength': [np.mean(rewarded_strength), np.mean(non_rewarded_strength)], 'interconnectivity_strength_err': [np.std(rewarded_strength) / np.sqrt(len(rewarded_strength)), np.std(non_rewarded_strength) / np.sqrt(len(non_rewarded_strength))]})
+    if mono:
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data_mono.csv'), index=False)
+    else:
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data.csv'), index=False)
+
     # plot the bar plot with the average percentage of rewarded and non-rewarded strength
     sns.barplot(x=['rewarded', 'non-rewarded'], y=[np.mean(rewarded_strength), np.mean(non_rewarded_strength)], ax=axes)
 
@@ -395,10 +403,13 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
             plateau_strength += result[0]
             transition_strength += result[1]
 
-    # # store the data into a dataframe, with a column indicating the type of trial
-    # plateau_strength = pd.DataFrame({'strength': plateau_strength, 'trial_type': 'plateau'})
-    # transition_strength = pd.DataFrame({'strength': transition_strength, 'trial_type': 'transition'})
-    # plateau_strength = plateau_strength.append(transition_strength)
+    # store the data into a dataframe, with a column indicating the type of trial
+    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'interconnectivity_strength': [np.mean(plateau_strength), np.mean(transition_strength)], 'interconnectivity_strength_err': [np.std(plateau_strength) / np.sqrt(len(plateau_strength)), np.std(transition_strength) / np.sqrt(len(transition_strength))]})
+    if mono:
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data_mono.csv'), index=False)
+    else:
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data.csv'), index=False)
+
 
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
@@ -458,6 +469,13 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     sample_size = len(overall_crosscors)
     overall_crosscors = np.nanmean(overall_crosscors, axis=0)
     overall_crosscors_std_err = np.nanstd(overall_crosscors, axis=0) / np.sqrt(sample_size)
+
+    # save the data into a dataframe
+    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_std_err': overall_crosscors_std_err})
+    if mono:
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'))
+    else:
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'))
 
     # plot overall crosscor
     sns.lineplot(x=np.arange(-50, 51, 1), y=overall_crosscors, color='black', linewidth=0.5)
