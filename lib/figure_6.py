@@ -30,12 +30,13 @@ spike_root = pjoin('data', 'spike_times', 'sessions')
 figure_6_figure_root = pjoin('figures', 'all_figures', 'figure_8')
 if not isdir(figure_6_figure_root):
     mkdir(figure_6_figure_root)
-panel_ab_figure_root = pjoin(figure_6_figure_root, 'panel_ab')
-panel_c_figure_root = pjoin(figure_6_figure_root, 'panel_c')
-if not isdir(panel_ab_figure_root):
-    mkdir(panel_ab_figure_root)
-if not isdir(panel_c_figure_root):
-    mkdir(panel_c_figure_root)
+panel_abc_figure_root = pjoin(figure_6_figure_root, 'panel_abc')
+if not isdir(panel_abc_figure_root):
+    mkdir(panel_abc_figure_root)
+panel_abc_significant = pjoin(figure_6_figure_root, 'panel_abc', 'significant')
+if not isdir(panel_abc_significant):
+    mkdir(panel_abc_significant)
+
 
 figure_6_data_root = pjoin('data', 'spike_times', 'figure_6')
 figure_data_root = pjoin('figure_data', 'figure_8')
@@ -45,11 +46,11 @@ if not isdir(figure_data_root):
 # in panel a and b folder
 panel_a_data_root = pjoin(figure_data_root, 'panel_a')
 panel_b_data_root = pjoin(figure_data_root, 'panel_b')
+panel_c_data_root = pjoin(figure_data_root, 'panel_c')
 if not isdir(panel_a_data_root):
     mkdir(panel_a_data_root)
 if not isdir(panel_b_data_root):
     mkdir(panel_b_data_root)
-panel_c_data_root = pjoin(figure_data_root, 'panel_c')
 if not isdir(panel_c_data_root):
     mkdir(panel_c_data_root)
 
@@ -102,62 +103,9 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     interconnectivity_strength = np.array(interconnectivity_strength)
     
     return interconnectivity_strength
-    
-
-# reset means whether to recalculate the values disregarding the saved files
-def figure_6_poster_panel_ab(session_name: str, pfc_name: str, dms_name: str,pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
-    if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-        # load the interconnectivity strength
-        interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) 
-    else:
-        # calculate the interconnectivity strength
-        interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_times, reset)
-        # load the interconnectivity strength
-        np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength) 
-
-    # calculate pearson r and the p value, set it as figure title
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", category=UserWarning)
-        try:
-            r, p = pearsonr(reward_proportion, interconnectivity_strength) # type: ignore
-        except (RuntimeWarning, UserWarning):
-            r, p = 0, 1
-
-    
-    if plot:
-        panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
-
-        panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
-
-        # plot reward proportion vs cross correlation in twinx plot
-        fig, ax1 = plt.subplots(1, 1, figsize=(15, 5))
-        ax1.plot(reward_proportion, color='tab:blue')
-        ax1.set_xlabel('Trial')
-        ax1.set_ylabel('Reward proportion', color='tab:blue')
-        ax1.tick_params(axis='y', labelcolor='tab:blue')
-        
-        ax2 = ax1.twinx()
-        ax2.plot(interconnectivity_strength, color='tab:red')
-        ax2.set_ylabel('Cross correlation', color='tab:red')
-        ax2.tick_params(axis='y', labelcolor='tab:red')
-
-        # fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
-        plt.close()
-
-        # save the figure to panel_ab folder
-        fig.savefig(pjoin(panel_ab_figure_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.png'))
-
-    # get the z score of the interconnectivity strength and reward proportion
-    interconnectivity_strength = (interconnectivity_strength - np.mean(interconnectivity_strength)) / np.std(interconnectivity_strength)
-    reward_proportion = (reward_proportion - np.mean(reward_proportion)) / np.std(reward_proportion)
-
-    # calculate the overall cross correlation
-    overall_cross_cor = crosscorrelation(interconnectivity_strength, reward_proportion, maxlag=50)
-
-    return p, r, overall_cross_cor
 
 
-def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
+def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
@@ -176,32 +124,62 @@ def figure_6_poster_panel_c(session_name: str, pfc_name: str, dms_name: str, pfc
         interconnectivity_strength_binned.append(np.mean(interconnectivity_strength[discretized_reward_proportion == i]))
         interconnectivity_strength_binned_err.append(np.std(interconnectivity_strength[discretized_reward_proportion == i]) / np.sqrt(np.sum(discretized_reward_proportion == i)))
     discretized_reward_proportion = discretized_reward_proportion * 0.2 - 0.1
-    
-    if plot:
-        panel_c_data = pd.DataFrame({'discretized_reward_proportion': np.arange(0.1, 1, 0.2), 'interconnectivity_strength_mean': interconnectivity_strength_binned, 'interconnectivity_strength_err': interconnectivity_strength_binned_err})
-        panel_c_data.to_csv(pjoin(panel_c_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
-
-        # plot reward proportion vs cross correlation in line plot
-        fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-        
-        # plot interconnectivity_strength against reward_proportion with error bar
-        sns.lineplot(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, ax=ax)
-        ax.errorbar(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, yerr=interconnectivity_strength_binned_err, fmt='o', color='black')
-        # set x axis tick label 
-        ax.set_xticks(np.arange(0, 1, 0.2))
-
-        # save figure to panel_c folder
-        fig.savefig(pjoin(panel_c_figure_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.png'))
-
-        plt.close()
 
     # calculate pearson r and the p value, set it as figure title
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=UserWarning)
         try:
-            r, p = pearsonr(discretized_reward_proportion, interconnectivity_strength) # type: ignore
+            dis_r, dis_p = pearsonr(discretized_reward_proportion, interconnectivity_strength)
+        except (RuntimeWarning, UserWarning):
+            dis_r, dis_p = 0, 1
+
+    # calculate pearson r and the p value, set it as figure title
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", category=UserWarning)
+        try:
+            r, p = pearsonr(reward_proportion, interconnectivity_strength)
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
+    
+    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')):
+        panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
+
+        panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
+
+        # plot reward proportion vs cross correlation in twinx plot
+        fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+        axes[0].plot(reward_proportion, color='tab:blue')
+        axes[0].set_xlabel('Trial')
+        axes[0].set_ylabel('Reward proportion', color='tab:blue')
+        axes[0].tick_params(axis='y', labelcolor='tab:blue')
+        
+        ax2 = axes[0].twinx()
+        ax2.plot(interconnectivity_strength, color='tab:red')
+        ax2.set_ylabel('Cross correlation', color='tab:red')
+        ax2.tick_params(axis='y', labelcolor='tab:red')
+
+        # fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+        plt.close()
+
+
+        panel_c_data = pd.DataFrame({'discretized_reward_proportion': np.arange(0.1, 1, 0.2), 'interconnectivity_strength_mean': interconnectivity_strength_binned, 'interconnectivity_strength_err': interconnectivity_strength_binned_err})
+        panel_c_data.to_csv(pjoin(panel_c_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
+        
+        # plot interconnectivity_strength against reward_proportion with error bar
+        sns.lineplot(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, ax=axes[1])
+        axes[1].errorbar(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, yerr=interconnectivity_strength_binned_err, fmt='o', color='black')
+        # set x axis tick label 
+        axes[1].set_xticks(np.arange(0, 1, 0.2))
+        axes[1].set_title(f'Pearson r: {dis_r:.2f}, p: {dis_p:.2f}')
+
+        fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+
+        if p < p_value_threshold:
+            fig.savefig(pjoin(panel_abc_significant, f'{session_name}_{pfc_name}_{dms_name}.png'))
+        else:
+            fig.savefig(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png'))
+
+        plt.close()
     
     # calculate the z score for interconnectivity strength and reward proportion
     interconnectivity_strength_z_score = (interconnectivity_strength - np.mean(interconnectivity_strength)) / np.std(interconnectivity_strength)
@@ -255,7 +233,7 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, _ = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             if p < p_value_threshold:
                 if r > 0:
@@ -287,7 +265,6 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
     axes.set_ylim(0, 1)
-
 
 # split into rewarded and non_rewarded trials
 def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
@@ -342,14 +319,13 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
             rewarded_strength += result[0]
             non_rewarded_strength += result[1]
 
+    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['rewarded', 'non-rewarded'], 'interconnectivity_strength': [rewarded_strength, non_rewarded_strength]})
     # plot the bar plot with the average percentage of rewarded and non-rewarded strength
     sns.barplot(x=['rewarded', 'non-rewarded'], y=[np.mean(rewarded_strength), np.mean(non_rewarded_strength)], ax=axes)
 
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
     print(f't: {t}, p: {p}')
-
-
 
 # similar to panel e, but split into plateau and transition trials instead of 
 # rewarded and non-rewarded trials
@@ -466,7 +442,7 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, overall_crosscor = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, overall_crosscor = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             overall_crosscors.append(overall_crosscor)
     else:
@@ -514,7 +490,7 @@ def process_session_panel_d(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, _ = figure_6_poster_panel_c(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
+        p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
 
         if p < p_value_threshold:
             if r > 0:
@@ -630,7 +606,7 @@ def process_session_panel_f(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, overall_crosscor = figure_6_poster_panel_ab(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, overall_crosscor = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         overall_crosscors.append(overall_crosscor)
     
