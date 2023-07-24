@@ -249,7 +249,7 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
 
         with Pool() as pool:
             process_session_partial = partial(process_session_panel_d, reset=reset)
-            results = list(pool.imap(process_session_partial, dms_pfc_paths))
+            results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
         for result in results:
             sig_rs_positive_percentage.append(result[0])
@@ -490,7 +490,7 @@ def process_session_panel_d(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
+        p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         if p < p_value_threshold:
             if r > 0:

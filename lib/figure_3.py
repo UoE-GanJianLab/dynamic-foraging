@@ -310,14 +310,15 @@ def figure_3_panel_bc_bottom():
     dms_mvt = dms_mvt_binned_mean - dms_signal_binned_mean
     dms_reward = dms_reward_binned_mean - dms_mvt_binned_mean
 
-    # scale the three regressors to have amplitude 1
-    pfc_signal_binned_mean = pfc_signal_binned_mean / np.max(np.abs(pfc_signal_binned_mean))
-    pfc_mvt = pfc_mvt / np.max(np.abs(pfc_mvt))
-    pfc_reward = pfc_reward / np.max(np.abs(pfc_reward))
+    # get the z score of the signal, mvt, and reward components
+    pfc_signal_binned_mean = (pfc_signal_binned_mean - np.mean(pfc_signal_binned_mean)) / np.std(pfc_signal_binned_mean)
+    pfc_mvt = (pfc_mvt - np.mean(pfc_mvt)) / np.std(pfc_mvt)
+    pfc_reward = (pfc_reward - np.mean(pfc_reward)) / np.std(pfc_reward)
 
-    dms_signal_binned_mean = dms_signal_binned_mean / np.max(np.abs(dms_signal_binned_mean))
-    dms_mvt = dms_mvt / np.max(np.abs(dms_mvt))
-    dms_reward = dms_reward / np.max(np.abs(dms_reward))
+    dms_signal_binned_mean = (dms_signal_binned_mean - np.mean(dms_signal_binned_mean)) / np.std(dms_signal_binned_mean)
+    dms_mvt = (dms_mvt - np.mean(dms_mvt)) / np.std(dms_mvt)
+    dms_reward = (dms_reward - np.mean(dms_reward)) / np.std(dms_reward)
+
 
     # store the regressors in X
     X_pfc= np.column_stack((pfc_signal_binned_mean, pfc_mvt, pfc_reward))
@@ -554,14 +555,14 @@ def figure_3_panel_d():
     dms_mvt = dms_mvt_binned_mean - dms_signal_binned_mean
     dms_reward = dms_reward_binned_mean - dms_mvt_binned_mean
 
-    # scale the three regressors to have amplitude 1
-    pfc_signal_binned_mean = pfc_signal_binned_mean / np.max(np.abs(pfc_signal_binned_mean))
-    pfc_mvt = pfc_mvt / np.max(np.abs(pfc_mvt))
-    pfc_reward = pfc_reward / np.max(np.abs(pfc_reward))
+    # standardize the signal, mvt, and reward components
+    pfc_signal_binned_mean = (pfc_signal_binned_mean - np.mean(pfc_signal_binned_mean)) / np.std(pfc_signal_binned_mean)
+    pfc_mvt = (pfc_mvt - np.mean(pfc_mvt)) / np.std(pfc_mvt)
+    pfc_reward = (pfc_reward - np.mean(pfc_reward)) / np.std(pfc_reward)
 
-    dms_signal_binned_mean = dms_signal_binned_mean / np.max(np.abs(dms_signal_binned_mean))
-    dms_mvt = dms_mvt / np.max(np.abs(dms_mvt))
-    dms_reward = dms_reward / np.max(np.abs(dms_reward))
+    dms_signal_binned_mean = (dms_signal_binned_mean - np.mean(dms_signal_binned_mean)) / np.std(dms_signal_binned_mean)
+    dms_mvt = (dms_mvt - np.mean(dms_mvt)) / np.std(dms_mvt)
+    dms_reward = (dms_reward - np.mean(dms_reward)) / np.std(dms_reward)
 
     # store the regressors in X
     X_pfc= np.column_stack((pfc_signal_binned_mean, pfc_mvt, pfc_reward))
