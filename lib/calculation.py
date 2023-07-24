@@ -117,17 +117,6 @@ def get_spikes_outside_window(cue_times: np.ndarray, spike_times:np.ndarray, win
         window_left_cur = cue + window_left
         window_right_cur = cue + window_right
 
-        # # for the edge case of last spike being in the window
-        # if spike_ptr == len(spike_times) and spike_times[spike_ptr-1] > window_left_cur:
-        #     spike_ptr -= 1
-
-        # # backtrack in case of overlapping cue time windows
-        # while spike_ptr > 0 and spike_ptr < len(spike_times) and spike_times[spike_ptr] > window_left_cur:
-        #     spike_ptr -= 1
-        #     # remove the spike if it is in the window
-        #     if len(outside_window_spikes) > 0:
-        #         outside_window_spikes.pop()
-
         # move the pointers into window
         while spike_ptr < len(spike_times) and spike_times[spike_ptr] < window_left_cur:
             outside_window_spikes.append(spike_times[spike_ptr])
