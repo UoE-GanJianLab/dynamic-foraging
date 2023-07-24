@@ -4,12 +4,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from os.path import join as pjoin
 
-from scipy.optimize import minimize # type: ignore
-from scipy.stats import truncnorm, norm # type: ignore
+from scipy.optimize import minimize
+from scipy.stats import truncnorm, norm
 from lib.calculation import moving_window_mean
 
 class RW:
-    def __init__(self, v0=0, v1=0, beta=5, kappa=0.1, b=0, alpha=0.2, gamma=0.1) -> None:
+    def __init__(self, v0=0, v1=0, beta=5, b=0, alpha=0.2) -> None:
         # initialize the record arrays
         self.choices = np.array([])
         self.rewards = np.array([])
@@ -18,10 +18,8 @@ class RW:
         self.v0 = v0
         self.v1 = v1
         self.beta = beta
-        self.kappa = kappa
         self.b = b # initialize with no bias
         self.alpha = alpha
-        self.gamma = gamma
 
 
     def update(self, outcome: int, choice: int) -> None:
@@ -61,9 +59,9 @@ class RW:
             self.choices[-1] = choice
 
             if prob == 0:
-                prob += 0.0001
+                prob += 0.001
             elif prob == 1:
-                prob -= 0.0001
+                prob -= 0.001
 
             if c == choice:
                 neg_log_likelihood += - np.log(prob)
@@ -84,7 +82,7 @@ class RW:
         fitted_parameters: List[float] = []
         nll_min = np.inf
 
-        for i in range(10):
+        for i in range(5):
             x0 = self.sample_parameters()
             # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
             bounds = [(5, 15), (-5, 5), (0.001, 1)]

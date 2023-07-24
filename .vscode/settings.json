@@ -2,5 +2,9 @@
     "files.associations": {
         "dirent.h": "c",
         "stdlib.h": "c"
-    }
+    },
+    "python.analysis.inlayHints.functionReturnTypes": false,
+    "python.analysis.inlayHints.parameterTypes": false,
+    "python.analysis.inlayHints.variableTypes": false,
 }
+
