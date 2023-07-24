@@ -26,11 +26,13 @@ class RW:
 
     def update(self, outcome: int, choice: int) -> None:
         if choice == 0:
-            self.v0 = self.alpha * (outcome - self.v0) + self.gamma * self.v0
-            self.v1 = self.gamma * self.v1
+            self.v0 = self.alpha * (outcome - self.v0)
+            # self.v0 = self.alpha * (outcome - self.v0) + self.gamma * self.v0
+            # self.v1 = self.gamma * self.v1
         else:
-            self.v1 = self.alpha * (outcome - self.v1) + self.gamma * self.v1
-            self.v0 = self.gamma * self.v0
+            self.v1 = self.alpha * (outcome - self.v1)
+            # self.v1 = self.alpha * (outcome - self.v1) + self.gamma * self.v1
+            # self.v0 = self.gamma * self.v0
 
 
     def get_choice(self) -> tuple[int, float]:
@@ -38,9 +40,9 @@ class RW:
             # if this is the first trial, choose without kappa term
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         else:
-            pre_choice = self.choices[-1]
-            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice))
-            # p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0 + self.b)))
+            # pre_choice = self.choices[-1]
+            # p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b + self.kappa * pre_choice))
+            p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
 
@@ -85,7 +87,7 @@ class RW:
         for i in range(10):
             x0 = self.sample_parameters()
             # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
-            bounds = [(0, np.inf), (-np.inf, np.inf), (-np.inf, np.inf), (0.001, 1), (0.001, 1)]
+            bounds = [(5, 15), (-5, 5), (0.001, 1)]
 
             params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
@@ -97,18 +99,15 @@ class RW:
     # parameters: beta, kappa, b
     def assign_parameters(self, parameters):
         self.beta = parameters[0]
-        self.kappa = parameters[1]
-        self.b = parameters[2]
-        self.alpha = parameters[3]
-        self.gamma = parameters[4]
+        self.b = parameters[1]
+        self.alpha = parameters[2]
+        # self.gamma = parameters[3]
 
     def sample_parameters(self):
-        beta = np.random.uniform(1, 10)
-        kappa = np.random.uniform(-1, 1)
-        b = np.random.uniform(-1, 1)
+        beta = np.random.uniform(5, 15)
+        b = np.random.uniform(-5, 5)
         alpha = np.random.uniform(0.1, 1)
-        gamma = np.random.uniform(0.1, 1)
-        return [beta, kappa, b, alpha,gamma]
+        return [beta, b, alpha]
     
     # v_r - v_l
     def get_delta_V(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray, session='session') -> np.ndarray:

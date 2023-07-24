@@ -32,11 +32,13 @@ def fit_and_save(session: str, reset=True):
     
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values
+    # print out the parameters beta kappa b alpha gamma with the session name and parameter name
+    print(f'{session_name} beta: {parameters[0]} b: {parameters[1]} alpha: {parameters[2]}')
     relative_values = rw.get_delta_V(parameters, choices, rewards, session_name)
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
 
-    if crainotomy_side == 'L':
+    if crainotomy_side == 'R':
         relative_values = -relative_values
 
     # save the relative values
