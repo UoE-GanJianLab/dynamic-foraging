@@ -15,6 +15,7 @@ relative_value_root = pjoin('data', 'prpd')
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 
 significan_p_threshold = 0.05
+bin_size = 0.2
 
 def firing_rate_vs_relative_value():
     # instead of spliting to R and L trials
@@ -205,58 +206,58 @@ def pastP_futureP_vs_relative_value():
                 dms_firing_all_response.extend(firing_rates_response)
 
     # discretize the relative values into 20 bins
-    relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.linspace(-1, 1, 10))
-    relative_values_past_R_dms = np.digitize(relative_values_past_R_dms, bins=np.linspace(-1, 1, 10))
-    relative_values_future_L_dms = np.digitize(relative_values_future_L_dms, bins=np.linspace(-1, 1, 10))
-    relative_values_future_R_dms = np.digitize(relative_values_future_R_dms, bins=np.linspace(-1, 1, 10))
+    relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_R_dms = np.digitize(relative_values_past_R_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_L_dms = np.digitize(relative_values_future_L_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_R_dms = np.digitize(relative_values_future_R_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
 
-    relative_values_past_L_pfc = np.digitize(relative_values_past_L_pfc, bins=np.linspace(-1, 1, 10))
-    relative_values_past_R_pfc = np.digitize(relative_values_past_R_pfc, bins=np.linspace(-1, 1, 10))
-    relative_values_future_L_pfc = np.digitize(relative_values_future_L_pfc, bins=np.linspace(-1, 1, 10))
-    relative_values_future_R_pfc = np.digitize(relative_values_future_R_pfc, bins=np.linspace(-1, 1, 10))
+    relative_values_past_L_pfc = np.digitize(relative_values_past_L_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_R_pfc = np.digitize(relative_values_past_R_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_L_pfc = np.digitize(relative_values_future_L_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_R_pfc = np.digitize(relative_values_future_R_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
 
-    relative_values_past_L_dms_response = np.digitize(relative_values_past_L_dms_response, bins=np.linspace(-1, 1, 10))
-    relative_values_past_R_dms_response = np.digitize(relative_values_past_R_dms_response, bins=np.linspace(-1, 1, 10))
-    relative_values_future_L_dms_response = np.digitize(relative_values_future_L_dms_response, bins=np.linspace(-1, 1, 10))
-    relative_values_future_R_dms_response = np.digitize(relative_values_future_R_dms_response, bins=np.linspace(-1, 1, 10))
+    relative_values_past_L_dms_response = np.digitize(relative_values_past_L_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_R_dms_response = np.digitize(relative_values_past_R_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_L_dms_response = np.digitize(relative_values_future_L_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_R_dms_response = np.digitize(relative_values_future_R_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
 
-    relative_values_past_L_pfc_response = np.digitize(relative_values_past_L_pfc_response, bins=np.linspace(-1, 1, 10))
-    relative_values_past_R_pfc_response = np.digitize(relative_values_past_R_pfc_response, bins=np.linspace(-1, 1, 10))
-    relative_values_future_L_pfc_response = np.digitize(relative_values_future_L_pfc_response, bins=np.linspace(-1, 1, 10))
-    relative_values_future_R_pfc_response = np.digitize(relative_values_future_R_pfc_response, bins=np.linspace(-1, 1, 10))
+    relative_values_past_L_pfc_response = np.digitize(relative_values_past_L_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_R_pfc_response = np.digitize(relative_values_past_R_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_L_pfc_response = np.digitize(relative_values_future_L_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_future_R_pfc_response = np.digitize(relative_values_future_R_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
 
-    relative_values_pfc_all = np.digitize(relative_values_pfc_all, bins=np.linspace(-1, 1, 10))
-    relative_values_dms_all = np.digitize(relative_values_dms_all, bins=np.linspace(-1, 1, 10))
+    relative_values_pfc_all = np.digitize(relative_values_pfc_all, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_dms_all = np.digitize(relative_values_dms_all, bins=np.linspace(-1, 1, int(2/bin_size)))
 
-    relative_values_pfc_all_response = np.digitize(relative_values_pfc_all_response, bins=np.linspace(-1, 1, 10))
-    relative_values_dms_all_response = np.digitize(relative_values_dms_all_response, bins=np.linspace(-1, 1, 10))
+    relative_values_pfc_all_response = np.digitize(relative_values_pfc_all_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_dms_all_response = np.digitize(relative_values_dms_all_response, bins=np.linspace(-1, 1, int(2/bin_size)))
 
     
-    relative_values_past_L_dms = relative_values_past_L_dms * 0.2 - 1
-    relative_values_past_R_dms = relative_values_past_R_dms * 0.2 - 1
-    relative_values_future_L_dms = relative_values_future_L_dms * 0.2 - 1
-    relative_values_future_R_dms = relative_values_future_R_dms * 0.2 - 1
+    relative_values_past_L_dms = relative_values_past_L_dms * bin_size - 1
+    relative_values_past_R_dms = relative_values_past_R_dms * bin_size - 1
+    relative_values_future_L_dms = relative_values_future_L_dms * bin_size - 1
+    relative_values_future_R_dms = relative_values_future_R_dms * bin_size - 1
 
-    relative_values_past_L_pfc = relative_values_past_L_pfc * 0.2 - 1
-    relative_values_past_R_pfc = relative_values_past_R_pfc * 0.2 - 1
-    relative_values_future_L_pfc = relative_values_future_L_pfc * 0.2 - 1
-    relative_values_future_R_pfc = relative_values_future_R_pfc * 0.2 - 1
+    relative_values_past_L_pfc = relative_values_past_L_pfc * bin_size - 1
+    relative_values_past_R_pfc = relative_values_past_R_pfc * bin_size - 1
+    relative_values_future_L_pfc = relative_values_future_L_pfc * bin_size - 1
+    relative_values_future_R_pfc = relative_values_future_R_pfc * bin_size - 1
 
-    relative_values_past_L_dms_response = relative_values_past_L_dms_response * 0.2 - 1
-    relative_values_past_R_dms_response = relative_values_past_R_dms_response * 0.2 - 1
-    relative_values_future_L_dms_response = relative_values_future_L_dms_response * 0.2 - 1
-    relative_values_future_R_dms_response = relative_values_future_R_dms_response * 0.2 - 1
+    relative_values_past_L_dms_response = relative_values_past_L_dms_response * bin_size - 1
+    relative_values_past_R_dms_response = relative_values_past_R_dms_response * bin_size - 1
+    relative_values_future_L_dms_response = relative_values_future_L_dms_response * bin_size - 1
+    relative_values_future_R_dms_response = relative_values_future_R_dms_response * bin_size - 1
 
-    relative_values_past_L_pfc_response = relative_values_past_L_pfc_response * 0.2 - 1
-    relative_values_past_R_pfc_response = relative_values_past_R_pfc_response * 0.2 - 1
-    relative_values_future_L_pfc_response = relative_values_future_L_pfc_response * 0.2 - 1
-    relative_values_future_R_pfc_response = relative_values_future_R_pfc_response * 0.2 - 1
+    relative_values_past_L_pfc_response = relative_values_past_L_pfc_response * bin_size - 1
+    relative_values_past_R_pfc_response = relative_values_past_R_pfc_response * bin_size - 1
+    relative_values_future_L_pfc_response = relative_values_future_L_pfc_response * bin_size - 1
+    relative_values_future_R_pfc_response = relative_values_future_R_pfc_response * bin_size - 1
 
-    relative_values_pfc_all = relative_values_pfc_all * 0.2 - 1
-    relative_values_dms_all = relative_values_dms_all * 0.2 - 1
+    relative_values_pfc_all = relative_values_pfc_all * bin_size - 1
+    relative_values_dms_all = relative_values_dms_all * bin_size - 1
 
-    relative_values_pfc_all_response = relative_values_pfc_all_response * 0.2 - 1
-    relative_values_dms_all_response = relative_values_dms_all_response * 0.2 - 1
+    relative_values_pfc_all_response = relative_values_pfc_all_response * bin_size - 1
+    relative_values_dms_all_response = relative_values_dms_all_response * bin_size - 1
 
     pfc_firing_rates_past_R = np.array(pfc_firing_rates_past_R)
     pfc_firing_rates_past_L = np.array(pfc_firing_rates_past_L)

@@ -8,15 +8,15 @@ Code base for paper Prefronto-striatal representation of perceived reward probab
 The raw experiemental data are stored in binary data format as .dat files
 
 Task data:
-- Also 20,000Hz
+- Also $20,000Hz$ sampling rate
 - 8 Digital channels stored in 2 bytes
 - Each channel 1 bit
 - Channels
-    - 1: all state transition 
-    - 2: init 
-    - 3: reward 
-    - 5, 6: rotary 3, 2(0 indexed)
-        - 1024 ticks around per $360\deg$
+    - $1$: all state transition 
+    - $2$: init 
+    - $3$: reward 
+    - $5, 6$: rotary $3, 2$($0$ indexed)
+        - $1024$ ticks around per $360\degree$
 
 Response time window: $[0s, 1.5s]$
 
@@ -74,6 +74,10 @@ Panel A B are for PFC and DMS respectively. These panels show the result of appl
 |---|---|---|---|---|---|---|
 |high or low prp trials|regressed coefficient for signal regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for signal regressor across all PFC/DMS cells|regressed coefficient for mvt regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for mvt regressor across all PFC/DMS cells|regressed coefficient for reward regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for reward regressor across all PFC/DMS cells|
 
+
+#### Figure 8
+
+Figure 8 focus on the interconnectivity strength 
 
 
 ## repository structure

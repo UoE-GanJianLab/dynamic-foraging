@@ -382,3 +382,13 @@ def circ_mtest(angles, mu):
     p_value = rayleightest(angles - mean_angle)
 
     return p_value
+
+
+# the probe is considered to have drifted if the neurons have 0 firing in 10 consecutive trials
+def check_probe_drift(firing_rates: np.ndarray) -> bool:
+    # check if there is 0 firing in 10 consecutive trials
+    for i in range(len(firing_rates) - 10):
+        if np.all(firing_rates[i:i+10] == 0):
+            return True
+
+    return False

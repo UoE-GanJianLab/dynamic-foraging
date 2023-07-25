@@ -1,4 +1,4 @@
-from os.path import join as pjoin
+from os.path import join as pjoin, isdir
 from os import listdir, mkdir
 from os.path import basename
 from typing import List, Tuple, Dict
@@ -21,7 +21,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from lib.file_utils import get_dms_pfc_paths_mono, get_dms_pfc_paths_all
-from lib.calculation import get_response_bg_firing, get_session_performances, moving_window_mean_prior
+from lib.calculation import get_response_bg_firing, get_session_performances, moving_window_mean_prior, check_probe_drift
 
 
 # relative positions to cue_time
@@ -32,13 +32,25 @@ RESPONSE_RIGHT = 1.5
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
-relative_value_root = pjoin('data', 'relative_values')
+relative_value_root = pjoin('data', 'prpd')
 
-def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
-    # delete all figures in the folder
-    rmtree(pjoin('figures', 'figure_5', 'panel_b'))
-    mkdir(pjoin('figures', 'figure_5', 'panel_b'))
+figure_5_data_root = pjoin('figure_data', 'all_figures', 'figure_6')
+if not isdir(figure_5_data_root):
+    mkdir(figure_5_data_root)
+figure_5_panel_b_data_root_prpd = pjoin(figure_5_data_root, 'panel_b_prpd')
+if not isdir(figure_5_panel_b_data_root_prpd):
+    mkdir(figure_5_panel_b_data_root_prpd)
+figure_5_panel_b_data_root_relative_value = pjoin(figure_5_data_root, 'panel_b_relative_value')
+if not isdir(figure_5_panel_b_data_root_relative_value):
+    mkdir(figure_5_panel_b_data_root_relative_value)
+figure_5_panel_b_figure_path_prpd = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_prpd')
+if not isdir(figure_5_panel_b_figure_path_prpd):
+    mkdir(figure_5_panel_b_figure_path_prpd)
+figure_5_panel_b_figure_path_relative_value = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_relative_value')
+if not isdir(figure_5_panel_b_figure_path_relative_value):
+    mkdir(figure_5_panel_b_figure_path_relative_value)
 
+def get_fig_5_panel_b(mono: bool = False, nonan: bool = False):
     if mono:
         mono_pairs = get_dms_pfc_paths_mono()
 
@@ -47,7 +59,7 @@ def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
             if nonan:
                 behaviour_data = behaviour_data[behaviour_data['trial_reward'].notna()]
             pfc_times = np.load(row['pfc_path'])
-            str_times = np.load(row['dms_path'])
+            dms_times = np.load(row['dms_path'])
 
             session_name = basename(row['session_path']).split('.')[0]
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
@@ -56,19 +68,17 @@ def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
                 relative_value = moving_window_mean_prior(relative_value, 10)
 
             pfc_name = basename(row['pfc_path']).split('.')[0]
-            str_name = basename(row['dms_path']).split('.')[0]
-            fig_name = '_'.join([session_name, pfc_name, str_name]) + '.png'
-            fig_path = pjoin('figures', 'figure_5', 'panel_b', fig_name)
+            dms_name = basename(row['dms_path']).split('.')[0]
+            fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+            fig_path = pjoin('figures', 'all_figures', 'figure_5', 'panel_b', fig_name)
 
             cue_times = behaviour_data['cue_time'].tolist()
             pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
-            str_mag, str_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times)
+            dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-            fig = draw_fig_5_panel_b(pfc_mag, str_mag, relative_value)
-            fig.savefig(fig_path, dpi=300)
-            plt.close()
+            draw_fig_5_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
     else:
-        for session_name in tqdm(listdir(spike_data_root)):
+        for session_name in listdir(spike_data_root):
             behaviour = pjoin(behaviour_root, session_name + '.csv')
             behaviour_data = pd.read_csv(behaviour)
             cue_times = behaviour_data['cue_time'].tolist()
@@ -77,25 +87,33 @@ def get_fig_5_panel_b(mono: bool = True, nonan: bool = False):
                 # smoothen the relative value
                 relative_value = moving_window_mean_prior(relative_value, 10)
 
+            # count the number of pfc and str pairs and use it for progress bar
+            pfc_count = len(glob(pjoin(spike_data_root, session_name, 'pfc_*')))
+            dms_count = len(glob(pjoin(spike_data_root, session_name, 'dms_*')))
+            total_count = pfc_count * dms_count
+            progress_bar = tqdm(total=total_count, desc=session_name)
+
             for pfc in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
                 pfc_times = np.load(pfc)
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+                if check_probe_drift(pfc_mag):
+                    progress_bar.update(dms_count)
+                    continue
                 for dms in glob(pjoin(spike_data_root, session_name, 'dms_*')):
-                    str_times = np.load(dms)
-                    str_mag, str_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times) 
-
+                    dms_times = np.load(dms)
+                    dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times) 
+                    if check_probe_drift(dms_mag):
+                        progress_bar.update(1)
+                        continue
                     pfc_name = basename(pfc).split('.')[0]
-                    str_name = basename(dms).split('.')[0]
-                    fig_name = '_'.join([session_name, pfc_name, str_name]) + '.png'
-                    fig_path = pjoin('figures', 'figure_5', 'panel_b', fig_name)
-
-                    fig = draw_fig_5_panel_b(pfc_mag, str_mag, relative_value)
-                    fig.savefig(fig_path, dpi=300)
-                    plt.close()
+                    dms_name = basename(dms).split('.')[0]
+                    
+                    draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
+                    progress_bar.update(1)
 
 
 # TODO add relative value signal
-def draw_fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
+def draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
     fig, axes = plt.subplots(3, 1, figsize=(15, 20))
@@ -127,8 +145,25 @@ def draw_fig_5_panel_b(pfc_mag, dms_mag, relative_values = []):
     sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_pfc, ax=axes[2], color='black')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_relative_values, ax=axes[2], color='red')
 
-    plt.show()
-    return fig
+    data_file_name = '_'.join([session_name, pfc_name, dms_name]) + '.csv'
+
+    if relative_value_root == pjoin('data', 'relative_values'):
+        # store the data in a dataframe
+        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'relative_value_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'relative_value_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'relative_value_phase': phase_relative_values})
+        figure_6_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_relative_value, data_file_name), index=False)
+    else:
+        # store the data in a dataframe
+        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'prpd_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'prpd_phase': phase_relative_values})
+        figure_6_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_prpd, data_file_name), index=False)
+    
+    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+    if relative_value_root == pjoin('data', 'relative_values'):
+        fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
+    else:
+        fig_path = pjoin(figure_5_panel_b_figure_path_prpd, fig_name)
+
+    fig.savefig(fig_path, dpi=300)
+    plt.close()
 
 def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
