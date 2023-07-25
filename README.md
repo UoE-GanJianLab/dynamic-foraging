@@ -75,6 +75,26 @@ Panel A B are for PFC and DMS respectively. These panels show the result of appl
 |high or low prp trials|regressed coefficient for signal regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for signal regressor across all PFC/DMS cells|regressed coefficient for mvt regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for mvt regressor across all PFC/DMS cells|regressed coefficient for reward regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for reward regressor across all PFC/DMS cells|
 
 
+#### Figure 5
+
+1. Panel A B C D
+
+The A B panels are for PFC firing that positively or negatively correlated with prpd/relative values. The C D panels are for DMS firing that positively or negatively correlated with prpd/relative values. The top panel is the raster plot with the data organized as follows:
+
+|trial_index|relative_spike_time|
+|---|---|
+|trial index|relative spike time to cue time|
+
+The bottom panel is the average firing rate(20ms bins) across all trials against the relative time to cue time with the data organized as follows:
+
+|bin_centers|left_p_high|right_p_high|
+|---|---|---|
+|center of the 20ms bin|average firing rate across trials with hign left reward probability|average firing rate across trials with hign right reward probability|
+
+
+
+
+
 #### Figure 8
 
 Figure 8 focus on the interconnectivity strength 

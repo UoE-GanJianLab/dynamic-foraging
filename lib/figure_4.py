@@ -14,6 +14,21 @@ BIN_WIDTH = 0.02
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 
+figure_5_data_source = pjoin('figure_data', 'figure_5')
+figure_5_panel_abcd_pfc_data_top = pjoin(figure_5_data_source, 'figure_5_panel_abcd_pfc_top')
+figure_5_panel_abcd_dms_data_top = pjoin(figure_5_data_source, 'figure_5_panel_abcd_dms_top')
+figure_5_panel_abcd_pfc_data_bottom = pjoin(figure_5_data_source, 'figure_5_panel_abcd_pfc_bottom')
+figure_5_panel_abcd_dms_data_bottom = pjoin(figure_5_data_source, 'figure_5_panel_abcd_dms_bottom')
+
+figure_5_figure_root = pjoin('figures', 'all_figures', 'figure_5')
+figure_5_panel_abcd_figure_root = pjoin(figure_5_figure_root, 'panel_abcd')
+figure_5_panel_abcd_pfc_root = pjoin(figure_5_panel_abcd_figure_root, 'pfc')
+figure_5_panel_abcd_dms_root = pjoin(figure_5_panel_abcd_figure_root, 'dms')
+
+for dir in [figure_5_figure_root, figure_5_panel_abcd_figure_root, figure_5_panel_abcd_pfc_root, figure_5_panel_abcd_dms_root, figure_5_data_source, figure_5_panel_abcd_pfc_data_top, figure_5_panel_abcd_dms_data_top, figure_5_panel_abcd_pfc_data_bottom, figure_5_panel_abcd_dms_data_bottom]:
+    if not isdir(dir):
+        mkdir(dir)
+
 def raster(spikes, cue_times, leftP, session_name, brain_section):
     for ind in range(len(spikes)):
         fig, axes = plt.subplots(2, 1, figsize=(15, 10))
@@ -22,6 +37,9 @@ def raster(spikes, cue_times, leftP, session_name, brain_section):
         all_spikes_left = []
         # right side advantageous
         all_spikes_right = []
+
+        trial_indices = []
+        relative_spike_times = []
 
         for tiral_ind, cue in enumerate(cue_times):
             trial_spikes = []
@@ -42,6 +60,8 @@ def raster(spikes, cue_times, leftP, session_name, brain_section):
                 trial_spikes.append(relative_time)
                 pointer += 1
             sns.scatterplot(x=trial_spikes, y=tiral_ind, ax=axes[0], color='black', markers=".", s=5) # type: ignore
+            trial_indices.extend(([tiral_ind])*len(trial_spikes))
+            relative_spike_times.extend(trial_spikes)
         
         bins = np.arange(start=-WINDOW_LEFT, stop=WINDOW_RIGHT, step=BIN_WIDTH)
         left_y, left_bin_edges = np.histogram(all_spikes_left, bins=bins)
@@ -66,17 +86,33 @@ def raster(spikes, cue_times, leftP, session_name, brain_section):
 
         axes[1].legend(bbox_to_anchor=(1.15, 0.7))
 
-        plt.show()
+        fig_name = session_name + '_' + brain_section + '_' + str(ind) + '.png'
+        data_file_name = session_name + '_' + brain_section + '_' + str(ind) + '.csv'
 
-        break
-        # # save firing for a cell
-        # if not isdir(pjoin('figure_2', 'panel_A', session_name)):
-        #     mkdir(pjoin('figure_2', 'panel_A', session_name))
-        #     mkdir(pjoin('figure_2', 'panel_A', session_name, 'svg'))
-        #     mkdir(pjoin('figure_2', 'panel_A', session_name, 'tiff'))
-            
-        # plt.savefig(pjoin('figure_2', 'panel_A', session_name, 'tiff', brain_section + '_' + str(ind) + '.tiff'), dpi=200)
-        # plt.savefig(pjoin('figure_2', 'panel_A', session_name, 'svg', brain_section + '_' + str(ind) + '.svg'), format='svg')
+        if brain_section == 'pfc':
+            fig.savefig(pjoin(figure_5_panel_abcd_pfc_root, fig_name), dpi=100)
+        else:
+            fig.savefig(pjoin(figure_5_panel_abcd_dms_root, fig_name), dpi=100)
+
+        plt.close(fig)
+
+        # save the firing data
+        raster_data = pd.DataFrame({'trial_index': trial_indices, 'relative_spike_time': relative_spike_times})
+        if brain_section == 'pfc':
+            figure_5_panel_abcd_pfc_data_top_path = pjoin(figure_5_panel_abcd_pfc_data_top, data_file_name)
+            raster_data.to_csv(figure_5_panel_abcd_pfc_data_top_path, index=False)
+        else:
+            figure_5_panel_abcd_dms_data_top_path = pjoin(figure_5_panel_abcd_dms_data_top, data_file_name)
+            raster_data.to_csv(figure_5_panel_abcd_dms_data_top_path, index=False)
+
+        left_bin_centers = np.round(left_bin_centers, 2)
+        line_data = pd.DataFrame({'bin_centers': left_bin_centers, 'left_p_high': left_y * int(1 / BIN_WIDTH) / len(cue_times), 'right_p_high': right_y * int(1 / BIN_WIDTH) / len(cue_times)})
+        if brain_section == 'pfc':
+            figure_5_panel_abcd_pfc_data_bottom_path = pjoin(figure_5_panel_abcd_pfc_data_bottom, data_file_name)
+            line_data.to_csv(figure_5_panel_abcd_pfc_data_bottom_path, index=False)
+        else:
+            figure_5_panel_abcd_dms_data_bottom_path = pjoin(figure_5_panel_abcd_dms_data_bottom, data_file_name)
+            line_data.to_csv(figure_5_panel_abcd_dms_data_bottom_path, index=False)
 
 def get_figure_4_panel_bc():
     for dir in listdir(spike_data_root):
@@ -98,4 +134,3 @@ def get_figure_4_panel_bc():
 
         raster(spikes=pfc_data, cue_times=cue_times, leftP=leftP, session_name=dir, brain_section='pfc')
         raster(spikes=dms_data, cue_times=cue_times, leftP=leftP, session_name=dir, brain_section='dms')
-        break
