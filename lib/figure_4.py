@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 
 WINDOW_LEFT = 0.5
 WINDOW_RIGHT = 1.5
@@ -115,7 +116,7 @@ def raster(spikes, cue_times, leftP, session_name, brain_section):
             line_data.to_csv(figure_5_panel_abcd_dms_data_bottom_path, index=False)
 
 def get_figure_4_panel_bc():
-    for dir in listdir(spike_data_root):
+    for dir in tqdm(listdir(spike_data_root)):
         pfc_path = pjoin(spike_data_root, dir, 'pfc.npy')
         dms_path = pjoin(spike_data_root, dir, 'dms.npy')
 
