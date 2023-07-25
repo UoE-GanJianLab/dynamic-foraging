@@ -92,7 +92,16 @@ The bottom panel is the average firing rate(20ms bins) across all trials against
 |center of the 20ms bin|average firing rate across trials with hign left reward probability|average firing rate across trials with hign right reward probability|
 
 
+#### Figure 6
 
+1. Panel B
+The data for panel b are split into two groups, one done with prpd, one with relative values from the reinforcement learning models. The data are organized as follows:
+
+|trial_index|pfc_mag_standardized|dms_mag_standardized|prpd_standardized|pfc_mag_filtered|dms_mag_filtered|prpd_filtered|pfc_phase|dms_phase|prpd_phase|
+|---|---|---|---|---|---|---|---|---|---|
+|trial index|standardized response magnitude for PFC|standardized response magnitude for DMS|standardized prpd|filtered response magnitude for PFC|filtered response magnitude for DMS|filtered prpd|phase of the filtered response magnitude for PFC|phase of the filtered response magnitude for DMS|phase of the filtered prpd|
+
+The pairs here are filtered by removing cells that are suspected to have experienced probe drift to reduce the amount of resulting images to go through. The filtering is done by removing cells with no firing in 10 consecutive trials in the response time window.
 
 
 #### Figure 8
