@@ -108,7 +108,15 @@ def get_fig_5_panel_b(mono: bool = False, nonan: bool = False):
                     pfc_name = basename(pfc).split('.')[0]
                     dms_name = basename(dms).split('.')[0]
                     
-                    draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
+                    fig = draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
+                    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+                    if relative_value_root == pjoin('data', 'relative_values'):
+                        fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
+                    else:
+                        fig_path = pjoin(figure_5_panel_b_figure_path_prpd, fig_name)
+
+                    fig.savefig(fig_path, dpi=300)
+                    plt.close(fig)
                     progress_bar.update(1)
 
 
@@ -156,14 +164,7 @@ def draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relat
         figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'prpd_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'prpd_phase': phase_relative_values})
         figure_6_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_prpd, data_file_name), index=False)
     
-    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
-    if relative_value_root == pjoin('data', 'relative_values'):
-        fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
-    else:
-        fig_path = pjoin(figure_5_panel_b_figure_path_prpd, fig_name)
-
-    fig.savefig(fig_path, dpi=300)
-    plt.close()
+    return fig
 
 def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))

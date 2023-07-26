@@ -75,9 +75,98 @@ Panel A B are for PFC and DMS respectively. These panels show the result of appl
 |high or low prp trials|regressed coefficient for signal regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for signal regressor across all PFC/DMS cells|regressed coefficient for mvt regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for mvt regressor across all PFC/DMS cells|regressed coefficient for reward regressor, averaged across all PFC/DMS cells|standard error for regressed coefficient for reward regressor across all PFC/DMS cells|
 
 
+#### Figure 5
+
+1. Panel A B C D
+
+The A B panels are for PFC firing that positively or negatively correlated with prpd/relative values. The C D panels are for DMS firing that positively or negatively correlated with prpd/relative values. The top panel is the raster plot with the data organized as follows:
+
+|trial_index|relative_spike_time|
+|---|---|
+|trial index|relative spike time to cue time|
+
+The bottom panel is the average firing rate(20ms bins) across all trials against the relative time to cue time with the data organized as follows:
+
+|bin_centers|left_p_high|right_p_high|
+|---|---|---|
+|center of the 20ms bin|average firing rate across trials with hign left reward probability|average firing rate across trials with hign right reward probability|
+
+
+#### Figure 6
+
+1. Panel B
+The data for panel b are split into two groups, one done with prpd, one with relative values from the reinforcement learning models. The data are organized as follows:
+
+|trial_index|pfc_mag_standardized|dms_mag_standardized|prpd_standardized|pfc_mag_filtered|dms_mag_filtered|prpd_filtered|pfc_phase|dms_phase|prpd_phase|
+|---|---|---|---|---|---|---|---|---|---|
+|trial index|standardized response magnitude for PFC|standardized response magnitude for DMS|standardized prpd|filtered response magnitude for PFC|filtered response magnitude for DMS|filtered prpd|phase of the filtered response magnitude for PFC|phase of the filtered response magnitude for DMS|phase of the filtered prpd|
+
+The pairs here are filtered by removing cells that are suspected to have experienced probe drift to reduce the amount of resulting images to go through. The filtering is done by removing cells with no firing in 10 consecutive trials in the response time window.
+
+
 #### Figure 8
 
 Figure 8 focus on the interconnectivity strength 
+
+1. Panel A B C
+
+Panel A B C shows the interconnectivity strength between PFC and DMS pairs, prior reward proportion of the corresponding session and the correlation between interconnectivity strength(max absolute normalized cross correlation) and discretized prior reward proportion respectively. The data are organized as follows:
+
+* Panel A
+
+|trial_index|interconnectivity_strength|
+|---|---|
+|trial index|interconnectivity strength between PFC and DMS(max absolute normalized cross correlation)|
+
+* Panel B
+
+|trial_index|reward_proportion|
+|---|---|
+|trial index|prior reward proportion of each session|
+
+* Panel C
+
+|discretized_reward_proportion|interconnectivity_strength_mean|interconnectivity_strength_err|
+|---|---|---|
+|discretized prior reward proportion|mean interconnectivity strength between PFC and DMS pairs|standard error of the mean interconnectivity strength between PFC and DMS pairs|
+
+
+2. Panel D
+
+This is a barplot comparing the percentage of strongly negatively correlated cell pairs between the PFC and DMS
+
+All pairs:
+
+t: -8.020560608781873, p: 3.576158011492007e-11
+
+Mono:
+
+t: -3.439937909343383, p: 0.0005646506319530828
+
+
+3. Panel E/ Panel E Extra
+
+This barplot compares the mean interconnectivity strength between rewarded and non-rewarded trials, as well as plateau and transitioning trials
+
+* rewarded vs non-rewarded
+
+All pairs:
+
+t: -116.29928981054866, p: 0.0
+
+Mono:
+
+t: -7.784737816978901, p: 7.019765436743266e-15
+
+* plateau vs transitioning
+
+All pairs:
+
+t: -20.212802029318336, p: 7.59799493448309e-91
+
+Mono:
+
+t: -5.30720280984404, p: 1.116669563832314e-07
 
 
 ## repository structure

@@ -17,7 +17,7 @@ import tqdm
 from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
 from scipy.signal import correlate # type: ignore
 
-from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation
+from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation, check_probe_drift
 from lib.file_utils import get_dms_pfc_paths_all, get_dms_pfc_paths_mono
 from lib.figure_utils import remove_top_and_right_spines
 
@@ -141,7 +141,7 @@ def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
     
-    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')):
+    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
         panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
 
         panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
@@ -406,9 +406,9 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
     # store the data into a dataframe, with a column indicating the type of trial
     figure_6_panel_e_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'interconnectivity_strength': [np.mean(plateau_strength), np.mean(transition_strength)], 'interconnectivity_strength_err': [np.std(plateau_strength) / np.sqrt(len(plateau_strength)), np.std(transition_strength) / np.sqrt(len(transition_strength))]})
     if mono:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data_mono.csv'), index=False)
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data_mono.csv'), index=False)
     else:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data.csv'), index=False)
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data.csv'), index=False)
 
 
     # # plot the plateau and transitioning trials as box plots
@@ -473,9 +473,9 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     # save the data into a dataframe
     figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_std_err': overall_crosscors_std_err})
     if mono:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'))
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
     else:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'))
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
 
     # plot overall crosscor
     sns.lineplot(x=np.arange(-50, 51, 1), y=overall_crosscors, color='black', linewidth=0.5)
