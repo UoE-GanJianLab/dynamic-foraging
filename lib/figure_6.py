@@ -17,7 +17,7 @@ import tqdm
 from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
 from scipy.signal import correlate # type: ignore
 
-from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation
+from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation, check_probe_drift
 from lib.file_utils import get_dms_pfc_paths_all, get_dms_pfc_paths_mono
 from lib.figure_utils import remove_top_and_right_spines
 
@@ -141,7 +141,7 @@ def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
     
-    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')):
+    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
         panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
 
         panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
