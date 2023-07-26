@@ -108,6 +108,45 @@ The pairs here are filtered by removing cells that are suspected to have experie
 
 Figure 8 focus on the interconnectivity strength 
 
+1. Panel A B C
+
+2. Panel D
+
+This is a barplot comparing the percentage of strongly negatively correlated cell pairs between the PFC and DMS
+
+All pairs:
+
+t: -8.020560608781873, p: 3.576158011492007e-11
+
+Mono:
+
+t: -3.439937909343383, p: 0.0005646506319530828
+
+
+3. Panel E/ Panel E Extra
+
+This barplot compares the mean interconnectivity strength between rewarded and non-rewarded trials, as well as plateau and transitioning trials
+
+* rewarded vs non-rewarded
+
+All pairs:
+
+t: -116.29928981054866, p: 0.0
+
+Mono:
+
+t: -7.784737816978901, p: 7.019765436743266e-15
+
+* plateau vs transitioning
+
+All pairs:
+
+t: -20.212802029318336, p: 7.59799493448309e-91
+
+Mono:
+
+t: -5.30720280984404, p: 1.116669563832314e-07
+
 
 ## repository structure
 
