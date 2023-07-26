@@ -473,9 +473,9 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     # save the data into a dataframe
     figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_std_err': overall_crosscors_std_err})
     if mono:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'))
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
     else:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'))
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
 
     # plot overall crosscor
     sns.lineplot(x=np.arange(-50, 51, 1), y=overall_crosscors, color='black', linewidth=0.5)
