@@ -533,7 +533,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
                 if np.std(dms_mag) != 0:
-                    session_phase_diffs_dms.append(dms_name)
+                    session_strong_correlated_cells_dms.append(dms_name)
                     # get the z score of the firing rates
                     dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
                     dms_mag_phase = get_phase(dms_mag)
@@ -545,7 +545,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                     dms_bg = (dms_bg - np.mean(dms_bg)) / np.std(dms_bg)
                     dms_bg_phase = get_phase(dms_bg)
                     if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < 0.05:
-                        session_phase_diffs_dms_bg.append(dms_name)
+                        session_strong_correlated_cells_dms_bg.append(dms_name)
                         dms_bg_sig_count += 1
                         phase_diff_bg = phase_diff(relative_values, dms_bg)
                         phase_diff_bg_dms.append(phase_diff_bg)
@@ -655,11 +655,11 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     # save the strong correlated pairs as two csv files
     strong_correlated_data = {'pfc': strong_correlated_cells_pfc, 'dms': strong_correlated_cells_dms, 'session': session_names}
     strong_correlated_data = pd.DataFrame(strong_correlated_data)
-    strong_correlated_data.to_csv('strong_circular_correlated_cells_pairs.csv')
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs.csv'), index=False)
 
     strong_correlated_data = {'pfc': strong_correlated_cells_pfc_bg, 'dms': strong_correlated_cells_dms_bg, 'session': session_names_bg}
     strong_correlated_data = pd.DataFrame(strong_correlated_data)
-    strong_correlated_data.to_csv('strong_circular_correlated_cells_pairs_bg.csv')
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs_bg.csv'), index=False)
 
     return fig
 
