@@ -406,9 +406,9 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
     # store the data into a dataframe, with a column indicating the type of trial
     figure_6_panel_e_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'interconnectivity_strength': [np.mean(plateau_strength), np.mean(transition_strength)], 'interconnectivity_strength_err': [np.std(plateau_strength) / np.sqrt(len(plateau_strength)), np.std(transition_strength) / np.sqrt(len(transition_strength))]})
     if mono:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data_mono.csv'), index=False)
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data_mono.csv'), index=False)
     else:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data.csv'), index=False)
+        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data.csv'), index=False)
 
 
     # # plot the plateau and transitioning trials as box plots
