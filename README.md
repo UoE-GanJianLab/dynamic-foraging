@@ -110,6 +110,27 @@ Figure 8 focus on the interconnectivity strength
 
 1. Panel A B C
 
+Panel A B C shows the interconnectivity strength between PFC and DMS pairs, prior reward proportion of the corresponding session and the correlation between interconnectivity strength(max absolute normalized cross correlation) and discretized prior reward proportion respectively. The data are organized as follows:
+
+* Panel A
+
+|trial_index|interconnectivity_strength|
+|---|---|
+|trial index|interconnectivity strength between PFC and DMS(max absolute normalized cross correlation)|
+
+* Panel B
+
+|trial_index|reward_proportion|
+|---|---|
+|trial index|prior reward proportion of each session|
+
+* Panel C
+
+|discretized_reward_proportion|interconnectivity_strength_mean|interconnectivity_strength_err|
+|---|---|---|
+|discretized prior reward proportion|mean interconnectivity strength between PFC and DMS pairs|standard error of the mean interconnectivity strength between PFC and DMS pairs|
+
+
 2. Panel D
 
 This is a barplot comparing the percentage of strongly negatively correlated cell pairs between the PFC and DMS
