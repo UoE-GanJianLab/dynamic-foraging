@@ -476,6 +476,15 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 phase_diff_bg = phase_diff(relative_values, dms_bg)
                 phase_diff_bg_dms.append(phase_diff_bg)
     else:
+        # initialize a set of strong correlated cells
+        strong_correlated_cells_pfc = []
+        strong_correlated_cells_pfc_bg = []
+        strong_correlated_cells_dms = []
+        strong_correlated_cells_dms_bg = []
+
+        session_names = []
+        session_names_bg = []
+
         for session_name in tqdm(listdir(spike_data_root)):
             session_path = pjoin(spike_data_root, session_name)
             relative_value_path = pjoin(relative_value_root, session_name + '.npy')
@@ -493,6 +502,11 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 behaviour_data = behaviour_data[~behaviour_data['trial_reward'].isna()]
             cue_times = np.array(behaviour_data['cue_time'].values)
 
+            session_strong_correlated_cells_pfc = []
+            session_strong_correlated_cells_pfc_bg = []
+            session_strong_correlated_cells_dms = []
+            session_strong_correlated_cells_dms_bg = []
+
             # load the pfc cells
             for pfc_path in glob(pjoin(session_path, 'pfc_*.npy')):
                 pfc_count += 1
@@ -504,6 +518,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                     pfc_mag = (pfc_mag - np.mean(pfc_mag)) / np.std(pfc_mag)
                     pfc_mag_phase = get_phase(pfc_mag) 
                     if circ_corrcc(pfc_mag_phase, phase_relative_values)[1] < 0.05:
+                        session_strong_correlated_cells_pfc.append(pfc_name)
                         pfc_response_sig_count += 1
                         phase_diff_mag = phase_diff(relative_values, pfc_mag)
                         phase_diff_response_pfc.append(phase_diff_mag)
@@ -512,6 +527,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                     pfc_bg = (pfc_bg - np.mean(pfc_bg)) / np.std(pfc_bg)
                     pfc_bg_phase = get_phase(pfc_bg)
                     if circ_corrcc(pfc_bg_phase, phase_relative_values)[1] < 0.05:
+                        session_strong_correlated_cells_pfc_bg.append(pfc_name)
                         pfc_bg_sig_count += 1
                         phase_diff_bg = phase_diff(relative_values, pfc_bg)
                         phase_diff_bg_pfc.append(phase_diff_bg)
@@ -523,6 +539,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                 dms_name = basename(dms_path).split('.')[0]
                 dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
                 if np.std(dms_mag) != 0:
+                    session_strong_correlated_cells_dms.append(dms_name)
                     # get the z score of the firing rates
                     dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
                     dms_mag_phase = get_phase(dms_mag)
@@ -534,9 +551,30 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
                     dms_bg = (dms_bg - np.mean(dms_bg)) / np.std(dms_bg)
                     dms_bg_phase = get_phase(dms_bg)
                     if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < 0.05:
+                        session_strong_correlated_cells_dms_bg.append(dms_name)
                         dms_bg_sig_count += 1
                         phase_diff_bg = phase_diff(relative_values, dms_bg)
                         phase_diff_bg_dms.append(phase_diff_bg)
+
+            # remove the duplicates in the session list
+            session_strong_correlated_cells_pfc = list(set(session_strong_correlated_cells_pfc))
+            session_strong_correlated_cells_pfc_bg = list(set(session_strong_correlated_cells_pfc_bg))
+            session_strong_correlated_cells_dms = list(set(session_strong_correlated_cells_dms))
+            session_strong_correlated_cells_dms_bg = list(set(session_strong_correlated_cells_dms_bg))
+
+            for pfc in session_strong_correlated_cells_pfc:
+                for dms in session_strong_correlated_cells_dms:
+                    strong_correlated_cells_pfc.append(pfc)
+                    strong_correlated_cells_dms.append(dms)
+                    session_names.append(session_name)
+            
+            for pfc in session_strong_correlated_cells_pfc_bg:
+                for dms in session_strong_correlated_cells_dms_bg:
+                    strong_correlated_cells_pfc_bg.append(pfc)
+                    strong_correlated_cells_dms_bg.append(dms)
+                    session_names_bg.append(session_name)
+
+    
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
     if zero_ymin:
@@ -597,8 +635,6 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     print(f'DMS response: {dms_response_sig_count} / {dms_count}')
     print(f'DMS bg: {dms_bg_sig_count} / {dms_count}')
 
-
-
     # set y label
     axes[0][1].set_ylabel('Number of PFC Pairs')
     axes[0][0].set_ylabel('Number of DMS Pairs')
@@ -620,6 +656,16 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     remove_top_and_right_spines(axes[0][1])
     remove_top_and_right_spines(axes[1][0])
     remove_top_and_right_spines(axes[1][1])
+    
+
+    # save the strong correlated pairs as two csv files
+    strong_correlated_data = {'pfc': strong_correlated_cells_pfc, 'dms': strong_correlated_cells_dms, 'session': session_names}
+    strong_correlated_data = pd.DataFrame(strong_correlated_data)
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs.csv'), index=False)
+
+    strong_correlated_data = {'pfc': strong_correlated_cells_pfc_bg, 'dms': strong_correlated_cells_dms_bg, 'session': session_names_bg}
+    strong_correlated_data = pd.DataFrame(strong_correlated_data)
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs_bg.csv'), index=False)
 
     return fig
 
