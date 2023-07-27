@@ -126,7 +126,16 @@ The pairs here are filtered by removing cells that are suspected to have experie
 
 2. Panel C
 
-The discretized mean phase difference between PFC and DMS pairs split by session performance
+Panel C shows the discretized mean phase difference between PFC and DMS pairs split by session performance. The bins range from $[-\pi, \pi]$ with 36 bins.
+
+|bin_center|good response count|good bg count|bad response count|bad bg count|
+|---|---|---|---|---|
+|center of the bin|number of good session PFC DMS pairs whose mean phase difference of response window firing falls into the bin|number of good session PFC DMS pairs whose mean phase difference of background firing falls into the bin|number of bad session PFC DMS pairs whose mean phase difference of response window firing falls into the bin|number of bad session PFC DMS pairs whose mean phase difference of background firing falls into the bin|
+
+3. Panel D
+
+
+
 #### Figure 7
 
 * Panel B
