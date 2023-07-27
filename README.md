@@ -134,6 +134,11 @@ Panel C shows the discretized mean phase difference between PFC and DMS pairs sp
 
 3. Panel D
 
+Panel C shows the discretized mean phase difference between PFC/DMS cells during reponse/ITI windows and PRPD. The data are organized as follows:
+
+|bin_center|pfc_response_count|pfc_bg_count|dms_response_count|dms_bg_count|
+|---|---|---|---|---|
+|center of the bin|number of PFC cells whose mean phase difference with PRPD during response window falls into the bin|number of PFC cells whose mean phase difference with PRPD during ITI window falls into the bin|number of DMS cells whose mean phase difference with PRPD during response window falls into the bin|number of DMS cells whose mean phase difference with PRPD during ITI window falls into the bin|
 
 
 #### Figure 7

@@ -161,7 +161,6 @@ def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
         # fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
         plt.close()
 
-
         panel_c_data = pd.DataFrame({'discretized_reward_proportion': np.arange(0.1, 1, 0.2), 'interconnectivity_strength_mean': interconnectivity_strength_binned, 'interconnectivity_strength_err': interconnectivity_strength_binned_err})
         panel_c_data.to_csv(pjoin(panel_c_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
         

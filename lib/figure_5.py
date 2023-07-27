@@ -587,6 +587,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     
 
     hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    pfc_response_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -595,6 +596,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     y_max = np.max(hist) * 1.05
     axes[0][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diff_bg_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    pfc_bg_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -603,6 +605,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     y_max = np.max(hist) * 1.05
     axes[0][1].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diff_response_dms, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    dms_response_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -611,6 +614,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     y_max = np.max(hist) * 1.05
     axes[1][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diff_bg_dms, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    dms_bg_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -624,6 +628,10 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
     sns.histplot(phase_diff_bg_pfc, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
     sns.histplot(phase_diff_response_dms, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
     sns.histplot(phase_diff_bg_dms, ax=axes[1][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
+
+    bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
+    panel_e_data = pd.DataFrame({'bin_center': bin_centers, 'pfc_response_count': pfc_response_count, 'pfc_bg_count': pfc_bg_count, 'dms_response_count': dms_response_count, 'dms_bg_count': dms_bg_count})
+    panel_e_data.to_csv(pjoin(figure_5_data_root, 'panel_e_data.csv'), index=False)
 
     # calculate the circular mean for each group
     mean = circmean(phase_diff_response_pfc, low=-np.pi, high=np.pi)
