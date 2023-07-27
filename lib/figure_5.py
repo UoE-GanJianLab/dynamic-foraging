@@ -325,6 +325,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     mid = int(bin_size / 2)
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
     hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    good_response_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -333,6 +334,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     y_max = np.max(hist) * 1.05
     axes[0][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bg, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    good_bg_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -341,6 +343,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     y_max = np.max(hist) * 1.05
     axes[0][1].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bad, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    bad_response_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -349,6 +352,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     y_max = np.max(hist) * 1.05
     axes[1][0].set_ylim(y_min, y_max)
     hist, edge = np.histogram(phase_diffs_bg_bad, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    bad_bg_count = hist
     if zero_ymin:
         y_min = 0
     else:
@@ -361,6 +365,12 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='blue', kde=True) # type: ignore
     sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='red', kde=True) # type: ignore
     sns.histplot(phase_diffs_bg_bad, ax=axes[1][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='red', kde=True) # type: ignore
+
+    # store the histogram data in the following format
+    # |bin_center|good_response_count|good_bg_count|bad_response_count|bad_bg_count|
+    bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
+    panel_d_data = pd.DataFrame({'bin_center': bin_centers, 'good_response_count': good_response_count, 'good_bg_count': good_bg_count, 'bad_response_count': bad_response_count, 'bad_bg_count': bad_bg_count})
+    panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_d_data.csv'), index=False)
 
     # set y label
     axes[0][1].set_ylabel('Number of Cell Pairs')
