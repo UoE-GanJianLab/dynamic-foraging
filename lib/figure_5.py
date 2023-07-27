@@ -207,6 +207,7 @@ def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_siz
     return fig
 
 def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool = True):
+    good_sessions = []
     # iti correlated
     phase_diffs = []
     phase_diffs_bg = []
@@ -302,6 +303,7 @@ def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool =
                         cur_bad_bg.append(phase_d_bg)
 
             if good:
+                good_sessions.append(session_name)
                 phase_diffs_session_mean.append(circmean(cur_good, low=-np.pi, high=np.pi))
                 phase_diffs_session_mean_bg.append(circmean(cur_good_bg, low=-np.pi, high=np.pi))
             else:
@@ -312,6 +314,10 @@ def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool =
         savemat('circular_data_panel_d_mono.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})   
     else:
         savemat('circular_data_panel_d_all.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})
+
+    # print out the good sessions to terminal with each entry being a separate line
+    for good_session in good_sessions:
+        print(good_session)
 
     fig = draw_fig_5_panel_d(phase_diffs=phase_diffs, phase_diffs_bg=phase_diffs_bg, phase_diffs_bad=phase_diffs_bad, phase_diffs_bg_bad=phase_diffs_bg_bad, bin_size=36, zero_ymin=zero_ymin)
 

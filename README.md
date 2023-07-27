@@ -34,7 +34,13 @@ The figure_data are named according to the names on the poster.
 
 #### Figure 1
 
-1. Panel D
+1. Panel B
+
+2. Panel C
+
+Panel C contains a series of plots 
+
+3. Panel D
 
 Panel D describes the percentage of choices made to the advantageous side as well as the percentage of rewarded trials relative to each switch from all sessions. The data are organized as follows:
 
@@ -91,6 +97,21 @@ The bottom panel is the average firing rate(20ms bins) across all trials against
 |---|---|---|
 |center of the 20ms bin|average firing rate across trials with hign left reward probability|average firing rate across trials with hign right reward probability|
 
+2. Panel E
+
+Panel E has a pair of pie charts showing the percentage of PFC and DMS cells that are correlated with PRPD/relative values. Each pie chart is split into four parts: not-correlated, only ITI firing correlated, only response magnitude correlated, both ITI firing and response magnitude correlated. The data are organized as follows:
+
+|cell_location|not-correlated percentage|ITI firing correlated percentage|response magnitude correlated percentage|both ITI firing and response magnitude correlated percentage|
+|---|---|---|---|---|
+|PFC or DMS|percentage of cells that are not correlated|percentage of cells that are only ITI firing correlated|percentage of cells that are only response magnitude correlated|percentage of cells that are both ITI firing and response magnitude correlated|
+
+3. Panel F
+
+Panel F makes further distinction between positive and negatively correlated cells. The mean percentage are calculated across all sessions. The data are organized as follows:
+
+|cell_location|firing window|positively correlated percentage|positive standard error|negatively correlated percentage|negative standard error|
+|---|---|---|---|---|---|---|
+|PFC or DMS|response magnitude or ITI firing|mean percentage of cells that are positively correlated|standard error of positively correlated percentage across all sessions|mean percentage of cells that are negatively correlated|standard error of negatively correlated percentage across all sessions|
 
 #### Figure 6
 
@@ -102,6 +123,19 @@ The data for panel b are split into two groups, one done with prpd, one with rel
 |trial index|standardized response magnitude for PFC|standardized response magnitude for DMS|standardized prpd|filtered response magnitude for PFC|filtered response magnitude for DMS|filtered prpd|phase of the filtered response magnitude for PFC|phase of the filtered response magnitude for DMS|phase of the filtered prpd|
 
 The pairs here are filtered by removing cells that are suspected to have experienced probe drift to reduce the amount of resulting images to go through. The filtering is done by removing cells with no firing in 10 consecutive trials in the response time window.
+
+2. Panel C
+
+The discretized mean phase difference between PFC and DMS pairs split by session performance
+#### Figure 7
+
+* Panel B
+
+This is a pie chart showing the percentage of PRPD modulated cell pairs out of all the mono cell pairs. Similar to figure 5 panel E, the pie chart is split into four parts: not-correlated, only ITI firing correlated, only response magnitude correlated, both ITI firing and response magnitude correlated. The data are organized as follows:
+
+|correlation|percentage|
+|---|---|
+|one of the four types of correlation|percentage of cell pairs that are correlated with the corresponding type|
 
 
 #### Figure 8
