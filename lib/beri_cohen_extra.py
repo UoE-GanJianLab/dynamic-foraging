@@ -1,4 +1,5 @@
-from os.path import join as pjoin, basename
+from os.path import join as pjoin, basename, isdir
+from os import mkdir
 from glob import glob
 
 import numpy as np
@@ -13,9 +14,15 @@ from lib.calculation import get_firing_rate_window
 behaviour_root = pjoin('data', 'behaviour_data')
 relative_value_root = pjoin('data', 'prpd')
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
+if relative_value_root == pjoin('data', 'prpd'):
+    figure_data_root = pjoin('figure_data', 'beri_cohen_extra_prpd')
+else:
+    figure_data_root = pjoin('figure_data', 'beri_cohen_extra_relative_value')
+if not isdir(figure_data_root):
+    mkdir(figure_data_root)
 
 significan_p_threshold = 0.05
-bin_size = 0.2
+bin_size = 0.25
 
 def firing_rate_vs_relative_value():
     # instead of spliting to R and L trials
@@ -39,7 +46,6 @@ def pastP_futureP_vs_relative_value():
     relative_values_future_L_pfc_response = []
     relative_values_past_R_pfc_response = []
     relative_values_past_L_pfc_response = []
-
 
     relative_values_past_R_dms = []
     relative_values_past_L_dms = []
@@ -86,6 +92,10 @@ def pastP_futureP_vs_relative_value():
     for session in glob(pjoin(behaviour_root, '*.csv')):
         session_name = basename(session).split('.')[0]
         relative_values = np.load(pjoin(relative_value_root, session_name+'.npy'))
+        # for binning to work correctly, reduce relative value of 1
+        # by bin size/2, increase relative value of -1 by bin size/2
+        relative_values[relative_values == 1] = relative_values[relative_values == 1] - bin_size/2
+        relative_values[relative_values == -1] = relative_values[relative_values == -1] + bin_size/2
         session_data = pd.read_csv(session)
         cue_time = np.array(session_data['cue_time'].values)
 
@@ -113,8 +123,9 @@ def pastP_futureP_vs_relative_value():
             firing_rates_response = get_firing_rate_window(cue_time, pfc_cell_data, window_left=0, window_right=1.5)
             firing_rates_response = np.array(firing_rates_response)
 
-            # check if the firing rates and relative values are # strongly correlated using pearson correlation
-            # continue if p value
+            # check if the firing rates and relative values are 
+            # strongly correlated using pearson correlation
+            # continue if p value is less than threshold
             if np.std(firing_rates) != 0 and stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
                 firing_rates = (firing_rates - np.mean(firing_rates)) / np.std(firing_rates)
                 # if pearson's r < 0 then flip the relative values
@@ -206,58 +217,33 @@ def pastP_futureP_vs_relative_value():
                 dms_firing_all_response.extend(firing_rates_response)
 
     # discretize the relative values into 20 bins
-    relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_past_R_dms = np.digitize(relative_values_past_R_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_L_dms = np.digitize(relative_values_future_L_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_R_dms = np.digitize(relative_values_future_R_dms, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_past_R_dms = np.digitize(relative_values_past_R_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_L_dms = np.digitize(relative_values_future_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_R_dms = np.digitize(relative_values_future_R_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    relative_values_past_L_pfc = np.digitize(relative_values_past_L_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_past_R_pfc = np.digitize(relative_values_past_R_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_L_pfc = np.digitize(relative_values_future_L_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_R_pfc = np.digitize(relative_values_future_R_pfc, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_L_pfc = np.digitize(relative_values_past_L_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_past_R_pfc = np.digitize(relative_values_past_R_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_L_pfc = np.digitize(relative_values_future_L_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_R_pfc = np.digitize(relative_values_future_R_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    relative_values_past_L_dms_response = np.digitize(relative_values_past_L_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_past_R_dms_response = np.digitize(relative_values_past_R_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_L_dms_response = np.digitize(relative_values_future_L_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_R_dms_response = np.digitize(relative_values_future_R_dms_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_L_dms_response = np.digitize(relative_values_past_L_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_past_R_dms_response = np.digitize(relative_values_past_R_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_L_dms_response = np.digitize(relative_values_future_L_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_R_dms_response = np.digitize(relative_values_future_R_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    relative_values_past_L_pfc_response = np.digitize(relative_values_past_L_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_past_R_pfc_response = np.digitize(relative_values_past_R_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_L_pfc_response = np.digitize(relative_values_future_L_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_future_R_pfc_response = np.digitize(relative_values_future_R_pfc_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_past_L_pfc_response = np.digitize(relative_values_past_L_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_past_R_pfc_response = np.digitize(relative_values_past_R_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_L_pfc_response = np.digitize(relative_values_future_L_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_future_R_pfc_response = np.digitize(relative_values_future_R_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    relative_values_pfc_all = np.digitize(relative_values_pfc_all, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_dms_all = np.digitize(relative_values_dms_all, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_pfc_all = np.digitize(relative_values_pfc_all, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_dms_all = np.digitize(relative_values_dms_all, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    relative_values_pfc_all_response = np.digitize(relative_values_pfc_all_response, bins=np.linspace(-1, 1, int(2/bin_size)))
-    relative_values_dms_all_response = np.digitize(relative_values_dms_all_response, bins=np.linspace(-1, 1, int(2/bin_size)))
+    relative_values_pfc_all_response = np.digitize(relative_values_pfc_all_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    relative_values_dms_all_response = np.digitize(relative_values_dms_all_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
 
-    
-    relative_values_past_L_dms = relative_values_past_L_dms * bin_size - 1
-    relative_values_past_R_dms = relative_values_past_R_dms * bin_size - 1
-    relative_values_future_L_dms = relative_values_future_L_dms * bin_size - 1
-    relative_values_future_R_dms = relative_values_future_R_dms * bin_size - 1
-
-    relative_values_past_L_pfc = relative_values_past_L_pfc * bin_size - 1
-    relative_values_past_R_pfc = relative_values_past_R_pfc * bin_size - 1
-    relative_values_future_L_pfc = relative_values_future_L_pfc * bin_size - 1
-    relative_values_future_R_pfc = relative_values_future_R_pfc * bin_size - 1
-
-    relative_values_past_L_dms_response = relative_values_past_L_dms_response * bin_size - 1
-    relative_values_past_R_dms_response = relative_values_past_R_dms_response * bin_size - 1
-    relative_values_future_L_dms_response = relative_values_future_L_dms_response * bin_size - 1
-    relative_values_future_R_dms_response = relative_values_future_R_dms_response * bin_size - 1
-
-    relative_values_past_L_pfc_response = relative_values_past_L_pfc_response * bin_size - 1
-    relative_values_past_R_pfc_response = relative_values_past_R_pfc_response * bin_size - 1
-    relative_values_future_L_pfc_response = relative_values_future_L_pfc_response * bin_size - 1
-    relative_values_future_R_pfc_response = relative_values_future_R_pfc_response * bin_size - 1
-
-    relative_values_pfc_all = relative_values_pfc_all * bin_size - 1
-    relative_values_dms_all = relative_values_dms_all * bin_size - 1
-
-    relative_values_pfc_all_response = relative_values_pfc_all_response * bin_size - 1
-    relative_values_dms_all_response = relative_values_dms_all_response * bin_size - 1
+    x = np.arange(-1+bin_size/2, 1, bin_size)
 
     pfc_firing_rates_past_R = np.array(pfc_firing_rates_past_R)
     pfc_firing_rates_past_L = np.array(pfc_firing_rates_past_L)
@@ -269,19 +255,63 @@ def pastP_futureP_vs_relative_value():
     dms_firing_rates_future_R = np.array(dms_firing_rates_future_R)
     dms_firing_rates_future_L = np.array(dms_firing_rates_future_L)
 
+    pfc_firing_rates_past_R_response = np.array(pfc_firing_rates_past_R_response)
+    pfc_firing_rates_past_L_response = np.array(pfc_firing_rates_past_L_response)
+    pfc_firing_rates_future_R_response = np.array(pfc_firing_rates_future_R_response)
+    pfc_firing_rates_future_L_response = np.array(pfc_firing_rates_future_L_response)
+
+    dms_firing_rates_past_R_response = np.array(dms_firing_rates_past_R_response)
+    dms_firing_rates_past_L_response = np.array(dms_firing_rates_past_L_response)
+    dms_firing_rates_future_R_response = np.array(dms_firing_rates_future_R_response)
+    dms_firing_rates_future_L_response = np.array(dms_firing_rates_future_L_response)
+
+    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R)
+    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L)
+    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R)
+    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L)
+
+    dms_firing_rate_past_R_mean, dms_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_dms, dms_firing_rates_past_R)
+    dms_firing_rate_past_L_mean, dms_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_dms, dms_firing_rates_past_L)
+    dms_firing_rate_future_R_mean, dms_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_dms, dms_firing_rates_future_R)
+    dms_firing_rate_future_L_mean, dms_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_dms, dms_firing_rates_future_L)
+
+    pfc_firing_rate_past_R_response_mean, pfc_firing_rate_past_R_response_sem = get_mean_and_sem(relative_values_past_R_pfc_response, pfc_firing_rates_past_R_response)
+    pfc_firing_rate_past_L_response_mean, pfc_firing_rate_past_L_response_sem = get_mean_and_sem(relative_values_past_L_pfc_response, pfc_firing_rates_past_L_response)
+    pfc_firing_rate_future_R_response_mean, pfc_firing_rate_future_R_response_sem = get_mean_and_sem(relative_values_future_R_pfc_response, pfc_firing_rates_future_R_response)
+    pfc_firing_rate_future_L_response_mean, pfc_firing_rate_future_L_response_sem = get_mean_and_sem(relative_values_future_L_pfc_response, pfc_firing_rates_future_L_response)
+    
+    dms_firing_rate_past_R_response_mean, dms_firing_rate_past_R_response_sem = get_mean_and_sem(relative_values_past_R_dms_response, dms_firing_rates_past_R_response)
+    dms_firing_rate_past_L_response_mean, dms_firing_rate_past_L_response_sem = get_mean_and_sem(relative_values_past_L_dms_response, dms_firing_rates_past_L_response)
+    dms_firing_rate_future_R_response_mean, dms_firing_rate_future_R_response_sem = get_mean_and_sem(relative_values_future_R_dms_response, dms_firing_rates_future_R_response)
+    dms_firing_rate_future_L_response_mean, dms_firing_rate_future_L_response_sem = get_mean_and_sem(relative_values_future_L_dms_response, dms_firing_rates_future_L_response)
+
+    pfc_firing_all_mean, pfc_firing_all_sem = get_mean_and_sem(relative_values_pfc_all, pfc_firing_all)
+    dms_firing_all_mean, dms_firing_all_sem = get_mean_and_sem(relative_values_dms_all, dms_firing_all)
+    pfc_firing_all_response_mean, pfc_firing_all_response_sem = get_mean_and_sem(relative_values_pfc_all_response, pfc_firing_all_response)
+    dms_firing_all_response_mean, dms_firing_all_response_sem = get_mean_and_sem(relative_values_dms_all_response, dms_firing_all_response)
+
+    x = np.arange(-1+bin_size/2, 1, bin_size)
+
     # plot the firing rates vs relative values as line plots with 
     # shaded error bars for the standard error
     # with R and L trials sharing the same plot
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    sns.lineplot(x=relative_values_past_R_pfc, y=pfc_firing_rates_past_R, ax=axes[0, 0], errorbar=('ci', 68), label='past R')
-    sns.lineplot(x=relative_values_past_L_pfc, y=pfc_firing_rates_past_L, ax=axes[0, 0], errorbar=('ci', 68), label='past L')
-    sns.lineplot(x=relative_values_future_R_pfc, y=pfc_firing_rates_future_R, ax=axes[0, 1], errorbar=('ci', 68), label='future R')
-    sns.lineplot(x=relative_values_future_L_pfc, y=pfc_firing_rates_future_L, ax=axes[0, 1], errorbar=('ci', 68), label='future L')
-
-    sns.lineplot(x=relative_values_past_R_dms, y=dms_firing_rates_past_R, ax=axes[1, 0], errorbar=('ci', 68), label='past R')
-    sns.lineplot(x=relative_values_past_L_dms, y=dms_firing_rates_past_L, ax=axes[1, 0], errorbar=('ci', 68), label='past L')
-    sns.lineplot(x=relative_values_future_R_dms, y=dms_firing_rates_future_R, ax=axes[1, 1], errorbar=('ci', 68), label='future R')
-    sns.lineplot(x=relative_values_future_L_dms, y=dms_firing_rates_future_L, ax=axes[1, 1], errorbar=('ci', 68), label='future L')
+    axes[0, 0].plot(x, pfc_firing_rate_past_R_mean, color='red')
+    axes[0, 0].fill_between(x, pfc_firing_rate_past_R_mean-pfc_firing_rate_past_R_sem, pfc_firing_rate_past_R_mean+pfc_firing_rate_past_R_sem, color='red', alpha=0.3)
+    axes[0, 0].plot(x, pfc_firing_rate_past_L_mean, color='blue')
+    axes[0, 0].fill_between(x, pfc_firing_rate_past_L_mean-pfc_firing_rate_past_L_sem, pfc_firing_rate_past_L_mean+pfc_firing_rate_past_L_sem, color='blue', alpha=0.3)
+    axes[0, 1].plot(x, pfc_firing_rate_future_R_mean, color='red')
+    axes[0, 1].fill_between(x, pfc_firing_rate_future_R_mean-pfc_firing_rate_future_R_sem, pfc_firing_rate_future_R_mean+pfc_firing_rate_future_R_sem, color='red', alpha=0.3)
+    axes[0, 1].plot(x, pfc_firing_rate_future_L_mean, color='blue')
+    axes[0, 1].fill_between(x, pfc_firing_rate_future_L_mean-pfc_firing_rate_future_L_sem, pfc_firing_rate_future_L_mean+pfc_firing_rate_future_L_sem, color='blue', alpha=0.3)
+    axes[1, 0].plot(x, dms_firing_rate_past_R_mean, color='red')
+    axes[1, 0].fill_between(x, dms_firing_rate_past_R_mean-dms_firing_rate_past_R_sem, dms_firing_rate_past_R_mean+dms_firing_rate_past_R_sem, color='red', alpha=0.3)
+    axes[1, 0].plot(x, dms_firing_rate_past_L_mean, color='blue')
+    axes[1, 0].fill_between(x, dms_firing_rate_past_L_mean-dms_firing_rate_past_L_sem, dms_firing_rate_past_L_mean+dms_firing_rate_past_L_sem, color='blue', alpha=0.3)
+    axes[1, 1].plot(x, dms_firing_rate_future_R_mean, color='red')
+    axes[1, 1].fill_between(x, dms_firing_rate_future_R_mean-dms_firing_rate_future_R_sem, dms_firing_rate_future_R_mean+dms_firing_rate_future_R_sem, color='red', alpha=0.3)
+    axes[1, 1].plot(x, dms_firing_rate_future_L_mean, color='blue')
+    axes[1, 1].fill_between(x, dms_firing_rate_future_L_mean-dms_firing_rate_future_L_sem, dms_firing_rate_future_L_mean+dms_firing_rate_future_L_sem, color='blue', alpha=0.3)
     
     axes[0, 0].set_title('Past trials')
     axes[0, 1].set_title('Future trials')
@@ -300,14 +330,22 @@ def pastP_futureP_vs_relative_value():
 
     # another figure for the response period
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    sns.lineplot(x=relative_values_past_R_pfc_response, y=pfc_firing_rates_past_R_response, ax=axes[0, 0], errorbar=('ci', 68), label='past R')
-    sns.lineplot(x=relative_values_past_L_pfc_response, y=pfc_firing_rates_past_L_response, ax=axes[0, 0], errorbar=('ci', 68), label='past L')
-    sns.lineplot(x=relative_values_future_R_pfc_response, y=pfc_firing_rates_future_R_response, ax=axes[0, 1], errorbar=('ci', 68), label='future R')
-    sns.lineplot(x=relative_values_future_L_pfc_response, y=pfc_firing_rates_future_L_response, ax=axes[0, 1], errorbar=('ci', 68), label='future L')
-    sns.lineplot(x=relative_values_past_R_dms_response, y=dms_firing_rates_past_R_response, ax=axes[1, 0], errorbar=('ci', 68), label='past R')
-    sns.lineplot(x=relative_values_past_L_dms_response, y=dms_firing_rates_past_L_response, ax=axes[1, 0], errorbar=('ci', 68), label='past L')
-    sns.lineplot(x=relative_values_future_R_dms_response, y=dms_firing_rates_future_R_response, ax=axes[1, 1], errorbar=('ci', 68), label='future R')
-    sns.lineplot(x=relative_values_future_L_dms_response, y=dms_firing_rates_future_L_response, ax=axes[1, 1], errorbar=('ci', 68), label='future L')
+    axes[0, 0].plot(x, pfc_firing_rate_past_R_response_mean, color='red')
+    axes[0, 0].fill_between(x, pfc_firing_rate_past_R_response_mean-pfc_firing_rate_past_R_response_sem, pfc_firing_rate_past_R_response_mean+pfc_firing_rate_past_R_response_sem, color='red', alpha=0.3)
+    axes[0, 0].plot(x, pfc_firing_rate_past_L_response_mean, color='blue')
+    axes[0, 0].fill_between(x, pfc_firing_rate_past_L_response_mean-pfc_firing_rate_past_L_response_sem, pfc_firing_rate_past_L_response_mean+pfc_firing_rate_past_L_response_sem, color='blue', alpha=0.3)
+    axes[0, 1].plot(x, pfc_firing_rate_future_R_response_mean, color='red')
+    axes[0, 1].fill_between(x, pfc_firing_rate_future_R_response_mean-pfc_firing_rate_future_R_response_sem, pfc_firing_rate_future_R_response_mean+pfc_firing_rate_future_R_response_sem, color='red', alpha=0.3)
+    axes[0, 1].plot(x, pfc_firing_rate_future_L_response_mean, color='blue')
+    axes[0, 1].fill_between(x, pfc_firing_rate_future_L_response_mean-pfc_firing_rate_future_L_response_sem, pfc_firing_rate_future_L_response_mean+pfc_firing_rate_future_L_response_sem, color='blue', alpha=0.3)
+    axes[1, 0].plot(x, dms_firing_rate_past_R_response_mean, color='red')
+    axes[1, 0].fill_between(x, dms_firing_rate_past_R_response_mean-dms_firing_rate_past_R_response_sem, dms_firing_rate_past_R_response_mean+dms_firing_rate_past_R_response_sem, color='red', alpha=0.3)
+    axes[1, 0].plot(x, dms_firing_rate_past_L_response_mean, color='blue')
+    axes[1, 0].fill_between(x, dms_firing_rate_past_L_response_mean-dms_firing_rate_past_L_response_sem, dms_firing_rate_past_L_response_mean+dms_firing_rate_past_L_response_sem, color='blue', alpha=0.3)
+    axes[1, 1].plot(x, dms_firing_rate_future_R_response_mean, color='red')
+    axes[1, 1].fill_between(x, dms_firing_rate_future_R_response_mean-dms_firing_rate_future_R_response_sem, dms_firing_rate_future_R_response_mean+dms_firing_rate_future_R_response_sem, color='red', alpha=0.3)
+    axes[1, 1].plot(x, dms_firing_rate_future_L_response_mean, color='blue')
+    axes[1, 1].fill_between(x, dms_firing_rate_future_L_response_mean-dms_firing_rate_future_L_response_sem, dms_firing_rate_future_L_response_mean+dms_firing_rate_future_L_response_sem, color='blue', alpha=0.3)
 
     axes[0, 0].set_title('Past trials')
     axes[0, 1].set_title('Future trials')
@@ -328,10 +366,15 @@ def pastP_futureP_vs_relative_value():
 
     # another figure for all trials
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    sns.lineplot(x=relative_values_pfc_all, y=pfc_firing_all, ax=axes[0, 0], errorbar=('ci', 68))
-    sns.lineplot(x=relative_values_dms_all, y=dms_firing_all, ax=axes[0, 1], errorbar=('ci', 68))
-    sns.lineplot(x=relative_values_pfc_all_response, y=pfc_firing_all_response, ax=axes[1, 0], errorbar=('ci', 68))
-    sns.lineplot(x=relative_values_dms_all_response, y=dms_firing_all_response, ax=axes[1, 1], errorbar=('ci', 68))
+    axes[0, 0].plot(x, pfc_firing_all_mean, color='red')
+    axes[0, 0].fill_between(x, pfc_firing_all_mean-pfc_firing_all_sem, pfc_firing_all_mean+pfc_firing_all_sem, color='red', alpha=0.3)
+    axes[0, 1].plot(x, pfc_firing_all_mean, color='red')
+    axes[0, 1].fill_between(x, pfc_firing_all_mean-pfc_firing_all_sem, pfc_firing_all_mean+pfc_firing_all_sem, color='red', alpha=0.3)
+    axes[1, 0].plot(x, dms_firing_all_mean, color='red')
+    axes[1, 0].fill_between(x, dms_firing_all_mean-dms_firing_all_sem, dms_firing_all_mean+dms_firing_all_sem, color='red', alpha=0.3)
+    axes[1, 1].plot(x, dms_firing_all_mean, color='red')
+    axes[1, 1].fill_between(x, dms_firing_all_mean-dms_firing_all_sem, dms_firing_all_mean+dms_firing_all_sem, color='red', alpha=0.3)
+
 
     axes[0, 0].set_title('BG')
     axes[0, 1].set_title('Response period')
@@ -350,4 +393,15 @@ def pastP_futureP_vs_relative_value():
     fig.suptitle('firing rate vs relative value (all trials)')
     plt.show()
 
+    # save all the data to a csv file
+    df = pd.DataFrame({'x': x, 'pfc_past_R_bg': pfc_firing_rate_past_R_mean, 'past_R_bg_sem': pfc_firing_rate_past_R_sem, 'pfc_past_L_bg': pfc_firing_rate_past_L_mean, 'past_L_bg_sem': pfc_firing_rate_past_L_sem, 'pfc_future_R_bg': pfc_firing_rate_future_R_mean, 'future_R_bg_sem': pfc_firing_rate_future_R_sem, 'pfc_future_L_bg': pfc_firing_rate_future_L_mean, 'future_L_bg_sem': pfc_firing_rate_future_L_sem, 'dms_past_R_bg': dms_firing_rate_past_R_mean, 'dms_past_R_bg_sem': dms_firing_rate_past_R_sem, 'dms_past_L_bg': dms_firing_rate_past_L_mean, 'dms_past_L_bg_sem': dms_firing_rate_past_L_sem, 'dms_future_R_bg': dms_firing_rate_future_R_mean, 'dms_future_R_bg_sem': dms_firing_rate_future_R_sem, 'dms_future_L_bg': dms_firing_rate_future_L_mean, 'dms_future_L_bg_sem': dms_firing_rate_future_L_sem, 'pfc_past_R_response': pfc_firing_rate_past_R_response_mean, 'pfc_past_R_response_sem': pfc_firing_rate_past_R_response_sem, 'pfc_past_L_response': pfc_firing_rate_past_L_response_mean, 'pfc_past_L_response_sem': pfc_firing_rate_past_L_response_sem, 'pfc_future_R_response': pfc_firing_rate_future_R_response_mean, 'pfc_future_R_response_sem': pfc_firing_rate_future_R_response_sem, 'pfc_future_L_response': pfc_firing_rate_future_L_response_mean, 'pfc_future_L_response_sem': pfc_firing_rate_future_L_response_sem, 'dms_past_R_response': dms_firing_rate_past_R_response_mean, 'dms_past_R_response_sem': dms_firing_rate_past_R_response_sem, 'dms_past_L_response': dms_firing_rate_past_L_response_mean, 'dms_past_L_response_sem': dms_firing_rate_past_L_response_sem, 'dms_future_R_response': dms_firing_rate_future_R_response_mean, 'dms_future_R_response_sem': dms_firing_rate_future_R_response_sem, 'dms_future_L_response': dms_firing_rate_future_L_response_mean, 'dms_future_L_response_sem': dms_firing_rate_future_L_response_sem, 'pfc_all_firing_bg': pfc_firing_all_mean, 'pfc_all_firing_bg_sem': pfc_firing_all_sem, 'dms_all_firing_bg': dms_firing_all_mean, 'dms_all_firing_bg_sem': dms_firing_all_sem, 'pfc_all_firing_response': pfc_firing_all_response_mean, 'pfc_all_firing_response_sem': pfc_firing_all_response_sem, 'dms_all_firing_response': dms_firing_all_response_mean, 'dms_all_firing_response_sem': dms_firing_all_response_sem})
+    df.to_csv(pjoin(figure_data_root, 'beri_cohen_extra.csv'), index=False)
 
+
+def get_mean_and_sem(x, y):
+    df = pd.DataFrame({'x': x, 'y': y})
+    df_org = df.copy()
+    df = df.groupby('x').mean()
+    df['sem'] = df_org.groupby('x').sem()['y']
+
+    return np.array(df['y']), np.array(df['sem'])

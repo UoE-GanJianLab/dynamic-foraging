@@ -36,9 +36,19 @@ The figure_data are named according to the names on the poster.
 
 1. Panel B
 
+Panel B demonstrats the wheel velocity difference between rewarded and non-rewarded trials as well as the reward probability during each 20ms bin between $[-0.5s, 1.5s]$ relative to the cue time. The data are organized as follows:
+
+|time|rewarded_velocity|no-reward velocity|reward_probability|
+|---|---|---|---|
+|relative time to cue time, center of the 20ms bin|The average wheel velocity during rewarded trials in the 20ms bin|The average wheel velocity during non-rewarded trials in the 20ms bin|The average reward probability during the 20ms bin|
+
 2. Panel C
 
-Panel C contains a series of plots 
+Panel C contains a series of plots that summarizes the behavioral performance of the animal. First figure compares the set reward probability of left and right; Second figure measures the response proportion(20 trial centred window) to left and right side; Third figure shows the comparison between proportion of reward choices and choices made to the high reward probability side; The fourth figure displays the comparison between prpd and relative values. The data are organized as follows:
+
+|trial_index|leftP|rightP|responses|left_response_proportion|right_response_proportion|perceived_left|perceived_right|prpd|relative_value|chosen_high_reward_side|high_reward_proportion|reward_proportion|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|trial index|left reward probability|right reward probability|response side|proportion of left responses in the 20 trial window centred at the trial|proportion of right responses in the 20 trial window centred at the trial|perceived left reward probability|perceived right reward probability|perceived reward probability difference(contra - ipsi)|relative value($Q_l-Q_r$)|chosen high reward side|proportion of choices made to the high reward side in the 20 trial window centred at the trial|proportion of rewarded trials in the 20 trial window centred at the trial|
 
 3. Panel D
 
@@ -47,6 +57,13 @@ Panel D describes the percentage of choices made to the advantageous side as wel
 |relative_trial_index|rewarded_percentage|high_reward_percentage|
 |---|---|---|
 |trial index relative to the switch|percentage of rewarded trials in the 50 trials before and after the switch, averaged across all switches|percentage of choices made to the high reward side in the 50 trials before and after the switch, averaged across all switches|
+
+
+#### Figure 2
+
+* Panel G
+
+Panel G is an example trial, showing angular velocity of wheel (blue), total angle traversed (red) and simultaneous multiple PFC single-unit recordings (black). The data are organized as follows:
 
 #### Figure 3
 1. Panel A B
@@ -216,6 +233,13 @@ Mono:
 
 t: -5.30720280984404, p: 1.116669563832314e-07
 
+#### Beri-Cohen Extra
+
+To rebate the reviewer's comment on influence of past and future choices, we plotted the firing rate of PFC and DMS cells against the relative value/prpd, split into past and future choices. The data are organized as follows:
+
+|x|pfc_past_R_bg|past_R_bg_sem|pfc_past_L_bg|past_L_bg_sem|pfc_future_R_bg|future_R_bg_sem|pfc_future_L_bg|future_L_bg_sem|dms_past_R_bg|dms_past_R_bg_sem|dms_past_L_bg|dms_past_L_bg_sem|dms_future_R_bg|dms_future_R_bg_sem|dms_future_L_bg|dms_future_L_bg_sem|pfc_past_R_response|pfc_past_R_response_sem|pfc_past_L_response|pfc_past_L_response_sem|pfc_future_R_response|pfc_future_R_response_sem|pfc_future_L_response|pfc_future_L_response_sem|dms_past_R_response|dms_past_R_response_sem|dms_past_L_response|dms_past_L_response_sem|dms_future_R_response|dms_future_R_response_sem|dms_future_L_response|dms_future_L_response_sem|pfc_all_firing_bg|pfc_all_firing_bg_sem|dms_all_firing_bg|dms_all_firing_bg_sem|pfc_all_firing_response|pfc_all_firing_response_sem|dms_all_firing_response|dms_all_firing_response_sem|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|center of 0.25 bin|mean firing rate of PFC cells whose past choice is right during ITI|standard error of the mean firing rate of PFC cells whose past choice is right during ITI|mean firing rate of PFC cells whose past choice is left during ITI|standard error of the mean firing rate of PFC cells whose past choice is left during ITI|mean firing rate of PFC cells whose future choice is right during ITI|standard error of the mean firing rate of PFC cells whose future choice is right during ITI|mean firing rate of PFC cells whose future choice is left during ITI|standard error of the mean firing rate of PFC cells whose future choice is left during ITI|mean firing rate of DMS cells whose past choice is right during ITI|standard error of the mean firing rate of DMS cells whose past choice is right during ITI|mean firing rate of DMS cells whose past choice is left during ITI|standard error of the mean firing rate of DMS cells whose past choice is left during ITI|mean firing rate of DMS cells whose future choice is right during ITI|standard error of the mean firing rate of DMS cells whose future choice is right during ITI|mean firing rate of DMS cells whose future choice is left during ITI|standard error of the mean firing rate of DMS cells whose future choice is left during ITI|mean firing rate of PFC cells whose past choice is right during response|standard error of the mean firing rate of PFC cells whose past choice is right during response|mean firing rate of PFC cells whose past choice is left during response|standard error of the mean firing rate of PFC cells whose past choice is left during response|mean firing rate of PFC cells whose future choice is right during response|standard error of the mean firing rate of PFC cells whose future choice is right during response|mean firing rate of PFC cells whose future choice is left during response|standard error of the mean firing rate of PFC cells whose future choice is left during response|mean firing rate of DMS cells whose past choice is right during response|standard error of the mean firing rate of DMS cells whose past choice is right during response|mean firing rate of DMS cells whose past choice is left during response|standard error of the mean firing rate of DMS cells whose past choice is left during response|mean firing rate of DMS cells whose future choice is right during response|standard error of the mean firing rate of DMS cells whose future choice is right during response|mean firing rate of DMS cells whose future choice is left during response|standard error of the mean firing rate of DMS cells whose future choice is left during response|mean firing rate of PFC cells during ITI|standard error of the mean firing rate of PFC cells during ITI|mean firing rate of DMS cells during ITI|standard error of the mean firing rate of DMS cells during ITI|mean firing rate of PFC cells during response|standard error of the mean firing rate of PFC cells during response|mean firing rate of DMS cells during response|standard error of the mean firing rate of DMS cells during response|
 
 ## repository structure
 

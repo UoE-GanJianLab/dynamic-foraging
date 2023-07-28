@@ -25,6 +25,8 @@ behaviour_root = pjoin('data', 'behaviour_data')
 signal_mvt_reward_file = pjoin(spike_time_dir, 'figure_3', 'signal_mvt_reward.npy')
 signal_mvt_reward_high_low_file = pjoin(spike_time_dir, 'figure_3', 'signal_mvt_reward_high_low.npy')
 
+wheel_velocity_file_root = pjoin('data', 'behaviour_data', 'wheel_velocity')
+
 figure_3_data_root = pjoin('figure_data', 'figure_3')
 if not isdir(figure_3_data_root):
     print('Creating ' + figure_3_data_root)
@@ -45,8 +47,18 @@ def compute_component_prp_spike_times(component_idx, prp_idx, relative_to_pfc, w
     component_spike_times = np.divide(component_spike_times, len([idx for idx in component_idx if idx in prp_idx]))
     return component_spike_times
 
+
+def get_figure_3_panel_a():
+    for session_wheel_velocity in listdir(wheel_velocity_file_root):
+        session_name = session_wheel_velocity.split('.')[0]
+        session_wheel_velocity = np.load(pjoin(wheel_velocity_file_root, session_wheel_velocity))
+
+        print(session_wheel_velocity[:20, 0])
+        print(session_wheel_velocity[:20, 1])
+
+
 # poster panel a,b of figure 3
-def figure_3_panel_bc(reset=False):
+def get_figure_3_panel_bc(reset=False):
     dms_count = 0
     pfc_count = 0
 
@@ -256,7 +268,7 @@ def figure_3_panel_bc(reset=False):
     ax_dms.legend(loc='upper right', fontsize=16)
     
 
-def figure_3_panel_bc_mid():
+def get_figure_3_panel_bc_mid():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
@@ -296,7 +308,7 @@ def figure_3_panel_bc_mid():
     fig_dms.suptitle('DMS', fontsize=16)
 
 
-def figure_3_panel_bc_bottom():
+def get_figure_3_panel_bc_bottom():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
@@ -541,7 +553,7 @@ def figure_3_panel_bc_bottom():
     fig_dms.tight_layout()
 
     
-def figure_3_panel_d():
+def get_figure_3_panel_d():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
@@ -721,6 +733,7 @@ def figure_3_panel_d():
     print('DMS signal t test: t = {}, p = {}'.format(dms_signal_t, dms_signal_p))
     print('DMS movement t test: t = {}, p = {}'.format(dms_mvt_t, dms_mvt_p))
     print('DMS reward t test: t = {}, p = {}'.format(dms_reward_t, dms_reward_p))
+
 
 def get_high_low_prp_index(session_name: str, reset: bool = False):
     if isfile(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy')) and not reset:
