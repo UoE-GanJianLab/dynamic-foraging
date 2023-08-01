@@ -168,7 +168,6 @@ This is a pie chart showing the percentage of PRPD modulated cell pairs out of a
 |---|---|
 |one of the four types of correlation|percentage of cell pairs that are correlated with the corresponding type|
 
-
 #### Figure 8
 
 Figure 8 focus on the interconnectivity strength 
@@ -194,7 +193,6 @@ Panel A B C shows the interconnectivity strength between PFC and DMS pairs, prio
 |discretized_reward_proportion|interconnectivity_strength_mean|interconnectivity_strength_err|
 |---|---|---|
 |discretized prior reward proportion|mean interconnectivity strength between PFC and DMS pairs|standard error of the mean interconnectivity strength between PFC and DMS pairs|
-
 
 2. Panel D
 

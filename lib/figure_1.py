@@ -17,6 +17,8 @@ for dir in [figure_data_root, panel_c_data_root]:
     if not isdir(dir):
         mkdir(dir)
 
+wheel_velocity_data_root = pjoin('data', 'behaviour_data', 'wheel_velocity')
+
 
 def get_figure_1_panel_c():
     for session in glob(pjoin(behaviour_data_root, '*.csv')):
@@ -76,6 +78,7 @@ def get_figure_1_panel_c():
         axes[3].set_ylabel('proportion')
         axes[3].legend()
         fig.suptitle(session_name)
+        plt.close(fig)
 
 
 def get_figure_1_panel_d():
@@ -88,7 +91,6 @@ def get_figure_1_panel_d():
 
     for session in sorted_sessions:
         session_name = basename(session).split('.')[0]
-        print(session_name)
         behaviour_data = pd.read_csv(session)
         leftP = np.array(behaviour_data['leftP'].values)
         trial_reward = np.array(behaviour_data['trial_reward'].values)
