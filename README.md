@@ -38,9 +38,7 @@ The figure_data are named according to the names on the poster.
 
 Panel B demonstrats the wheel velocity difference between rewarded and non-rewarded trials as well as the reward probability during each 20ms bin between $[-0.5s, 1.5s]$ relative to the cue time. The data are organized as follows:
 
-|time|rewarded_velocity|no-reward velocity|reward_probability|
-|---|---|---|---|
-|relative time to cue time, center of the 20ms bin|The average wheel velocity during rewarded trials in the 20ms bin|The average wheel velocity during non-rewarded trials in the 20ms bin|The average reward probability during the 20ms bin|
+|time|reward_probability|wheel_velocity_rewarded|wheel_velocity_rewarded_sem|wheel_velocity_unrewarded|wheel_velocity_unrewarded_sem|
 
 2. Panel C
 
