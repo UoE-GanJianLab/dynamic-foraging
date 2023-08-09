@@ -194,6 +194,13 @@ def get_relative_spike_times(spike_times: np.ndarray, cue_times: np.ndarray, win
         
     return relative_spike_times
 
+def get_relative_firing_rate_binned(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float, bin_size: int) -> List[List[float]]:
+    relative_spike_times = get_relative_spike_times_flat(spike_times, cue_times, window_left, window_right)
+    relative_spike_times_binned = bin_array(relative_spike_times, window_left, window_right, bin_size)
+    relative_firing_rate = relative_spike_times_binned / (len(cue_times)*bin_size)
+    return relative_firing_rate
+    
+
 def get_relative_spike_times_flat(spike_times: np.ndarray, cue_times: np.ndarray, window_left: float, window_right: float) -> List[List[float]]:
     spike_ptr = 0
 
@@ -392,3 +399,12 @@ def check_probe_drift(firing_rates: np.ndarray) -> bool:
             return True
 
     return False
+
+def get_mean_and_sem(signals):
+    return np.mean(signals, axis=0), np.std(signals, axis=0) / np.sqrt(len(signals))
+
+def bin_array(data, window_left, window_right, bin_size):
+    discretized_data = np.digitize(data, bins=np.arange(window_left, window_right+bin_size, bin_size), right=True)
+    print(discretized_data)
+    discretized_data = [np.sum(discretized_data==i) for i in range(1, int((window_right-window_left)/bin_size)+1)]
+    return np.array(discretized_data)
