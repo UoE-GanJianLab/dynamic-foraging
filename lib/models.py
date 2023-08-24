@@ -87,7 +87,7 @@ class RW:
             # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
             bounds = [(5, 15), (-5, 5), (0.001, 1)]
 
-            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
+            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead')['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
                 fitted_parameters = params
                 nll_min = self.nll(params, choices_real, rewards_real)
@@ -139,16 +139,3 @@ class RW:
         plt.close()
 
         return delta_V
-
-    # # simulate according to a session of real behaviour
-    # def simulate(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
-    #     self.assign_parameters(parameters)
-    #     self.choices = np.array([])
-        
-    #     neg_log_likelihood = 0
-    #     self.v0, self.v1 = 0, 0
-
-    #     for i in range(choices_real.size):
-    #         choice = choices_real[i]
-    #         c, prob = self.get_choice()
-    #         self.choices[-1] = choice

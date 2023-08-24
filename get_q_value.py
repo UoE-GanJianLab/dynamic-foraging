@@ -39,14 +39,10 @@ def fit_and_save(session: str, reset=True):
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values
     # print out the parameters beta kappa b alpha gamma with the session name and parameter name
-    print(f'{session_name} beta: {parameters[0]} b: {parameters[1]} alpha: {parameters[2]}')
     relative_values = rw.get_delta_V(parameters, choices, rewards, session_name)
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
 
-<<<<<<< HEAD
-    if crainotomy_side == 'R':
-=======
     # for each nan trial, insert a value equal to previous relative value
     # into the relative values
     for nan_trial in nan_trials:
@@ -59,9 +55,8 @@ def fit_and_save(session: str, reset=True):
     relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
 
 
-    if crainotomy_side == 'L':
->>>>>>> 4abb7e75460ea1172faf3007b96ac36263444030
-        relative_values = -relative_values
+    # if crainotomy_side == 'L':
+    #     relative_values = -relative_values
 
     # save the relative values
     np.save(pjoin(RELATIVE_VALUE_ROOT, session_name+'.npy'), relative_values)
