@@ -17,9 +17,9 @@ import tqdm
 from scipy.stats import pearsonr, ttest_ind, spearmanr # type: ignore
 from scipy.signal import correlate # type: ignore
 
-from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation, check_probe_drift
+from lib.calculation import moving_window_mean_prior, get_relative_spike_times, get_spike_times_in_window, get_normalized_cross_correlation, crosscorrelation, check_probe_drift, get_mean_and_sem
 from lib.file_utils import get_dms_pfc_paths_all, get_dms_pfc_paths_mono
-from lib.figure_utils import remove_top_and_right_spines
+from lib.figure_utils import remove_top_and_right_spines, plot_with_sem_error_bar
 
 # ignore constant input warning from scipy
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -186,7 +186,7 @@ def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
     # calculate the overall cross correlation
     overall_cross_cor = crosscorrelation(interconnectivity_strength_z_score, reward_proportion_z_score, maxlag=50)
 
-    return p, r, overall_cross_cor
+    return p, r, list(overall_cross_cor)
 
 
 def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
@@ -465,20 +465,18 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
         # print the length of arrays in overall_crosscors
         overall_crosscors = np.concatenate(overall_crosscors)
 
-    sample_size = len(overall_crosscors)
-    overall_crosscors = np.nanmean(overall_crosscors, axis=0)
-    overall_crosscors_std_err = np.nanstd(overall_crosscors, axis=0) / np.sqrt(sample_size)
+    print(overall_crosscors)
+    overall_crosscors, overall_crosscors_sem = get_mean_and_sem(overall_crosscors)
 
     # save the data into a dataframe
-    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_std_err': overall_crosscors_std_err})
+    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_sem': overall_crosscors_sem})
     if mono:
         figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
     else:
         figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
 
     # plot overall crosscor
-    sns.lineplot(x=np.arange(-50, 51, 1), y=overall_crosscors, color='black', linewidth=0.5)
-    axes.fill_between(np.arange(-50, 51, 1), overall_crosscors - overall_crosscors_std_err, overall_crosscors + overall_crosscors_std_err, alpha=0.5, color='black')
+    plot_with_sem_error_bar(ax=axes,x=np.arange(-50, 51, 1, dtype=int), mean=overall_crosscors, sem=overall_crosscors_sem, color='black')
     axes.set_xlabel('Trial Lag')
 
 

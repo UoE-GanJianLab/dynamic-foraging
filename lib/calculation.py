@@ -401,7 +401,7 @@ def check_probe_drift(firing_rates: np.ndarray) -> bool:
     return False
 
 def get_mean_and_sem(signals):
-    return np.mean(signals, axis=0), np.std(signals, axis=0) / np.sqrt(len(signals))
+    return np.nanmean(signals, axis=0), np.nanstd(signals, axis=0) / np.sqrt(len(signals))
 
 def bin_array(data, window_left, window_right, bin_size):
     discretized_data = np.digitize(data, bins=np.arange(window_left, window_right+bin_size, bin_size), right=True)
