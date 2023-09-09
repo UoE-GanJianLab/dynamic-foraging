@@ -34,7 +34,7 @@ def firing_rate_vs_relative_value():
     firing_rates = []
 
 
-def pastP_futureP_vs_relative_value():
+def get_figure_5_panel_gh():
     # go through each sessions and load up the behaviour data 
     # as well as the relative values
     relative_values_past_R_pfc = []
