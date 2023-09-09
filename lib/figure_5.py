@@ -370,7 +370,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     # |bin_center|good_response_count|good_bg_count|bad_response_count|bad_bg_count|
     bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
     panel_d_data = pd.DataFrame({'bin_center': bin_centers, 'good_response_count': good_response_count, 'good_bg_count': good_bg_count, 'bad_response_count': bad_response_count, 'bad_bg_count': bad_bg_count})
-    panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_c_data.csv'), index=False)
+    panel_d_data.to_csv(pjoin(figure_5_data_root, 'pnel_c_data.csv'), index=False)
 
     # set y label
     axes[0][1].set_ylabel('Number of Cell Pairs')

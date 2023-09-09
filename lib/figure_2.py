@@ -36,6 +36,8 @@ def get_figure_2_panel_a():
     total_trial = 0
 
     # TODO downsample the wheel velocity signal
+    
+
 
     # for all sessions, load the cue times
     for session in glob(pjoin(behaviour_data_root, '*.csv')):

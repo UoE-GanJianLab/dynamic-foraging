@@ -48,17 +48,9 @@ def compute_component_prp_spike_times(component_idx, prp_idx, relative_to_pfc, w
     return component_spike_times
 
 
-def get_figure_3_panel_a():
-    for session_wheel_velocity in listdir(wheel_velocity_file_root):
-        session_name = session_wheel_velocity.split('.')[0]
-        session_wheel_velocity = np.load(pjoin(wheel_velocity_file_root, session_wheel_velocity))
-
-        print(session_wheel_velocity[:20, 0])
-        print(session_wheel_velocity[:20, 1])
-
 
 # poster panel a,b of figure 3
-def get_figure_3_panel_bc(reset=False):
+def get_figure_3_panel_ab(reset=False):
     dms_count = 0
     pfc_count = 0
 
@@ -268,7 +260,7 @@ def get_figure_3_panel_bc(reset=False):
     ax_dms.legend(loc='upper right', fontsize=16)
     
 
-def get_figure_3_panel_bc_mid():
+def get_figure_3_panel_cd():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
@@ -308,7 +300,7 @@ def get_figure_3_panel_bc_mid():
     fig_dms.suptitle('DMS', fontsize=16)
 
 
-def get_figure_3_panel_bc_bottom():
+def get_figure_3_panel_ef():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
@@ -553,7 +545,7 @@ def get_figure_3_panel_bc_bottom():
     fig_dms.tight_layout()
 
     
-def get_figure_3_panel_d():
+def get_figure_4_panel_ab():
     if not isfile(signal_mvt_reward_file):
         # print error message
         print('Error: ' + signal_mvt_reward_file + ' does not exist. Run figure_3_panel_bc() first.')
