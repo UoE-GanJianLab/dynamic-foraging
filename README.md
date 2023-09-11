@@ -177,9 +177,12 @@ $$\'x(\tau)=\frac{x(\tau)-E[x(\tau)]}{E[x(\tau)]}$$
 Where:
 
 $$x(\tau)=\sum^N_{t=-N}g(t)h(t+\tau)$$
+
 $$E[x(\tau)]=\sum^N_{t=-N}\bar{g}(t)\bar{h}(t+\tau)$$
 
 $\bar{g}(t)$ is a time series with equal length to $g(t)$, where each time point equals $\bar{g(t)}$, the mean of $g(t)$. Same applies to $h(t)$.
+
+To adjust for the sudden variations in the firing rates, the interconnectivity stength for each trial is calculated using a centered 20-trial long window. The binned firing rates(10ms) from 1 second before the first trial initiation till the last trial initiation in the 20-trial window of the corresponding DMS and PFC cells are the $g(t)$ and $h(t)$ in the above equations.
 
 1. Panel A B C
 
@@ -239,6 +242,10 @@ t: -20.212802029318336, p: 7.59799493448309e-91
 Mono:
 
 t: -5.30720280984404, p: 1.116669563832314e-07
+
+4. Panel F
+
+
 
 #### Beri-Cohen Extra
 
