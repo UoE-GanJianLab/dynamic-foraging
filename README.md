@@ -125,7 +125,7 @@ Panel E has a pair of pie charts showing the percentage of PFC and DMS cells tha
 Panel F makes further distinction between positive and negatively correlated cells. The mean percentage are calculated across all sessions. The data are organized as follows:
 
 |cell_location|firing window|positively correlated percentage|positive standard error|negatively correlated percentage|negative standard error|
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|
 |PFC or DMS|response magnitude or ITI firing|mean percentage of cells that are positively correlated|standard error of positively correlated percentage across all sessions|mean percentage of cells that are negatively correlated|standard error of negatively correlated percentage across all sessions|
 
 #### Figure 6
@@ -168,7 +168,18 @@ This is a pie chart showing the percentage of PRPD modulated cell pairs out of a
 
 #### Figure 8
 
-Figure 8 focus on the interconnectivity strength 
+Figure 8 focus on the interconnectivity strength, calculated using the maximum absolute deviation from 0 of the normalized cross correlation between the pair of DMS and PFC firring during ITI.
+
+The normalized cross correlation $\'x(\tau)$ between two time series $g(t), h(t)$ is calculated using:
+
+$$\'x(\tau)=\frac{x(\tau)-E[x(\tau)]}{E[x(\tau)]}$$
+
+Where:
+
+$$x(\tau)=\sum^N_{t=-N}g(t)h(t+\tau)$$
+$$E[x(\tau)]=\sum^N_{t=-N}\bar{g}(t)\bar{h}(t+\tau)$$
+
+$\bar{g}(t)$ is a time series with equal length to $g(t)$, where each time point equals $\bar{g(t)}$, the mean of $g(t)$. Same applies to $h(t)$.
 
 1. Panel A B C
 
