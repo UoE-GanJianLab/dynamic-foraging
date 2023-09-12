@@ -9,7 +9,7 @@ from scipy.stats import truncnorm, norm
 from lib.calculation import moving_window_mean
 
 class RW:
-    def __init__(self, v0=0, v1=0, beta=5, b=0, alpha=0.2) -> None:
+    def __init__(self, v0=0.5, v1=0.5, beta=5, b=0, alpha=0.2) -> None:
         # initialize the record arrays
         self.choices = np.array([])
         self.rewards = np.array([])
@@ -33,6 +33,7 @@ class RW:
             # self.v0 = self.gamma * self.v0
 
 
+    # returns the choice made and the probability of making that choice
     def get_choice(self) -> tuple[int, float]:
         if self.choices.size == 0:
             # if this is the first trial, choose without kappa term
@@ -43,30 +44,29 @@ class RW:
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
+        prob = p_r if choice == 1 else 1 - p_r
 
-        return (choice, p_r)
+        return (choice, prob)
 
 
     def nll(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
         self.assign_parameters(parameters)
         self.choices = np.array([])
         neg_log_likelihood = 0
-        self.v0, self.v1 = 0, 0
+        self.v0, self.v1 = 0.5, 0.5
 
         for i in range(choices_real.size):
             choice = choices_real[i]
             c, prob = self.get_choice()
             self.choices[-1] = choice
 
+            if c != choice:
+                prob = 1 - prob
+            
             if prob == 0:
-                prob += 0.001
-            elif prob == 1:
-                prob -= 0.001
-
-            if c == choice:
-                neg_log_likelihood += - np.log(prob)
-            else:
-                neg_log_likelihood += - np.log(1 - prob)
+                prob += 0.000001
+            
+            neg_log_likelihood += -np.log(prob)
 
             reward = rewards_real[i]
 
@@ -87,7 +87,7 @@ class RW:
             # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
             bounds = [(5, 15), (-5, 5), (0.001, 1)]
 
-            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead')['x']
+            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real))['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
                 fitted_parameters = params
                 nll_min = self.nll(params, choices_real, rewards_real)
@@ -128,7 +128,7 @@ class RW:
         
         # smoothen the choices
         simulated_choices = moving_window_mean(simulated_choices, 10)
-        choices_real = np.convolve(choices_real, np.ones((10,))/10, mode='same')
+        choices_real = moving_window_mean(choices_real, 10)
         # plot simulated choices and real choices, and delta_V
         plt.plot(simulated_choices, label='simulated')
         plt.plot(choices_real, label='real')

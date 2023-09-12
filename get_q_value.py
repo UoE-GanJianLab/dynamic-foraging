@@ -23,8 +23,8 @@ def fit_and_save(session: str, reset=True):
     # remove nan trials
     session_data = session_data[~session_data['trial_response_side'].isna()]
     choices = np.array(session_data['trial_response_side'].values)
-    # convert choices of -1 to 0
-    choices[choices == -1] = 0
+    # # convert choices of -1 to 0
+    # choices[choices == -1] = 0
     rewards = np.array(session_data['trial_reward'].values)
 
     if session_name[:6] == "AKED01":
@@ -32,13 +32,12 @@ def fit_and_save(session: str, reset=True):
 
     # fit the models
     rw = RW()
-    parameters = rw.fit(choices_real=choices, rewards_real=rewards)[0]
+    parameters, nll_min = rw.fit(choices_real=choices, rewards_real=rewards)
     # print the fitted parameters with their names: beta, kappa, b, alpha, accurate to 3 decimal places
-    print(f'{session_name}: beta: {parameters[0]:.3f}, b: {parameters[1]:.3f}, alpha: {parameters[2]:.3f}')
+    print(f'{session_name}: beta: {parameters[0]:.3f}, b: {parameters[1]:.3f}, alpha: {parameters[2]:.3f}, nll: {nll_min:.3f}')
     # print out the fitted 
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values
-    # print out the parameters beta kappa b alpha gamma with the session name and parameter name
     relative_values = rw.get_delta_V(parameters, choices, rewards, session_name)
     # remove the last entry for the relative values
     relative_values = relative_values[:-1]
@@ -51,8 +50,8 @@ def fit_and_save(session: str, reset=True):
     # smoothen the relative values
     relative_values = moving_window_mean_prior(relative_values, 10)
 
-    # scale relative values to the range of -1 to 1
-    relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
+    # # scale relative values to the range of -1 to 1
+    # relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
 
 
     # if crainotomy_side == 'L':

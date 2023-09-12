@@ -12,7 +12,7 @@ from lib.file_utils import get_dms_pfc_paths_all
 from lib.calculation import get_firing_rate_window
 
 behaviour_root = pjoin('data', 'behaviour_data')
-relative_value_root = pjoin('data', 'prpd')
+relative_value_root = pjoin('data', 'relative_values')
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 if relative_value_root == pjoin('data', 'prpd'):
     figure_data_root = pjoin('figure_data', 'beri_cohen_extra_prpd')
