@@ -201,9 +201,6 @@ def process_session_group(sessions):
 
     return (session_all, dms_all, pfc_all, peak_all, peak_width_all, counts_in_peak_all)
 
-# Define the main function
-
-
 def find_PMSE_parallel(reset=False):
     sessions = listdir(pjoin('data', 'spike_times', 'sessions'))
 
