@@ -180,8 +180,6 @@ $$x(\tau)=\sum^N_{t=-N}g(t)h(t+\tau)$$
 
 $$E[x(\tau)]=\sum^N_{t=-N}\bar{g}(t)\bar{h}(t+\tau)$$
 
-The signals $g(t), h(t)$ were standardized before calculating the cross correlation.
-
 $\bar{g}(t)$ is a time series with equal length to $g(t)$, where each time point equals $\bar{g(t)}$, the mean of $g(t)$. Same applies to $h(t)$.
 
 To adjust for the sudden variations in the firing rates, the interconnectivity stength for each trial is calculated using a centered 20-trial long window. The binned firing rates(10ms) from 1 second before the first trial initiation till the last trial initiation in the 20-trial window of the corresponding DMS and PFC cells are the $g(t)$ and $h(t)$ in the above equations.
