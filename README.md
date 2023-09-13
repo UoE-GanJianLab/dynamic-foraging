@@ -261,19 +261,25 @@ In addition to the intuitive PRPD. reinforcement learning modelling was also uti
 
 The model (sometimes referred to as the Q-learning model in other publications)'s decision is guided by two decision variables, associated with two choices given to the animals. In our case, $Q_l$ corresponds to leftward choices, while $Q_r$ corresponds to the right. They were fed into the softmax function, along with a bias term $b$ and inverse temperature parameter $\beta$ to produce the probability of making a rightward choice.
 
-$${\begin{align*}P_r&=\frac{e^{\beta\cdot Q_r}}{e^{\beta\cdot Q_r}+e^{\beta\cdot Q_l+b}}\\&=\frac{1}{1+e^{-\beta(Q_r-Q_l)+b}}\end{align*}}$$
+$$
+\begin{align*}P_r&=\frac{e^{\beta\cdot Q_r}}{e^{\beta\cdot Q_r}+e^{\beta\cdot Q_l+b}}\\&=\frac{1}{1+e^{-\beta(Q_r-Q_l)+b}}\end{align*}
+$$
 
 The second equation is the result of dividing both the numerator and denominator by $e^{\beta\cdot Q_r}$, and is actually used in the optimization process.
 
 After each trial, the model updates the decision variables using the following equations:
 
-$${\begin{align*}\delta&=r-Q_{choice}\\Q_{choice}&=Q_{choice}+\alpha\cdot\delta\\Q_{non-choice}&=Q_{non-choice}\end{align*}}$$
+$$
+\begin{align*}\delta&=r-Q_{choice}\\Q_{choice}&=Q_{choice}+\alpha\cdot\delta\\Q_{non-choice}&=Q_{non-choice}\end{align*}
+$$
 
-Where $\delta$ is the prediction error, $r$ is the reward received, $Q_{choice}$ is the decision variable associated with the chosen side, $Q_{non-choice}$ is the decision variable associated with the side not chosen by the animals, and $\alpha$ is the learning rate.
+Where $\delta$ is the prediction error, $r$ is the reward received, $Q_{choice}$ is the decision variable associated with the chosen side, $Q_{non-choice}$ is the decision variable associated with the chosen by the animals, and $\alpha$ is the learning rate.
 
 The optimization process aims to minimize the negative log-likelihood of the model's choice probability given the actual choices made by the animals. The negative log-likelihood is calculated using the following equation:
 
-$$NLL=-\sum_{i=1}^{n}log(P_{i})$$
+$$
+NLL=-\sum_{i=1}^{n}log(P_{i})
+$$
 
 Where $n$ is the number of trials, $P_{r_i}$ is the probability of making the animal's choice at trial $i$. The optimization process is handled by Python's Scipy package, using the Nelder-Mead method of the minimize function. The optimization process was repeated 100 times for each session, with the initial parameters randomly sampled from a uniform distribution to avoid local minima as much as possible.
 
@@ -297,7 +303,7 @@ helper functions as well as functions written for producing each figure given fo
 
 Come extension to the common math libraries, including the moving window mean function as well as relative firing rate calculation
 
-Normalized cross correlation as defined by Wei Xu and the cross correlation metric 
+Normalized cross-correlation as defined by Wei Xu and the cross-correlation metric 
 
 ### conversion.py
 
@@ -306,55 +312,5 @@ Normalized cross correlation as defined by Wei Xu and the cross correlation metr
 ### models.py
 
 ### file_utils.py
-
-
-
-# figures
-
-Figures below are named according to the first draft of the manuscript.
-
-## figure 1
-
-![Alt text](figures/manuscript_figures/figure_1.png?raw=true "Manuscript figure 1")
-
-
-## figure 2
-
-![Alt text](figures/manuscript_figures/figure_2.png?raw=true "Manuscript figure 2")
-
-
-## figure 3
-
-![Alt text](figures/manuscript_figures/figure_3.png?raw=true "Manuscript figure 3")
-
-
-Values are digitized using 20ms bins
-
-## figure 4
-
-![Alt text](figures/manuscript_figures/figure_4.png?raw=true "Manuscript figure 4")
-
-
-## figure 5
-
-![Alt text](figures/manuscript_figures/figure_5.png?raw=true "Manuscript figure 5")
-
-
-### fig_5_panel_b
-
-Response magnitude was defined as the mean absolute difference between firing rate in the 0 to 1.5s window and mean intertrial firing rate (-1 to 0s)
-
-We then low-pass filtered these signals using a cut-off frequency that is 10 times the fundamental frequency of the session (the fundamental trial frequency of each session is simply 1 divided by the number of trials).
-
-To calculate the trial-wise phase of the filtered signal we removed its mean and performed a Hilbert transform.   
-
-### fig_5_panel_c, fig_5_panel_d
-The circular-mean phase differences between each prefrontal-striatal neuron pair were calculated for all sessions and their distribution plotted in figure 5C (top) for both response magnitudes and inter-trial frequencies.  
-
-The performance of a trial is the xcorr between rightP and proportion of choices made towards the right side. Proportion of rewarded trials and proportion of responses towards the high probability side (advantageous responses) were calculated using a centred moving 20-trial long window.  Perceived reward probability was gauged by calculating, for each side, the proportion of rewarded trials in the previous 10 trials of responses made to that side.  
-
-## figure 6
-
-![Alt text](figures/manuscript_figures/figure_6.png?raw=true "Manuscript figure 6")
 
 
