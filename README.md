@@ -261,14 +261,21 @@ In addition to the intuitive PRPD. reinforcement learning modelling was also uti
 
 The model (sometimes referred to as the Q-learning model in other publications)'s decision is guided by two decision variables, associated with two choices given to the animals. In our case, $Q_l$ corresponds to leftward choices, while $Q_r$ corresponds to the right. They were fed into the softmax function, along with a bias term $b$ and inverse temperature parameter $\beta$ to produce the probability of making a rightward choice.
 
-$$\begin{aligned}P_r&=\frac{e^{\beta\cdot Q_r}}{e^{\beta\cdot Q_r}+e^{\beta\cdot Q_l+b}}\\&=\frac{1}{1+e^{-\beta(Q_r-Q_l)+b}}\end{aligned}$$
+$$
+\begin{aligned}P_r&=\frac{e^{\beta\cdot Q_r}}{e^{\beta\cdot Q_r}+e^{\beta\cdot Q_l+b}} \cr
+&=\frac{1}{1+e^{-\beta(Q_r-Q_l)+b}}\end{aligned}
+$$
 
 
 The second equation is the result of dividing both the numerator and denominator by $e^{\beta\cdot Q_r}$, and is actually used in the optimization process.
 
 After each trial, the model updates the decision variables using the following equations:
 
-$$\begin{aligned}\delta&=r-Q_{choice}\\Q_{choice}&=Q_{choice}+\alpha\cdot\delta\\Q_{non-choice}&=Q_{non-choice}\end{aligned}$$
+$$
+\begin{aligned}\delta&=r-Q_{choice}\cr
+Q_{choice}&=Q_{choice}+\alpha\cdot\delta\cr
+Q_{non-choice}&=Q_{non-choice}\end{aligned}
+$$
 
 Where $\delta$ is the prediction error, $r$ is the reward received, $Q_{choice}$ is the decision variable associated with the chosen side, $Q_{non-choice}$ is the decision variable associated with the chosen by the animals, and $\alpha$ is the learning rate.
 
