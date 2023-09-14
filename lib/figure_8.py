@@ -105,7 +105,7 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     return interconnectivity_strength
 
 
-def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
+def figure_8_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
@@ -189,7 +189,10 @@ def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
     return p, r, list(overall_cross_cor)
 
 
-def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
+# average propotion of significantly positively and negatively correlated prior reward
+# proportion and interconnectivity strength. Panel d is for all the data, while panel d
+# is for the mono pair data
+def figure_8_poster_panel_dh(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
     sig_rs_positive_percentage = []
     sig_rs_negative_percentage = []
@@ -232,7 +235,7 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, _ = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             if p < p_value_threshold:
                 if r > 0:
@@ -258,18 +261,83 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     t, p = ttest_ind(sig_rs_positive_percentage, sig_rs_negative_percentage, alternative='less')
     print(f't: {t}, p: {p}')
 
-    figure_6_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)]})
+    figure_8_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)]})
     if mono:
-        figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data_mono.csv'), index=False)
+        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data_mono.csv'), index=False)
     else:
-        figure_6_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data.csv'), index=False)
+        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data.csv'), index=False)
 
     # plot the bar plot with the average percentage of positive and negative significant rs
     sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
     axes.set_ylim(0, 1)
 
+
+
+
+# mean cross correlation between interconnectivity strength and reward proportion
+# panel e is for all the data, while panel f is for the mono pair data
+def figure_8_poster_panel_ei(mono: bool = False, reset: bool = False):
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
+
+    if reset:
+        rmtree(figure_8_data_root)
+        mkdir(figure_8_data_root)
+
+    if mono:
+        dms_pfc_paths = get_dms_pfc_paths_mono()
+
+        overall_crosscors = []
+        
+        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
+
+            session_name = basename(session_path).split('.')[0]
+            pfc_name = basename(pfc_path).split('.')[0]
+            dms_name = basename(dms_path).split('.')[0]
+            
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
+
+            behaviour_data = pd.read_csv(session_path)
+            cue_time = np.array(behaviour_data['cue_time'].values)
+            trial_reward = np.array(behaviour_data['trial_reward'].values)
+            # fill the nan with 0
+            trial_reward[np.isnan(trial_reward)] = 0
+            reward_proportion = moving_window_mean_prior(trial_reward, 10)
+
+            # plot figure 6 poster panel ab
+            p, r, overall_crosscor = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+
+            overall_crosscors.append(overall_crosscor)
+    else:
+        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
+
+        with Pool() as pool:
+            process_session_partial = partial(process_session_panel_f, reset=reset)
+            overall_crosscors = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
+
+        # print the length of arrays in overall_crosscors
+        overall_crosscors = np.concatenate(overall_crosscors)
+
+    print(overall_crosscors)
+    overall_crosscors, overall_crosscors_sem = get_mean_and_sem(overall_crosscors)
+
+    # save the data into a dataframe
+    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_sem': overall_crosscors_sem})
+    if mono:
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
+    else:
+        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
+
+    # plot overall crosscor
+    plot_with_sem_error_bar(ax=axes,x=np.arange(-50, 51, 1, dtype=int), mean=overall_crosscors, sem=overall_crosscors_sem, color='black')
+    axes.set_xlabel('Trial Lag')
+
+
 # split into rewarded and non_rewarded trials
-def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
+def figure_8_poster_panel_fj(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     rewarded_strength = []
@@ -336,7 +404,7 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
 
 # similar to panel e, but split into plateau and transition trials instead of 
 # rewarded and non-rewarded trials
-def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool = False):
+def figure_8_panel_gk(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     plateau_strength = []
@@ -403,11 +471,11 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
             transition_strength += result[1]
 
     # store the data into a dataframe, with a column indicating the type of trial
-    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'interconnectivity_strength': [np.mean(plateau_strength), np.mean(transition_strength)], 'interconnectivity_strength_err': [np.std(plateau_strength) / np.sqrt(len(plateau_strength)), np.std(transition_strength) / np.sqrt(len(transition_strength))]})
+    figure_8_panel_gk_data = pd.DataFrame({'plateau': plateau_strength, 'transition': transition_strength})
     if mono:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data_mono.csv'), index=False)
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_mono.csv'), index=False)
     else:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_plateau_transition_data.csv'), index=False)
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk.csv'), index=False)
 
 
     # # plot the plateau and transitioning trials as box plots
@@ -418,66 +486,6 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(plateau_strength, transition_strength)
     print(f't: {t}, p: {p}')
-
-
-def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
-    fig, axes = plt.subplots(1, 1, figsize=(5, 5))
-
-    if reset:
-        rmtree(figure_8_data_root)
-        mkdir(figure_8_data_root)
-
-    if mono:
-        dms_pfc_paths = get_dms_pfc_paths_mono()
-
-        overall_crosscors = []
-        
-        for mono_pair in tqdm.tqdm(dms_pfc_paths.iterrows()):
-            session_path = mono_pair[1]['session_path']
-            pfc_path = mono_pair[1]['pfc_path']
-            dms_path = mono_pair[1]['dms_path']
-
-            session_name = basename(session_path).split('.')[0]
-            pfc_name = basename(pfc_path).split('.')[0]
-            dms_name = basename(dms_path).split('.')[0]
-            
-            pfc_times = np.load(pfc_path)
-            dms_times = np.load(dms_path)
-
-            behaviour_data = pd.read_csv(session_path)
-            cue_time = np.array(behaviour_data['cue_time'].values)
-            trial_reward = np.array(behaviour_data['trial_reward'].values)
-            # fill the nan with 0
-            trial_reward[np.isnan(trial_reward)] = 0
-            reward_proportion = moving_window_mean_prior(trial_reward, 10)
-
-            # plot figure 6 poster panel ab
-            p, r, overall_crosscor = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
-
-            overall_crosscors.append(overall_crosscor)
-    else:
-        dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
-
-        with Pool() as pool:
-            process_session_partial = partial(process_session_panel_f, reset=reset)
-            overall_crosscors = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
-
-        # print the length of arrays in overall_crosscors
-        overall_crosscors = np.concatenate(overall_crosscors)
-
-    print(overall_crosscors)
-    overall_crosscors, overall_crosscors_sem = get_mean_and_sem(overall_crosscors)
-
-    # save the data into a dataframe
-    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_sem': overall_crosscors_sem})
-    if mono:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
-    else:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
-
-    # plot overall crosscor
-    plot_with_sem_error_bar(ax=axes,x=np.arange(-50, 51, 1, dtype=int), mean=overall_crosscors, sem=overall_crosscors_sem, color='black')
-    axes.set_xlabel('Trial Lag')
 
 
 def process_session_panel_d(session, reset=False):
@@ -505,7 +513,7 @@ def process_session_panel_d(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, _ = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, _ = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         if p < p_value_threshold:
             if r > 0:
@@ -621,7 +629,7 @@ def process_session_panel_f(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, overall_crosscor = figure_6_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, overall_crosscor = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         overall_crosscors.append(overall_crosscor)
     
