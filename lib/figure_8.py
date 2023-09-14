@@ -38,7 +38,7 @@ if not isdir(panel_abc_significant):
     mkdir(panel_abc_significant)
 
 
-figure_6_data_root = pjoin('data', 'spike_times', 'figure_6')
+figure_8_data_root = pjoin('data', 'spike_times', 'figure_8')
 figure_data_root = pjoin('figure_data', 'figure_8')
 if not isdir(figure_data_root):
     mkdir(figure_data_root)
@@ -107,13 +107,13 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
 
 def figure_6_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
-    if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-        interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+    if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+        interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
     else:
         # calculate the interconnectivity strength
         interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_times)
         # load the interconnectivity strength
-        np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+        np.save(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
 
     discretized_reward_proportion = np.digitize(reward_proportion, bins=np.arange(0, 1, 0.2))
     # get the mean interconnectivity strength for each reward 
@@ -195,8 +195,8 @@ def figure_6_poster_panel_d(mono: bool = False, reset: bool = False):
     sig_rs_negative_percentage = []
 
     if reset:
-        rmtree(figure_6_data_root)
-        mkdir(figure_6_data_root)
+        rmtree(figure_8_data_root)
+        mkdir(figure_8_data_root)
 
     if mono:
         dms_pfc_paths = get_dms_pfc_paths_mono()
@@ -276,8 +276,8 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
     non_rewarded_strength = []
 
     if reset:
-        rmtree(figure_6_data_root)
-        mkdir(figure_6_data_root)
+        rmtree(figure_8_data_root)
+        mkdir(figure_8_data_root)
     
     if mono:
         dms_pfc_paths = get_dms_pfc_paths_mono()
@@ -298,15 +298,15 @@ def figure_6_poster_panel_e(mono: bool = False, reset: bool = False):
             rewarded_trials = np.where(trial_reward == 1)[0]
             non_rewarded_trials = np.where(trial_reward == 0)[0]
 
-            if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-                interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+            if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+                interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
             else:
                 pfc_times = np.load(pfc_path)
                 dms_times = np.load(dms_path)
                 # calculate the interconnectivity strength
                 interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
                 # load the interconnectivity strength
-                np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+                np.save(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
 
             rewarded_strength.extend(interconnectivity_strength[rewarded_trials])
             non_rewarded_strength.extend(interconnectivity_strength[non_rewarded_trials])
@@ -343,8 +343,8 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
     transition_strength = []
 
     if reset:
-        rmtree(figure_6_data_root)
-        mkdir(figure_6_data_root)
+        rmtree(figure_8_data_root)
+        mkdir(figure_8_data_root)
 
     if mono:
         dms_pfc_paths = get_dms_pfc_paths_mono()
@@ -379,15 +379,15 @@ def figure_6_poster_panel_e_plateau_transition(mono: bool = False, reset: bool =
             plateau_trial_indices = np.array(plateau_trial_indices)
             transition_trial_indices = np.array(transition_trial_indices)
 
-            if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-                interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+            if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+                interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
             else:
                 pfc_times = np.load(pfc_path)
                 dms_times = np.load(dms_path)
                 # calculate the interconnectivity strength
                 interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
                 # load the interconnectivity strength
-                np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+                np.save(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
             
             plateau_strength.extend(interconnectivity_strength[plateau_trial_indices])
             transition_strength.extend(interconnectivity_strength[transition_trial_indices])
@@ -424,8 +424,8 @@ def figure_6_poster_panel_f(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     if reset:
-        rmtree(figure_6_data_root)
-        mkdir(figure_6_data_root)
+        rmtree(figure_8_data_root)
+        mkdir(figure_8_data_root)
 
     if mono:
         dms_pfc_paths = get_dms_pfc_paths_mono()
@@ -536,15 +536,15 @@ def process_session_panel_e(session, reset=False):
         pfc_name = basename(pfc_path).split('.')[0]
         dms_name = basename(dms_path).split('.')[0]
 
-        if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-            interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+        if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+            interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
         else:
             pfc_times = np.load(pfc_path)
             dms_times = np.load(dms_path)
             # calculate the interconnectivity strength
             interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
             # load the interconnectivity strength
-            np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+            np.save(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
         
         rewarded_interconnectivity.extend(interconnectivity_strength[trial_reward == 1])
         non_rewarded_interconnectivity.extend(interconnectivity_strength[trial_reward == 0])
@@ -586,15 +586,15 @@ def process_session_panel_e_plateau_transition(session, reset=False):
         pfc_name = basename(pfc_path).split('.')[0]
         dms_name = basename(dms_path).split('.')[0]
 
-        if isfile(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
-            interconnectivity_strength = np.load(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
+        if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
+            interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
         else:
             pfc_times = np.load(pfc_path)
             dms_times = np.load(dms_path)
             # calculate the interconnectivity strength
             interconnectivity_strength = get_interconnectivity_strength(pfc_times, dms_times, cue_time)
             # load the interconnectivity strength
-            np.save(pjoin(figure_6_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
+            np.save(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'), interconnectivity_strength)
         
         plateau_interconnectivity.extend(interconnectivity_strength[plateau_trial_indices])
         transition_interconnectivity.extend(interconnectivity_strength[transition_trial_indices])

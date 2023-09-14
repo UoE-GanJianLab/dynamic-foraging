@@ -22,13 +22,10 @@ def fit_and_save(session: str, reset=True):
     nan_trials = session_data[session_data['trial_response_side'].isna()].index
     # remove nan trials
     session_data = session_data[~session_data['trial_response_side'].isna()]
+    # choices are -1 for left and 1 for right
     choices = np.array(session_data['trial_response_side'].values)
-    # # convert choices of -1 to 0
-    # choices[choices == -1] = 0
+    # rewards are 0 for no reward and 1 for reward
     rewards = np.array(session_data['trial_reward'].values)
-
-    if session_name[:6] == "AKED01":
-        crainotomy_side = 'L'
 
     # fit the models
     rw = RW()
@@ -48,15 +45,10 @@ def fit_and_save(session: str, reset=True):
         relative_values = np.insert(relative_values, nan_trial, relative_values[nan_trial-1])
 
     # smoothen the relative values
-    relative_values = moving_window_mean_prior(relative_values, 10)
+    # relative_values = moving_window_mean_prior(relative_values, 10)
 
     # # scale relative values to the range of -1 to 1
     # relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
-
-
-    # if crainotomy_side == 'L':
-    #     relative_values = -relative_values
-
     # save the relative values
     np.save(pjoin(RELATIVE_VALUE_ROOT, session_name+'.npy'), relative_values)
 

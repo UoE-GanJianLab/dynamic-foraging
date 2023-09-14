@@ -23,12 +23,12 @@ class RW:
 
 
     def update(self, outcome: int, choice: int) -> None:
-        if choice == 0:
-            self.v0 = self.alpha * (outcome - self.v0)
+        if choice == -1:
+            self.v0 = self.alpha * (outcome - self.v0) + self.v0
             # self.v0 = self.alpha * (outcome - self.v0) + self.gamma * self.v0
             # self.v1 = self.gamma * self.v1
         else:
-            self.v1 = self.alpha * (outcome - self.v1)
+            self.v1 = self.alpha * (outcome - self.v1) + self.v1
             # self.v1 = self.alpha * (outcome - self.v1) + self.gamma * self.v1
             # self.v0 = self.gamma * self.v0
 
@@ -44,9 +44,8 @@ class RW:
             p_r = 1 / (1 + np.exp(-self.beta * (self.v1 - self.v0) + self.b))
         choice = -1 if np.random.binomial(1, p_r) == 0 else 1
         self.choices = np.append(self.choices, choice)
-        prob = p_r if choice == 1 else 1 - p_r
 
-        return (choice, prob)
+        return (choice, p_r)
 
 
     def nll(self, parameters, choices_real: np.ndarray, rewards_real: np.ndarray) -> float:
@@ -57,14 +56,13 @@ class RW:
 
         for i in range(choices_real.size):
             choice = choices_real[i]
-            c, prob = self.get_choice()
+            c, p_r = self.get_choice()
             self.choices[-1] = choice
 
-            if c != choice:
-                prob = 1 - prob
-            
+            prob = p_r if choice == 1 else 1 - p_r
+
             if prob == 0:
-                prob += 0.000001
+                prob += 0.01
             
             neg_log_likelihood += -np.log(prob)
 
@@ -82,12 +80,12 @@ class RW:
         fitted_parameters: List[float] = []
         nll_min = np.inf
 
-        for i in range(5):
+        for i in range(100):
             x0 = self.sample_parameters()
             # bounds = [(1, 10), (-1, 1), (-5, 5), (0.001, 1), (0.001, 1)]
-            bounds = [(5, 15), (-5, 5), (0.001, 1)]
+            bounds = [(0.1, np.inf), (-np.inf, np.inf), (0.001, 1)]
 
-            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real))['x']
+            params = minimize(self.nll, x0=x0, args=(choices_real, rewards_real), method='Nelder-Mead', bounds=bounds)['x']
             if self.nll(params, choices_real, rewards_real) < nll_min:
                 fitted_parameters = params
                 nll_min = self.nll(params, choices_real, rewards_real)
@@ -113,7 +111,6 @@ class RW:
         simulated_choices = np.array([])
         self.choices = np.array([])
         delta_V = np.array([])
-        neg_log_likelihood = 0
         self.v0, self.v1 = 0, 0
         delta_V = np.append(delta_V, self.v1 - self.v0)
 
