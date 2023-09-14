@@ -105,7 +105,7 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     return interconnectivity_strength
 
 
-def figure_8_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
+def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
@@ -192,7 +192,7 @@ def figure_8_poster_panel_abc(session_name: str, pfc_name: str, dms_name: str, p
 # average propotion of significantly positively and negatively correlated prior reward
 # proportion and interconnectivity strength. Panel d is for all the data, while panel d
 # is for the mono pair data
-def figure_8_poster_panel_dh(mono: bool = False, reset: bool = False):
+def figure_8_panel_dh(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
     sig_rs_positive_percentage = []
     sig_rs_negative_percentage = []
@@ -235,7 +235,7 @@ def figure_8_poster_panel_dh(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, _ = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, _ = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             if p < p_value_threshold:
                 if r > 0:
@@ -261,22 +261,23 @@ def figure_8_poster_panel_dh(mono: bool = False, reset: bool = False):
     t, p = ttest_ind(sig_rs_positive_percentage, sig_rs_negative_percentage, alternative='less')
     print(f't: {t}, p: {p}')
 
-    figure_8_panel_d_data = pd.DataFrame({'correlation direction': ['+', '-'], 'correlation percentage': [np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)]})
+    figure_8_panel_d_data = pd.DataFrame({'positive': sig_rs_positive_percentage, 'negative': sig_rs_negative_percentage})
     if mono:
-        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data_mono.csv'), index=False)
+        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_dh_mono.csv'), index=False)
     else:
-        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_d_data.csv'), index=False)
+        figure_8_panel_d_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_dh.csv'), index=False)
 
     # plot the bar plot with the average percentage of positive and negative significant rs
-    sns.barplot(x=['+', '-'], y=[np.mean(sig_rs_positive_percentage), np.mean(sig_rs_negative_percentage)], ax=axes)
-    axes.set_ylim(0, 1)
+    sig_rs_positive_percentage = np.array(sig_rs_positive_percentage)
+    sig_rs_negative_percentage = np.array(sig_rs_negative_percentage)
 
+    sns.violinplot(data=[sig_rs_positive_percentage[sig_rs_positive_percentage<1], sig_rs_negative_percentage[sig_rs_negative_percentage<1]], ax=axes)
 
 
 
 # mean cross correlation between interconnectivity strength and reward proportion
 # panel e is for all the data, while panel f is for the mono pair data
-def figure_8_poster_panel_ei(mono: bool = False, reset: bool = False):
+def figure_8_panel_ei(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     if reset:
@@ -308,7 +309,7 @@ def figure_8_poster_panel_ei(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, overall_crosscor = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             overall_crosscors.append(overall_crosscor)
     else:
@@ -325,11 +326,11 @@ def figure_8_poster_panel_ei(mono: bool = False, reset: bool = False):
     overall_crosscors, overall_crosscors_sem = get_mean_and_sem(overall_crosscors)
 
     # save the data into a dataframe
-    figure_6_panel_f_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_sem': overall_crosscors_sem})
+    figure_8_panel_ei_data = pd.DataFrame({'trial_lag': np.arange(-50, 51, 1), 'cross_correlation': overall_crosscors, 'cross_correlation_sem': overall_crosscors_sem})
     if mono:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data_mono.csv'), index=False)
+        figure_8_panel_ei_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_ei_data_mono.csv'), index=False)
     else:
-        figure_6_panel_f_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_f_data.csv'), index=False)
+        figure_8_panel_ei_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_ei_data.csv'), index=False)
 
     # plot overall crosscor
     plot_with_sem_error_bar(ax=axes,x=np.arange(-50, 51, 1, dtype=int), mean=overall_crosscors, sem=overall_crosscors_sem, color='black')
@@ -337,7 +338,7 @@ def figure_8_poster_panel_ei(mono: bool = False, reset: bool = False):
 
 
 # split into rewarded and non_rewarded trials
-def figure_8_poster_panel_fj(mono: bool = False, reset: bool = False):
+def figure_8_panel_fj(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     rewarded_strength = []
@@ -389,15 +390,20 @@ def figure_8_poster_panel_fj(mono: bool = False, reset: bool = False):
             rewarded_strength += result[0]
             non_rewarded_strength += result[1]
 
-    figure_6_panel_e_data = pd.DataFrame({'trial_type': ['rewarded', 'non-rewarded'], 'interconnectivity_strength': [np.mean(rewarded_strength), np.mean(non_rewarded_strength)], 'interconnectivity_strength_err': [np.std(rewarded_strength) / np.sqrt(len(rewarded_strength)), np.std(non_rewarded_strength) / np.sqrt(len(non_rewarded_strength))]})
+    figure_8_panel_fj_data_rewarded = pd.DataFrame({'rewarded': rewarded_strength})
+    figure_8_panel_fj_data_non_rewarded = pd.DataFrame({'non_rewarded': non_rewarded_strength})
     if mono:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data_mono.csv'), index=False)
+        figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded_mono.csv'), index=False)
+        figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded_mono.csv'), index=False)
     else:
-        figure_6_panel_e_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_e_data.csv'), index=False)
+        figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded.csv'), index=False)
+        figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded.csv'), index=False)
 
     # plot the bar plot with the average percentage of rewarded and non-rewarded strength
-    sns.barplot(x=['rewarded', 'non-rewarded'], y=[np.mean(rewarded_strength), np.mean(non_rewarded_strength)], ax=axes)
+    rewarded_strength = np.array(rewarded_strength)
+    non_rewarded_strength = np.array(non_rewarded_strength)
 
+    sns.violinplot(data=[rewarded_strength[rewarded_strength<50], non_rewarded_strength[non_rewarded_strength<50]], ax=axes)
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
     print(f't: {t}, p: {p}')
@@ -477,10 +483,12 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
     else:
         figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk.csv'), index=False)
 
+    plateau_strength = np.array(plateau_strength)
+    transition_strength = np.array(transition_strength)
 
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
-    sns.barplot(x=['plateau', 'transition'], y=[np.mean(plateau_strength), np.mean(transition_strength)], ax=axes)
+    sns.violinplot(data=[plateau_strength[plateau_strength<50], transition_strength[transition_strength<50]], ax=axes)
 
     
     # t test to see if the percentage of rewarded and non-rewarded strength are different
@@ -513,7 +521,7 @@ def process_session_panel_d(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, _ = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, _ = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         if p < p_value_threshold:
             if r > 0:
@@ -629,7 +637,7 @@ def process_session_panel_f(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, overall_crosscor = figure_8_poster_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         overall_crosscors.append(overall_crosscor)
     
