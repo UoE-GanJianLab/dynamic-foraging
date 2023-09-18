@@ -1,3 +1,3 @@
-from lib.figure_5 import get_fig_5_panel_b
+from lib.figure_6 import get_fig_6_panel_b
 
-get_fig_5_panel_b()
+get_fig_6_panel_b(mono=True)

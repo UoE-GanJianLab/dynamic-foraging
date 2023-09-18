@@ -34,23 +34,23 @@ spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
 relative_value_root = pjoin('data', 'relative_values')
 
-figure_5_data_root = pjoin('figure_data', 'figure_6')
-if not isdir(figure_5_data_root):
-    mkdir(figure_5_data_root)
-figure_5_panel_b_data_root_prpd = pjoin(figure_5_data_root, 'panel_b_prpd')
-if not isdir(figure_5_panel_b_data_root_prpd):
-    mkdir(figure_5_panel_b_data_root_prpd)
-figure_5_panel_b_data_root_relative_value = pjoin(figure_5_data_root, 'panel_b_relative_value')
-if not isdir(figure_5_panel_b_data_root_relative_value):
-    mkdir(figure_5_panel_b_data_root_relative_value)
-figure_5_panel_b_figure_path_prpd = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_prpd')
-if not isdir(figure_5_panel_b_figure_path_prpd):
-    mkdir(figure_5_panel_b_figure_path_prpd)
+figure_6_data_root = pjoin('figure_data', 'figure_6')
+if not isdir(figure_6_data_root):
+    mkdir(figure_6_data_root)
+figure_6_panel_b_data_root_prpd = pjoin(figure_6_data_root, 'panel_b_prpd')
+if not isdir(figure_6_panel_b_data_root_prpd):
+    mkdir(figure_6_panel_b_data_root_prpd)
+figure_6_panel_b_data_root_relative_value = pjoin(figure_6_data_root, 'panel_b_relative_value')
+if not isdir(figure_6_panel_b_data_root_relative_value):
+    mkdir(figure_6_panel_b_data_root_relative_value)
+figure_6_panel_b_figure_path_prpd = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_prpd')
+if not isdir(figure_6_panel_b_figure_path_prpd):
+    mkdir(figure_6_panel_b_figure_path_prpd)
 figure_5_panel_b_figure_path_relative_value = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_relative_value')
 if not isdir(figure_5_panel_b_figure_path_relative_value):
     mkdir(figure_5_panel_b_figure_path_relative_value)
 
-def get_fig_5_panel_b(mono: bool = False, nonan: bool = False):
+def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
     if mono:
         mono_pairs = get_dms_pfc_paths_mono()
 
@@ -83,9 +83,9 @@ def get_fig_5_panel_b(mono: bool = False, nonan: bool = False):
             behaviour_data = pd.read_csv(behaviour)
             cue_times = behaviour_data['cue_time'].tolist()
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
-            if relative_value_root == pjoin('data', 'relative_values'):
-                # smoothen the relative value
-                relative_value = moving_window_mean_prior(relative_value, 10)
+            # if relative_value_root == pjoin('data', 'relative_values'):
+            #     # smoothen the relative value
+            #     relative_value = moving_window_mean_prior(relative_value, 10)
 
             # count the number of pfc and str pairs and use it for progress bar
             pfc_count = len(glob(pjoin(spike_data_root, session_name, 'pfc_*')))
@@ -113,7 +113,7 @@ def get_fig_5_panel_b(mono: bool = False, nonan: bool = False):
                     if relative_value_root == pjoin('data', 'relative_values'):
                         fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
                     else:
-                        fig_path = pjoin(figure_5_panel_b_figure_path_prpd, fig_name)
+                        fig_path = pjoin(figure_6_panel_b_figure_path_prpd, fig_name)
 
                     fig.savefig(fig_path, dpi=300)
                     plt.close(fig)
@@ -158,11 +158,11 @@ def draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relat
     if relative_value_root == pjoin('data', 'relative_values'):
         # store the data in a dataframe
         figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'relative_value_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'relative_value_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'relative_value_phase': phase_relative_values})
-        figure_6_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_relative_value, data_file_name), index=False)
+        figure_6_panel_b_data.to_csv(pjoin(figure_6_panel_b_data_root_relative_value, data_file_name), index=False)
     else:
         # store the data in a dataframe
         figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'prpd_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'prpd_phase': phase_relative_values})
-        figure_6_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_prpd, data_file_name), index=False)
+        figure_6_panel_b_data.to_csv(pjoin(figure_6_panel_b_data_root_prpd, data_file_name), index=False)
     
     return fig
 
@@ -371,9 +371,9 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
     bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
     panel_d_data = pd.DataFrame({'bin_center': bin_centers, 'good_response_count': good_response_count, 'good_bg_count': good_bg_count, 'bad_response_count': bad_response_count, 'bad_bg_count': bad_bg_count})
     if relative_value_root == pjoin('data', 'relative_values'):
-        panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_c_data_relative_value.csv'), index=False)
+        panel_d_data.to_csv(pjoin(figure_6_data_root, 'panel_c_data_relative_value.csv'), index=False)
     else:
-        panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_c_data.csv'), index=False)
+        panel_d_data.to_csv(pjoin(figure_6_data_root, 'panel_c_data.csv'), index=False)
 
     # set y label
     axes[0][1].set_ylabel('Number of Cell Pairs')
@@ -634,7 +634,7 @@ def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
 
     bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
     panel_e_data = pd.DataFrame({'bin_center': bin_centers, 'pfc_response_count': pfc_response_count, 'pfc_bg_count': pfc_bg_count, 'dms_response_count': dms_response_count, 'dms_bg_count': dms_bg_count})
-    panel_e_data.to_csv(pjoin(figure_5_data_root, 'panel_d_data.csv'), index=False)
+    panel_e_data.to_csv(pjoin(figure_6_data_root, 'panel_d_data.csv'), index=False)
 
     # calculate the circular mean for each group
     mean = circmean(phase_diff_response_pfc, low=-np.pi, high=np.pi)
