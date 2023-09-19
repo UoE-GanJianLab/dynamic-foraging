@@ -39,6 +39,10 @@ def fit_and_save(session: str, reset=True):
     parameters, nll_min = rw.fit(choices_real=choices, rewards_real=rewards)
     # print the fitted parameters with their names: beta, kappa, b, alpha, accurate to 3 decimal places
     print(f'{session_name}: beta: {parameters[0]:.3f}, b: {parameters[1]:.3f}, alpha: {parameters[2]:.3f}, nll: {nll_min:.3f}')
+    # if alpha is 0.001, then the model has failed to converge
+    if parameters[2] < 0.002:
+        print(f'{session_name}: alpha is too small, model has failed to converge')
+        return
     # print out the fitted 
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values

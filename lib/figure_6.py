@@ -1,4 +1,4 @@
-from os.path import join as pjoin, isdir
+from os.path import join as pjoin, isdir, isfile
 from os import listdir, mkdir
 from os.path import basename
 from typing import List, Tuple, Dict
@@ -501,6 +501,9 @@ def get_figure_6_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False
         for session_name in tqdm(listdir(spike_data_root)):
             session_path = pjoin(spike_data_root, session_name)
             relative_value_path = pjoin(relative_value_root, session_name + '.npy')
+
+            if not isfile(relative_value_path):
+                continue
             relative_values = np.load(relative_value_path)
             if no_nan:
                 # smoothen relative values

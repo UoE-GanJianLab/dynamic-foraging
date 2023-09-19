@@ -271,7 +271,7 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
     sig_rs_positive_percentage = np.array(sig_rs_positive_percentage)
     sig_rs_negative_percentage = np.array(sig_rs_negative_percentage)
 
-    sns.boxplot(data=[sig_rs_positive_percentage[sig_rs_positive_percentage<1], sig_rs_negative_percentage[sig_rs_negative_percentage<1]], ax=axes)
+    sns.boxplot(data=[sig_rs_positive_percentage, sig_rs_negative_percentage], ax=axes, fliersize=0.05)
     axes.set_ylim(0, 1)
 
 
@@ -391,21 +391,25 @@ def figure_8_panel_fj(mono: bool = False, reset: bool = False):
             rewarded_strength += result[0]
             non_rewarded_strength += result[1]
 
-    figure_8_panel_fj_data_rewarded = pd.DataFrame({'rewarded': rewarded_strength})
-    figure_8_panel_fj_data_non_rewarded = pd.DataFrame({'non_rewarded': non_rewarded_strength})
-    if mono:
-        figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded_mono.csv'), index=False)
-        figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded_mono.csv'), index=False)
-    else:
-        figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded.csv'), index=False)
-        figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded.csv'), index=False)
+    # figure_8_panel_fj_data_rewarded = pd.DataFrame({'rewarded': rewarded_strength})
+    # figure_8_panel_fj_data_non_rewarded = pd.DataFrame({'non_rewarded': non_rewarded_strength})
+    # if mono:
+    #     figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded_mono.csv'), index=False)
+    #     figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded_mono.csv'), index=False)
+    # else:
+    #     figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded.csv'), index=False)
+    #     figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded.csv'), index=False)
 
     # plot the bar plot with the average percentage of rewarded and non-rewarded strength
     rewarded_strength = np.array(rewarded_strength)
     non_rewarded_strength = np.array(non_rewarded_strength)
 
-    sns.boxplot(data=[rewarded_strength[rewarded_strength<100], non_rewarded_strength[non_rewarded_strength<100]], ax=axes)
-    axes.set_ylim(0, 50)
+    # remove the 0s from the arrays
+    rewarded_strength = rewarded_strength[rewarded_strength != 0]
+    non_rewarded_strength = non_rewarded_strength[non_rewarded_strength != 0]
+
+    sns.boxplot(data=[rewarded_strength, non_rewarded_strength], ax=axes, fliersize=0.01)
+    axes.set_ylim(0, 80)
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
     print(f't: {t}, p: {p}')
@@ -497,8 +501,8 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
 
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
-    sns.boxplot(data=[plateau_strength, transition_strength], ax=axes)
-    axes.set_ylim(0, 50)
+    sns.boxplot(data=[plateau_strength, transition_strength], ax=axes, fliersize=0.01)
+    axes.set_ylim(0, 60)
     
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(plateau_strength, transition_strength)
