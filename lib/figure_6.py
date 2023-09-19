@@ -32,7 +32,7 @@ RESPONSE_RIGHT = 1.5
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
-relative_value_root = pjoin('data', 'relative_values')
+relative_value_root = pjoin('data', 'prpd')
 
 figure_6_data_root = pjoin('figure_data', 'figure_6')
 if not isdir(figure_6_data_root):
@@ -46,9 +46,9 @@ if not isdir(figure_6_panel_b_data_root_relative_value):
 figure_6_panel_b_figure_path_prpd = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_prpd')
 if not isdir(figure_6_panel_b_figure_path_prpd):
     mkdir(figure_6_panel_b_figure_path_prpd)
-figure_5_panel_b_figure_path_relative_value = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_relative_value')
-if not isdir(figure_5_panel_b_figure_path_relative_value):
-    mkdir(figure_5_panel_b_figure_path_relative_value)
+figure_6_panel_b_figure_path_relative_value = pjoin('figures', 'all_figures', 'figure_6', 'panel_b_relative_value')
+if not isdir(figure_6_panel_b_figure_path_relative_value):
+    mkdir(figure_6_panel_b_figure_path_relative_value)
 
 def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
     if mono:
@@ -76,7 +76,7 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
             pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
             dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-            draw_fig_5_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
+            draw_fig_6_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
     else:
         for session_name in listdir(spike_data_root):
             behaviour = pjoin(behaviour_root, session_name + '.csv')
@@ -108,10 +108,10 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
                     pfc_name = basename(pfc).split('.')[0]
                     dms_name = basename(dms).split('.')[0]
                     
-                    fig = draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
+                    fig = draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
                     fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
                     if relative_value_root == pjoin('data', 'relative_values'):
-                        fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
+                        fig_path = pjoin(figure_6_panel_b_figure_path_relative_value, fig_name)
                     else:
                         fig_path = pjoin(figure_6_panel_b_figure_path_prpd, fig_name)
 
@@ -121,7 +121,7 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
 
 
 # TODO add relative value signal
-def draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
+def draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
     fig, axes = plt.subplots(3, 1, figsize=(15, 20))
@@ -166,7 +166,7 @@ def draw_fig_5_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relat
     
     return fig
 
-def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
+def get_fig_6_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
     hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
     if zero_ymin:
@@ -206,7 +206,7 @@ def fig_5_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_siz
 
     return fig
 
-def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool = True):
+def get_figure_6_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool = True):
     good_sessions = []
     # iti correlated
     phase_diffs = []
@@ -319,9 +319,9 @@ def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool =
     for good_session in good_sessions:
         print(good_session)
 
-    fig = draw_fig_5_panel_d(phase_diffs=phase_diffs, phase_diffs_bg=phase_diffs_bg, phase_diffs_bad=phase_diffs_bad, phase_diffs_bg_bad=phase_diffs_bg_bad, bin_size=36, zero_ymin=zero_ymin)
+    fig = draw_fig_6_panel_d(phase_diffs=phase_diffs, phase_diffs_bg=phase_diffs_bg, phase_diffs_bad=phase_diffs_bad, phase_diffs_bg_bad=phase_diffs_bg_bad, bin_size=36, zero_ymin=zero_ymin)
 
-def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
+def draw_fig_6_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
     mid = int(bin_size / 2)
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
     hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
@@ -399,7 +399,7 @@ def draw_fig_5_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
 
     return fig
 
-def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
+def get_figure_6_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
 
     bin_size = 36

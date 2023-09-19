@@ -271,7 +271,8 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
     sig_rs_positive_percentage = np.array(sig_rs_positive_percentage)
     sig_rs_negative_percentage = np.array(sig_rs_negative_percentage)
 
-    sns.violinplot(data=[sig_rs_positive_percentage[sig_rs_positive_percentage<1], sig_rs_negative_percentage[sig_rs_negative_percentage<1]], ax=axes)
+    sns.boxplot(data=[sig_rs_positive_percentage[sig_rs_positive_percentage<1], sig_rs_negative_percentage[sig_rs_negative_percentage<1]], ax=axes)
+    axes.set_ylim(0, 1)
 
 
 
@@ -403,7 +404,8 @@ def figure_8_panel_fj(mono: bool = False, reset: bool = False):
     rewarded_strength = np.array(rewarded_strength)
     non_rewarded_strength = np.array(non_rewarded_strength)
 
-    sns.violinplot(data=[rewarded_strength[rewarded_strength<50], non_rewarded_strength[non_rewarded_strength<50]], ax=axes)
+    sns.boxplot(data=[rewarded_strength[rewarded_strength<100], non_rewarded_strength[non_rewarded_strength<100]], ax=axes)
+    axes.set_ylim(0, 50)
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
     print(f't: {t}, p: {p}')
@@ -476,20 +478,27 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
             plateau_strength += result[0]
             transition_strength += result[1]
 
-    # store the data into a dataframe, with a column indicating the type of trial
-    figure_8_panel_gk_data = pd.DataFrame({'plateau': plateau_strength, 'transition': transition_strength})
-    if mono:
-        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_mono.csv'), index=False)
-    else:
-        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk.csv'), index=False)
-
+    # remove 0s from the arrays
     plateau_strength = np.array(plateau_strength)
     transition_strength = np.array(transition_strength)
 
+    plateau_strength = plateau_strength[plateau_strength != 0]
+    transition_strength = transition_strength[transition_strength != 0]
+
+    # # store the data into a dataframe, with a column indicating the type of trial
+    # figure_8_panel_gk_data = pd.DataFrame({'plateau': plateau_strength, 'transition': transition_strength})
+    # if mono:
+    #     figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_mono.csv'), index=False)
+    # else:
+    #     figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk.csv'), index=False)
+
+    # plateau_strength = np.array(plateau_strength)
+    # transition_strength = np.array(transition_strength)
+
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
-    sns.violinplot(data=[plateau_strength[plateau_strength<50], transition_strength[transition_strength<50]], ax=axes)
-
+    sns.boxplot(data=[plateau_strength, transition_strength], ax=axes)
+    axes.set_ylim(0, 50)
     
     # t test to see if the percentage of rewarded and non-rewarded strength are different
     t, p = ttest_ind(plateau_strength, transition_strength)

@@ -115,7 +115,7 @@ def raster(spikes, cue_times, leftP, session_name, brain_section):
             figure_5_panel_abcd_dms_data_bottom_path = pjoin(figure_5_panel_abcd_dms_data_bottom, data_file_name)
             line_data.to_csv(figure_5_panel_abcd_dms_data_bottom_path, index=False)
 
-def get_figure_4_panel_bc():
+def get_figure_5_panel_abcd():
     for dir in tqdm(listdir(spike_data_root)):
         pfc_path = pjoin(spike_data_root, dir, 'pfc.npy')
         dms_path = pjoin(spike_data_root, dir, 'dms.npy')

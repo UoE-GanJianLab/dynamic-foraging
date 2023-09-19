@@ -18,6 +18,12 @@ def fit_and_save(session: str, reset=True):
     session_name = basename(session).split('.')[0]
     session_data = pd.read_csv(session)
 
+    print(session_name)
+
+    if session_name[:6] == "AKED01":
+        crainotomy_side = "L"
+
+    org_length = len(session_data)
     # get the index of the nan trials
     nan_trials = session_data[session_data['trial_response_side'].isna()].index
     # remove nan trials
@@ -27,6 +33,7 @@ def fit_and_save(session: str, reset=True):
     # rewards are 0 for no reward and 1 for reward
     rewards = np.array(session_data['trial_reward'].values)
 
+    # TODO remove sessions that fail to converge
     # fit the models
     rw = RW()
     parameters, nll_min = rw.fit(choices_real=choices, rewards_real=rewards)
@@ -44,13 +51,19 @@ def fit_and_save(session: str, reset=True):
     for nan_trial in nan_trials:
         relative_values = np.insert(relative_values, nan_trial, relative_values[nan_trial-1])
 
+    result_length = len(relative_values)
     # smoothen the relative values
     # relative_values = moving_window_mean_prior(relative_values, 10)
+
+    if crainotomy_side == 'R':
+        relative_values = -relative_values
 
     # # scale relative values to the range of -1 to 1
     # relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
     # save the relative values
     np.save(pjoin(RELATIVE_VALUE_ROOT, session_name+'.npy'), relative_values)
+
+    print(f'{session_name}: {org_length} -> {result_length}')
 
 # create a list of session paths to process
 sessions = glob(pjoin(BEHAVIOUR_ROOT, '*.csv'))
