@@ -890,7 +890,6 @@ def phase_diff_pfc_dms_array(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[np.ndarr
 
     return np.array(phase_diff), np.array(phase_diff_bg)
 
-
 def phase_diff(sig1, sig2) -> float:
     length = len(sig1)
     # low_pass filter
