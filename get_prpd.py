@@ -17,8 +17,8 @@ for behaviour_file in glob(pjoin(sessions_folder, "*.csv")):
     session_data = pd.read_csv(behaviour_file)
     session_name = basename(behaviour_file).split(".")[0]
 
-    if session_name[:6] == "AKED01":
-        craniotomy_side = "L"
+    # if session_name[:6] == "AKED01":
+    #     craniotomy_side = "L"
     # fill the nan with 0
     session_data = session_data.fillna(0)
     trial_response_side = session_data['trial_response_side']

@@ -20,8 +20,8 @@ def fit_and_save(session: str, reset=True):
 
     print(session_name)
 
-    if session_name[:6] == "AKED01":
-        crainotomy_side = "L"
+    # if session_name[:6] == "AKED01":
+    #     crainotomy_side = "L"
 
     org_length = len(session_data)
     # get the index of the nan trials

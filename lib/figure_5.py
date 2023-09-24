@@ -299,26 +299,25 @@ def get_figure_5_panel_ef_right(prpd=True):
     dms_strongly_negatively_correlated_bg = []
     dms_strongly_positively_correlated_bg = []
 
+
     for session in sessions:
         session_cells = correlation_data[correlation_data['session'] == session]
-        if len(session_cells == 0):
+        if len(session_cells) == 0:
             continue
         pfc_cells = session_cells[session_cells['cell'].str.startswith('pfc')]
-        dms_cells = session_cells[session_cells['cell'].str.startswith('str')]
+        dms_cells = session_cells[session_cells['cell'].str.startswith('dms')]
 
         total_pfc_cells = len(glob(pjoin(spike_firing_root, session, 'pfc_*')))
         total_dms_cells = len(glob(pjoin(spike_firing_root, session, 'dms_*')))
 
-        print(total_pfc_cells, total_dms_cells)
-
-        pfc_strongly_positively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] >= 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
+        pfc_strongly_positively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] > 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
         pfc_strongly_negatively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] < 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
         pfc_strongly_negatively_correlated_bg.append(len(pfc_cells[(pfc_cells['background_firing_pearson_r'] < 0) & (pfc_cells['background_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        pfc_strongly_positively_correlated_bg.append(len(pfc_cells[(pfc_cells['background_firing_pearson_r'] >= 0) & (pfc_cells['background_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        dms_strongly_positively_correlated.append(len(dms_cells[(dms_cells['response_firing_pearson_r'] >= 0) & (dms_cells['response_firing_p_values'] < significance_threshold)])/ total_dms_cells)
+        pfc_strongly_positively_correlated_bg.append(len(pfc_cells[(pfc_cells['background_firing_pearson_r'] > 0) & (pfc_cells['background_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
+        dms_strongly_positively_correlated.append(len(dms_cells[(dms_cells['response_firing_pearson_r'] > 0) & (dms_cells['response_firing_p_values'] < significance_threshold)])/ total_dms_cells)
         dms_strongly_negatively_correlated.append(len(dms_cells[(dms_cells['response_firing_pearson_r'] < 0) & (dms_cells['response_firing_p_values'] < significance_threshold)])/ total_dms_cells)
         dms_strongly_negatively_correlated_bg.append(len(dms_cells[(dms_cells['background_firing_pearson_r'] < 0) & (dms_cells['background_firing_p_values'] < significance_threshold)])/ total_dms_cells)
-        dms_strongly_positively_correlated_bg.append(len(dms_cells[(dms_cells['background_firing_pearson_r'] >= 0) & (dms_cells['background_firing_p_values'] < significance_threshold)])/ total_dms_cells)
+        dms_strongly_positively_correlated_bg.append(len(dms_cells[(dms_cells['background_firing_pearson_r'] > 0) & (dms_cells['background_firing_p_values'] < significance_threshold)])/ total_dms_cells)
 
     # plot the result as boxplots
     pfc_strongly_positively_correlated = np.array(pfc_strongly_positively_correlated)
