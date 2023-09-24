@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
+import scipy
 
 from lib.calculation import get_firing_rate_window
 
@@ -154,11 +155,19 @@ def get_figure_5_panel_abcd():
  
 # calculate the correlation statistics
 def calculate_correlation_statistics():
-    # load the prpd files
-    prpd_files = glob(pjoin('data', 'prpd', '*.npy'))
+    session_names_prpd = []
+    cell_names_prpd = []
+    session_names_relative_value = []
+    cell_names_relative_value = []
 
-    # load the relative values
-    relative_value_files = glob(pjoin('data', 'relative_values', '*.npy'))
+    prpd_correlations_response = []
+    prpd_p_values_response = []
+    prpd_correlations_bg = []
+    prpd_p_values_bg = []
+    relative_value_correlations_response = []
+    relative_value_p_values_response = []
+    relative_value_correlations_bg = []
+    relative_value_p_values_bg = []
 
     # load the spike times for each session
     sessions = glob(pjoin('data', 'spike_times', 'sessions', '*'))
@@ -172,26 +181,65 @@ def calculate_correlation_statistics():
         dms_cells = glob(pjoin(session, 'dms_*'))
         all_cells = pfc_cells + dms_cells
 
+        prpd = np.load(pjoin('data', 'prpd', session_name+'.npy'))  
+        relative = False
+        if isfile(pjoin('data', 'relative_values', session_name+'.npy')):
+            relative_values = np.load(pjoin('data', 'relative_values', session_name+'.npy'))
+            relative = True
+
         # load the firing data
-        all_cells_firing_rate_response = []
-        all_cells_firing_rate_bg = []
         for cell in all_cells:
+            cell_name = basename(cell).split('.')[0]
             firing_data = np.load(cell, allow_pickle=False)
-            all_cells_firing_rate_response.append(np.array(get_firing_rate_window(firing_data, cue_times, RESPONSE_WINDOW_LEFT, RESPONSE_WINDOW_RIGHT)))
-            all_cells_firing_rate_bg.append(np.array(get_firing_rate_window(firing_data, cue_times, ITI_WINDOW_LEFT, ITI_WINDOW_RIGHT)))
+            firing_rate_response = np.array(get_firing_rate_window(cue_times, firing_data, RESPONSE_WINDOW_LEFT, RESPONSE_WINDOW_RIGHT))
+            firing_rate_bg= np.array(get_firing_rate_window(cue_times, firing_data, ITI_WINDOW_LEFT, ITI_WINDOW_RIGHT))
+
+            # calculate the pearson correlation coefficient and p value for prpd and firing rate
+            prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd, firing_rate_response)
+            prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd, firing_rate_bg)
+
+            session_names_prpd.append(session_name)
+            cell_names_prpd.append(cell_name)
+            prpd_correlations_response.append(prpd_correlation_response)
+            prpd_p_values_response.append(prpd_p_value_response)
+            prpd_correlations_bg.append(prpd_correlation_bg)
+            prpd_p_values_bg.append(prpd_p_value_bg)
+
+            if relative:
+                relative_value_correlation_response, relative_value_p_value_response = scipy.stats.pearsonr(relative_values, firing_rate_response)
+                relative_value_correlation_bg, relative_value_p_value_bg = scipy.stats.pearsonr(relative_values, firing_rate_bg)
+
+                session_names_relative_value.append(session_name)
+                cell_names_relative_value.append(cell_name)
+                relative_value_correlations_response.append(relative_value_correlation_response)
+                relative_value_p_values_response.append(relative_value_p_value_response)
+                relative_value_correlations_bg.append(relative_value_correlation_bg)
+                relative_value_p_values_bg.append(relative_value_p_value_bg)
+    
+    # save the data to csv
+    prpd_correlation_data = pd.DataFrame({'session': session_names_prpd, 'cell': cell_names_prpd, 'background_firing_pearson_r': prpd_correlations_bg, 'background_firing_p_values': prpd_p_values_bg, 'response_firing_pearson_r': prpd_correlations_response, 'response_firing_p_values': prpd_p_values_response})
+    prpd_correlation_data.to_csv(pjoin('data', 'prpd_correlation.csv'), index=False)
+
+    relative_value_correlation_data = pd.DataFrame({'session': session_names_relative_value, 'cell': cell_names_relative_value, 'background_firing_pearson_r': relative_value_correlations_bg, 'background_firing_p_values': relative_value_p_values_bg, 'response_firing_pearson_r': relative_value_correlations_response, 'response_firing_p_values': relative_value_p_values_response})
+    relative_value_correlation_data.to_csv(pjoin('data', 'relative_value_correlation.csv'), index=False)
 
 
 def get_figure_5_panel_ef_left(prpd=True):
     if prpd:
-        correlation_data = pd.read_csv(pjoin('data', 'figure_6',  'prpd_correlation.csv'))
+        correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
     else:
-        correlation_data = pd.read_csv(pjoin('data', 'figure_6', 'relative_value_correlation.csv'))
+        correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
+
+    # remove rows with nan values
+    correlation_data = correlation_data.dropna()
+
     # correlation_data have following columns:
     # session,background_firing_pearson_r,background_firing_p_values,response_firing_pearson_r,response_firing_p_values,cell
     # get the pfc cells(cell start with pfc) who are not correlated in background firing and correlated in response firing,
     # correlated in background firing only, correlated in response firing only, and correlated in both
     pfc_cells = correlation_data[correlation_data['cell'].str.startswith('pfc')]
     total_pfc_cells = len(glob(pjoin(spike_firing_root, '*', 'pfc_*')))
+    
     
     pfc_cells__background_only = pfc_cells[(pfc_cells['background_firing_p_values'] < significance_threshold) & (pfc_cells['response_firing_p_values'] >= significance_threshold)]
     pfc_cells__background_only_percent = len(pfc_cells__background_only) / total_pfc_cells
@@ -233,9 +281,12 @@ def get_figure_5_panel_ef_left(prpd=True):
 
 def get_figure_5_panel_ef_right(prpd=True):
     if prpd:
-        correlation_data = pd.read_csv(pjoin('data', 'figure_6',  'prpd_correlation.csv'))
+        correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
     else:
-        correlation_data = pd.read_csv(pjoin('data', 'figure_6', 'relative_value_correlation.csv'))
+        correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
+
+    # remove rows with nan values
+    correlation_data = correlation_data.dropna()
 
     # for each session, calculate the percentage cells of strongly positively and negatively correlated with prpd for pfc and dms
     sessions = correlation_data['session'].unique()
@@ -257,6 +308,8 @@ def get_figure_5_panel_ef_right(prpd=True):
 
         total_pfc_cells = len(glob(pjoin(spike_firing_root, session, 'pfc_*')))
         total_dms_cells = len(glob(pjoin(spike_firing_root, session, 'dms_*')))
+
+        print(total_pfc_cells, total_dms_cells)
 
         pfc_strongly_positively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] >= 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
         pfc_strongly_negatively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] < 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
