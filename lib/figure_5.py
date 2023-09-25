@@ -181,11 +181,24 @@ def calculate_correlation_statistics():
         dms_cells = glob(pjoin(session, 'dms_*'))
         all_cells = pfc_cells + dms_cells
 
-        prpd = np.load(pjoin('data', 'prpd', session_name+'.npy'))  
+        prpd = np.load(pjoin('data', 'prpd', session_name+'.npy')) 
+        prpd[prpd == 1] = 0.999 
         relative = False
         if isfile(pjoin('data', 'relative_values', session_name+'.npy')):
             relative_values = np.load(pjoin('data', 'relative_values', session_name+'.npy'))
+            relative_values[relative_values == 1] = 0.999
             relative = True
+        
+        # calculate the pearson correlation coefficient and p value for prpd and firing rate
+        # discretize the prpd into 10 bins from -1 to 1
+        bins = np.arange(-1, 1.1, 0.1)
+        prpd = np.digitize(prpd, bins, right=True)
+        # calculate the bin center for all available prpd values
+        prpd_values = np.sort(np.unique(prpd))
+
+        if relative:
+            relative_values = np.digitize(relative_values, bins, right=True)
+            delta_q_values = np.sort(np.unique(relative_values))
 
         # load the firing data
         for cell in all_cells:
@@ -194,9 +207,19 @@ def calculate_correlation_statistics():
             firing_rate_response = np.array(get_firing_rate_window(cue_times, firing_data, RESPONSE_WINDOW_LEFT, RESPONSE_WINDOW_RIGHT))
             firing_rate_bg= np.array(get_firing_rate_window(cue_times, firing_data, ITI_WINDOW_LEFT, ITI_WINDOW_RIGHT))
 
-            # calculate the pearson correlation coefficient and p value for prpd and firing rate
-            prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd, firing_rate_response)
-            prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd, firing_rate_bg)
+            if np.std(firing_rate_response) == 0 or np.std(firing_rate_bg) == 0:
+                continue
+
+            # calculate the z score for the firing rate
+            firing_rate_response = (firing_rate_response - np.mean(firing_rate_response)) / np.std(firing_rate_response)
+            firing_rate_bg = (firing_rate_bg - np.mean(firing_rate_bg)) / np.std(firing_rate_bg)
+
+            # calculate the mean firing rate for each bin
+            firing_rate_response_prpd = np.array([np.mean(firing_rate_response[prpd == i]) for i in prpd_values])
+            firing_rate_bg_prpd_binned = np.array([np.mean(firing_rate_bg[prpd == i]) for i in prpd_values])
+
+            prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd_values, firing_rate_response_prpd)
+            prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd_values, firing_rate_bg_prpd_binned)
 
             session_names_prpd.append(session_name)
             cell_names_prpd.append(cell_name)
@@ -206,8 +229,11 @@ def calculate_correlation_statistics():
             prpd_p_values_bg.append(prpd_p_value_bg)
 
             if relative:
-                relative_value_correlation_response, relative_value_p_value_response = scipy.stats.pearsonr(relative_values, firing_rate_response)
-                relative_value_correlation_bg, relative_value_p_value_bg = scipy.stats.pearsonr(relative_values, firing_rate_bg)
+                firing_rate_response_relative_value = np.array([np.mean(firing_rate_response[relative_values == i]) for i in delta_q_values])
+                firing_rate_bg_relative_value = np.array([np.mean(firing_rate_bg[relative_values == i]) for i in delta_q_values])
+
+                relative_value_correlation_response, relative_value_p_value_response = scipy.stats.pearsonr(delta_q_values, firing_rate_response_relative_value)
+                relative_value_correlation_bg, relative_value_p_value_bg = scipy.stats.pearsonr(delta_q_values, firing_rate_bg_relative_value)
 
                 session_names_relative_value.append(session_name)
                 cell_names_relative_value.append(cell_name)
@@ -260,7 +286,7 @@ def get_figure_5_panel_ef_left(prpd=True):
     dms_cells_response_only_percent = len(dms_cells_response_only) / total_dms_cells
     dms_cells_both = dms_cells[(dms_cells['background_firing_p_values'] < significance_threshold) & (dms_cells['response_firing_p_values'] < significance_threshold)]
     dms_cells_both_percent = len(dms_cells_both) / total_dms_cells
-    dms_cells_neither = dms_cells[(dms_cells['background_firing_p_values'] >= significance_threshold) & (dms_cells['response_firing_p_values'] >- significance_threshold)]
+    dms_cells_neither = dms_cells[(dms_cells['background_firing_p_values'] >= significance_threshold) & (dms_cells['response_firing_p_values'] >= significance_threshold)]
     dms_cells_neither_percent = len(dms_cells_neither) / total_dms_cells
 
     # save the data to csv with these columns: |cell_location|not-correlated percentage|ITI firing correlated percentage|
