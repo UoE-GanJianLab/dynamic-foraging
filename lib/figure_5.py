@@ -214,7 +214,6 @@ def calculate_correlation_statistics():
             firing_rate_response = (firing_rate_response - np.mean(firing_rate_response)) / np.std(firing_rate_response)
             firing_rate_bg = (firing_rate_bg - np.mean(firing_rate_bg)) / np.std(firing_rate_bg)
 
-            # calculate the mean firing rate for each bin
             firing_rate_response_prpd = np.array([np.mean(firing_rate_response[prpd == i]) for i in prpd_values])
             firing_rate_bg_prpd_binned = np.array([np.mean(firing_rate_bg[prpd == i]) for i in prpd_values])
 
@@ -400,7 +399,7 @@ def get_figure_5_panel_ef_right(prpd=True):
 
     # save the data to csv
     panel_ef_right_data = pd.DataFrame({'pfc_strongly_positively_correlated_response': pfc_strongly_positively_correlated, 'pfc_strongly_negatively_correlated_response': pfc_strongly_negatively_correlated, 'pfc_strongly_positively_correlated_bg': pfc_strongly_positively_correlated_bg, 'pfc_strongly_negatively_correlated_bg': pfc_strongly_negatively_correlated_bg, 'dms_strongly_positively_correlated_response': dms_strongly_positively_correlated, 'dms_strongly_negatively_correlated_response': dms_strongly_negatively_correlated, 'dms_strongly_positively_correlated_bg': dms_strongly_positively_correlated_bg, 'dms_strongly_negatively_correlated_bg': dms_strongly_negatively_correlated_bg})
-    
+
     if prpd:
         panel_ef_right_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_right_prpd.csv'), index=False)
     else:
