@@ -230,8 +230,8 @@ def get_figure_5_panel_ef_left(prpd=True):
     else:
         correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
 
-    # remove rows with nan values
-    correlation_data = correlation_data.dropna()
+    # # remove rows with nan values
+    # correlation_data = correlation_data.dropna()
 
     # correlation_data have following columns:
     # session,background_firing_pearson_r,background_firing_p_values,response_firing_pearson_r,response_firing_p_values,cell
@@ -251,7 +251,7 @@ def get_figure_5_panel_ef_left(prpd=True):
     pfc_cells_neither_percent = len(pfc_cells_neither) / total_pfc_cells
 
     # similarly for dms
-    dms_cells = correlation_data[correlation_data['cell'].str.startswith('str')]
+    dms_cells = correlation_data[correlation_data['cell'].str.startswith('dms')]
     total_dms_cells = len(glob(pjoin(spike_firing_root, '*', 'dms_*')))
 
     dms_cells__background_only = dms_cells[(dms_cells['background_firing_p_values'] < significance_threshold) & (dms_cells['response_firing_p_values'] >= significance_threshold)]
@@ -285,8 +285,8 @@ def get_figure_5_panel_ef_right(prpd=True):
     else:
         correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
 
-    # remove rows with nan values
-    correlation_data = correlation_data.dropna()
+    # # remove rows with nan values
+    # correlation_data = correlation_data.dropna()
 
     # for each session, calculate the percentage cells of strongly positively and negatively correlated with prpd for pfc and dms
     sessions = correlation_data['session'].unique()
