@@ -292,7 +292,10 @@ def get_figure_5_panel_ef_left(prpd=True):
     # save the data to csv with these columns: |cell_location|not-correlated percentage|ITI firing correlated percentage|
     # response magnitude correlated percentage|both ITI firing and response magnitude correlated percentage|
     panel_e_data = pd.DataFrame({'cell_location': ['pfc', 'dms'], 'not-correlated percentage': [pfc_cells_neither_percent, dms_cells_neither_percent], 'ITI firing correlated percentage': [pfc_cells__background_only_percent, dms_cells__background_only_percent], 'response magnitude correlated percentage': [pfc_cells_response_only_percent, dms_cells_response_only_percent], 'both ITI firing and response magnitude correlated percentage': [pfc_cells_both_percent, dms_cells_both_percent]})
-    panel_e_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_e.csv'), index=False)
+    if prpd:
+        panel_e_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_left_prpd.csv'), index=False) 
+    else:
+        panel_e_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_left_relative_value.csv'), index=False)
 
     # plot the result as pie charts, show the original counts in the pie chart
     plt.figure(figsize=(4, 4))
@@ -394,3 +397,11 @@ def get_figure_5_panel_ef_right(prpd=True):
     print('pfc background: ', ttest_ind(pfc_strongly_positively_correlated_bg, pfc_strongly_negatively_correlated_bg))
     print('dms response: ', ttest_ind(dms_strongly_positively_correlated, dms_strongly_negatively_correlated))
     print('dms background: ', ttest_ind(dms_strongly_positively_correlated_bg, dms_strongly_negatively_correlated_bg))
+
+    # save the data to csv
+    panel_ef_right_data = pd.DataFrame({'pfc_strongly_positively_correlated_response': pfc_strongly_positively_correlated, 'pfc_strongly_negatively_correlated_response': pfc_strongly_negatively_correlated, 'pfc_strongly_positively_correlated_bg': pfc_strongly_positively_correlated_bg, 'pfc_strongly_negatively_correlated_bg': pfc_strongly_negatively_correlated_bg, 'dms_strongly_positively_correlated_response': dms_strongly_positively_correlated, 'dms_strongly_negatively_correlated_response': dms_strongly_negatively_correlated, 'dms_strongly_positively_correlated_bg': dms_strongly_positively_correlated_bg, 'dms_strongly_negatively_correlated_bg': dms_strongly_negatively_correlated_bg})
+    
+    if prpd:
+        panel_ef_right_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_right_prpd.csv'), index=False)
+    else:
+        panel_ef_right_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_right_relative_value.csv'), index=False)
