@@ -59,9 +59,6 @@ def fit_and_save(session: str, reset=True):
     # smoothen the relative values
     # relative_values = moving_window_mean_prior(relative_values, 10)
 
-    if crainotomy_side == 'R':
-        relative_values = -relative_values
-
     # # scale relative values to the range of -1 to 1
     # relative_values = (relative_values - np.min(relative_values)) / (np.max(relative_values) - np.min(relative_values))
     # save the relative values
