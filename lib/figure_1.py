@@ -110,6 +110,10 @@ def get_figure_1_panel_b():
 def get_figure_1_panel_c():
     for session in glob(pjoin(behaviour_data_root, '*.csv')):
         session_name = basename(session).split('.')[0]
+
+        if not isfile(pjoin('data', 'relative_values', session_name+'.npy')):
+            continue
+
         behaviour_data = pd.read_csv(session)
         leftP = np.array(behaviour_data['leftP'].values)
         rightP = np.array(behaviour_data['rightP'].values)
@@ -132,6 +136,7 @@ def get_figure_1_panel_c():
         prpd, perceived_left, perceived_right = get_prpd(session_name, trial_response_side, trial_reward)
 
         relative_values = np.load(pjoin('data', 'relative_values', session_name+'.npy'))
+        prpd_calculated = np.load(pjoin('data', 'prpd', session_name+'.npy'))
         
         figure_1_panel_c_data = pd.DataFrame({'trial_index': trial_indices, 'leftP': leftP, 'rightP': rightP, 'responses': trial_response_side, 'left_response_proportion': left_response_proportion, 'right_response_proportion': right_response_proportion, 'perceived_left': perceived_left, 'perceived_right': perceived_right, 'prpd': prpd, 'relative_values': relative_values, 'chosen_high_reward_side': chosen_high_reward_side, 'high_reward_proportion': high_reward_proportion, 'reward_proportion': reward_proportion})
         figure_1_panel_c_data.to_csv(pjoin(panel_c_data_root, session_name+'.csv'), index=False)
@@ -155,6 +160,8 @@ def get_figure_1_panel_c():
         axes[2].plot(trial_indices, perceived_left, label='perceived left')
         axes[2].plot(trial_indices, perceived_right, label='perceived right')
         axes[2].plot(trial_indices, prpd, label='prpd')
+        axes[2].plot(trial_indices, relative_values, label='relative values')
+        axes[2].plot(trial_indices, prpd_calculated, label='prpd calculated')
         axes[2].set_xlabel('trials')
         axes[2].set_ylabel('reward probability')
         axes[2].legend()
@@ -165,7 +172,6 @@ def get_figure_1_panel_c():
         axes[3].set_ylabel('proportion')
         axes[3].legend()
         fig.suptitle(session_name)
-        plt.close(fig)
 
 
 def get_figure_1_panel_d():
