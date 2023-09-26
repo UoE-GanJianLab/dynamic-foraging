@@ -111,8 +111,8 @@ class RW:
         simulated_choices = np.array([])
         self.choices = np.array([])
         delta_V = np.array([])
-        self.v0, self.v1 = 0, 0
-        delta_V = np.append(delta_V, self.v1 - self.v0)
+        self.v0, self.v1 = 0.5, 0.5
+        delta_V = np.append(delta_V, self.v0 - self.v1)
 
         for i in range(choices_real.size):
             choice = choices_real[i]
@@ -121,18 +121,18 @@ class RW:
             self.choices[-1] = choice
             reward = rewards_real[i]
             self.update(reward, choice)
-            delta_V = np.append(delta_V, self.v1 - self.v0)
+            delta_V = np.append(delta_V, self.v0 - self.v1)
         
         # smoothen the choices
         simulated_choices = moving_window_mean(simulated_choices, 10)
         choices_real = moving_window_mean(choices_real, 10)
-        # plot simulated choices and real choices, and delta_V
-        plt.plot(simulated_choices, label='simulated')
-        plt.plot(choices_real, label='real')
-        plt.legend()
+        # # plot simulated choices and real choices, and delta_V
+        # plt.plot(simulated_choices, label='simulated')
+        # plt.plot(choices_real, label='real')
+        # plt.legend()
 
-        # save the plot in data/relative values
-        plt.savefig(pjoin('data', 'relative_values', f'{session}.png'))
-        plt.close()
+        # # save the plot in data/relative values
+        # plt.savefig(pjoin('data', 'relative_values', f'{session}.png'))
+        # plt.close()
 
         return delta_V
