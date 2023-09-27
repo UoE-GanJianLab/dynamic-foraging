@@ -391,14 +391,16 @@ def figure_8_panel_fj(mono: bool = False, reset: bool = False):
             rewarded_strength += result[0]
             non_rewarded_strength += result[1]
 
-    # figure_8_panel_fj_data_rewarded = pd.DataFrame({'rewarded': rewarded_strength})
-    # figure_8_panel_fj_data_non_rewarded = pd.DataFrame({'non_rewarded': non_rewarded_strength})
-    # if mono:
-    #     figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded_mono.csv'), index=False)
-    #     figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded_mono.csv'), index=False)
-    # else:
-    #     figure_8_panel_fj_data_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_rewarded.csv'), index=False)
-    #     figure_8_panel_fj_data_non_rewarded.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_non_rewarded.csv'), index=False)
+    # save the mean and sem of rewarded and non-rewarded strength
+    rewarded_strength_mean, rewarded_strength_sem = get_mean_and_sem(rewarded_strength)
+    non_rewarded_strength_mean, non_rewarded_strength_sem = get_mean_and_sem(non_rewarded_strength)
+
+    # save the data into a dataframe
+    figure_8_panel_fj_data = pd.DataFrame({'trial_type': ['rewarded', 'non-rewarded'], 'strength': [rewarded_strength_mean, non_rewarded_strength_mean], 'sem': [rewarded_strength_sem, non_rewarded_strength_sem]})
+    if mono:
+        figure_8_panel_fj_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_data_mono.csv'), index=False)
+    else:
+        figure_8_panel_fj_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_fj_data.csv'), index=False)
 
     # plot the bar plot with the average percentage of rewarded and non-rewarded strength
     rewarded_strength = np.array(rewarded_strength)
@@ -489,15 +491,16 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
     plateau_strength = plateau_strength[plateau_strength != 0]
     transition_strength = transition_strength[transition_strength != 0]
 
-    # # store the data into a dataframe, with a column indicating the type of trial
-    # figure_8_panel_gk_data = pd.DataFrame({'plateau': plateau_strength, 'transition': transition_strength})
-    # if mono:
-    #     figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_mono.csv'), index=False)
-    # else:
-    #     figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk.csv'), index=False)
+    # save the mean and sem of plateau and transition strength
+    plateau_strength_mean, plateau_strength_sem = get_mean_and_sem(plateau_strength)
+    transition_strength_mean, transition_strength_sem = get_mean_and_sem(transition_strength)
 
-    # plateau_strength = np.array(plateau_strength)
-    # transition_strength = np.array(transition_strength)
+    # save the data into a dataframe
+    figure_8_panel_gk_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'strength': [plateau_strength_mean, transition_strength_mean], 'sem': [plateau_strength_sem, transition_strength_sem]})
+    if mono:
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_data_mono.csv'), index=False)
+    else:
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_data.csv'), index=False)
 
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)

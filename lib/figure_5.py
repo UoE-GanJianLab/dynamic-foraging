@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 import scipy
+from scipy.stats import ttest_rel
 
 from lib.calculation import get_firing_rate_window
 
@@ -462,10 +463,10 @@ def get_figure_5_panel_gh():
     pfc_firing_all_response = []
     dms_firing_all_response = []
 
-    pfc_firing_rates_past_R = []
-    pfc_firing_rates_past_L = []
-    pfc_firing_rates_future_R = []
-    pfc_firing_rates_future_L = []
+    pfc_firing_rates_past_R_bg = []
+    pfc_firing_rates_past_L_bg = []
+    pfc_firing_rates_future_R_bg = []
+    pfc_firing_rates_future_L_bg = []
 
     pfc_firing_rates_past_R_response = []
     pfc_firing_rates_past_L_response = []
@@ -510,8 +511,8 @@ def get_figure_5_panel_gh():
             pfc_cell_data = np.load(pfc_cell)
 
             # get the firing rate of the cell
-            firing_rates = get_firing_rate_window(cue_time, pfc_cell_data, window_left=-1, window_right=-0.5)
-            firing_rates = np.array(firing_rates)
+            firing_rates_bg = get_firing_rate_window(cue_time, pfc_cell_data, window_left=-1, window_right=-0.5)
+            firing_rates_bg = np.array(firing_rates_bg)
 
             firing_rates_response = get_firing_rate_window(cue_time, pfc_cell_data, window_left=0, window_right=1.5)
             firing_rates_response = np.array(firing_rates_response)
@@ -519,18 +520,18 @@ def get_figure_5_panel_gh():
             # check if the firing rates and relative values are 
             # strongly correlated using pearson correlation
             # continue if p value is less than threshold
-            if np.std(firing_rates) != 0 and scipy.stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
-                firing_rates = (firing_rates - np.mean(firing_rates)) / np.std(firing_rates)
+            if np.std(firing_rates_bg) != 0 and scipy.stats.pearsonr(firing_rates_bg, relative_values)[1] < significan_p_threshold:
+                firing_rates_bg = (firing_rates_bg - np.mean(firing_rates_bg)) / np.std(firing_rates_bg)
                 # if pearson's r < 0 then flip the relative values
                 # so that the firing rate is positively correlated with relative values
-                if scipy.stats.pearsonr(firing_rates, relative_values)[0] < 0:
+                if scipy.stats.pearsonr(firing_rates_bg, relative_values)[0] < 0:
                     relative_values = -relative_values
 
                 # get the firing rates for the past and future trials
-                pfc_firing_rates_past_R.extend(firing_rates[past_R_indices])
-                pfc_firing_rates_past_L.extend(firing_rates[past_L_indices])
-                pfc_firing_rates_future_R.extend(firing_rates[future_R_indices])
-                pfc_firing_rates_future_L.extend(firing_rates[future_L_indices])
+                pfc_firing_rates_past_R_bg.extend(firing_rates_bg[past_R_indices])
+                pfc_firing_rates_past_L_bg.extend(firing_rates_bg[past_L_indices])
+                pfc_firing_rates_future_R_bg.extend(firing_rates_bg[future_R_indices])
+                pfc_firing_rates_future_L_bg.extend(firing_rates_bg[future_L_indices])
 
                 relative_values_future_L_pfc.extend(relative_values[future_L_indices])
                 relative_values_future_R_pfc.extend(relative_values[future_R_indices])
@@ -538,7 +539,7 @@ def get_figure_5_panel_gh():
                 relative_values_past_R_pfc.extend(relative_values[past_R_indices])
 
                 relative_values_pfc_all.extend(relative_values)
-                pfc_firing_all.extend(firing_rates)
+                pfc_firing_all.extend(firing_rates_bg)
             
             if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
                 firing_rates_response = (firing_rates_response - np.mean(firing_rates_response)) / np.std(firing_rates_response)
@@ -565,22 +566,22 @@ def get_figure_5_panel_gh():
             dms_cell_data = np.load(dms_cell)
 
             # get the firing rate of the cell
-            firing_rates = get_firing_rate_window(cue_time, dms_cell_data, window_left=-1, window_right=-0.5)
-            firing_rates = np.array(firing_rates)            
+            firing_rates_bg = get_firing_rate_window(cue_time, dms_cell_data, window_left=-1, window_right=-0.5)
+            firing_rates_bg = np.array(firing_rates_bg)            
 
             firing_rates_response = get_firing_rate_window(cue_time, dms_cell_data, window_left=0, window_right=1.5)
             firing_rates_response = np.array(firing_rates_response)
 
-            if np.std(firing_rates) != 0 and scipy.stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
-                if scipy.stats.pearsonr(firing_rates, relative_values)[0] < 0:
+            if np.std(firing_rates_bg) != 0 and scipy.stats.pearsonr(firing_rates_bg, relative_values)[1] < significan_p_threshold:
+                if scipy.stats.pearsonr(firing_rates_bg, relative_values)[0] < 0:
                     relative_values = -relative_values
 
-                firing_rates = (firing_rates - np.mean(firing_rates)) / np.std(firing_rates)
+                firing_rates_bg = (firing_rates_bg - np.mean(firing_rates_bg)) / np.std(firing_rates_bg)
                 # get the firing rates for the past and future trials
-                dms_firing_rates_past_R.extend(firing_rates[past_R_indices])
-                dms_firing_rates_past_L.extend(firing_rates[past_L_indices])
-                dms_firing_rates_future_R.extend(firing_rates[future_R_indices])
-                dms_firing_rates_future_L.extend(firing_rates[future_L_indices])
+                dms_firing_rates_past_R.extend(firing_rates_bg[past_R_indices])
+                dms_firing_rates_past_L.extend(firing_rates_bg[past_L_indices])
+                dms_firing_rates_future_R.extend(firing_rates_bg[future_R_indices])
+                dms_firing_rates_future_L.extend(firing_rates_bg[future_L_indices])
 
                 relative_values_future_L_dms.extend(relative_values[future_L_indices])
                 relative_values_future_R_dms.extend(relative_values[future_R_indices])
@@ -588,7 +589,7 @@ def get_figure_5_panel_gh():
                 relative_values_past_R_dms.extend(relative_values[past_R_indices])
 
                 relative_values_dms_all.extend(relative_values)
-                dms_firing_all.extend(firing_rates)
+                dms_firing_all.extend(firing_rates_bg)
 
             if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
                 if scipy.stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
@@ -608,6 +609,10 @@ def get_figure_5_panel_gh():
 
                 relative_values_dms_all_response.extend(relative_values)
                 dms_firing_all_response.extend(firing_rates_response)
+
+    # do paired t test before digitization
+    print('pfc firing rate past R vs past L: ', ttest_rel(pfc_firing_rates_past_R_bg, pfc_firing_rates_past_L_bg))
+    print('pfc firing rate future R vs future L: ', ttest_rel(pfc_firing_rates_future_R_bg, pfc_firing_rates_future_L_bg))
 
     # discretize the relative values into 20 bins
     relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
@@ -638,10 +643,10 @@ def get_figure_5_panel_gh():
 
     x = np.arange(-1+bin_size/2, 1, bin_size)
 
-    pfc_firing_rates_past_R = np.array(pfc_firing_rates_past_R)
-    pfc_firing_rates_past_L = np.array(pfc_firing_rates_past_L)
-    pfc_firing_rates_future_R = np.array(pfc_firing_rates_future_R)
-    pfc_firing_rates_future_L = np.array(pfc_firing_rates_future_L)
+    pfc_firing_rates_past_R_bg = np.array(pfc_firing_rates_past_R_bg)
+    pfc_firing_rates_past_L_bg = np.array(pfc_firing_rates_past_L_bg)
+    pfc_firing_rates_future_R_bg = np.array(pfc_firing_rates_future_R_bg)
+    pfc_firing_rates_future_L_bg = np.array(pfc_firing_rates_future_L_bg)
 
     dms_firing_rates_past_R = np.array(dms_firing_rates_past_R)
     dms_firing_rates_past_L = np.array(dms_firing_rates_past_L)
@@ -658,10 +663,10 @@ def get_figure_5_panel_gh():
     dms_firing_rates_future_R_response = np.array(dms_firing_rates_future_R_response)
     dms_firing_rates_future_L_response = np.array(dms_firing_rates_future_L_response)
 
-    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R)
-    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L)
-    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R)
-    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L)
+    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R_bg)
+    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L_bg)
+    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R_bg)
+    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L_bg)
 
     dms_firing_rate_past_R_mean, dms_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_dms, dms_firing_rates_past_R)
     dms_firing_rate_past_L_mean, dms_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_dms, dms_firing_rates_past_L)
