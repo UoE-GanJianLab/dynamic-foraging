@@ -1,5 +1,5 @@
-correlation,percentage
-not correlated,0.8067796610169492
-response only,0.09830508474576272
-background only,0.0288135593220339
-both,0.06610169491525424
+correlation,percentage,count
+not correlated,0.8067796610169492,476
+response only,0.09830508474576272,58
+background only,0.0288135593220339,17
+both,0.06610169491525424,39

@@ -17,6 +17,8 @@ figure_7_data_root = pjoin('figure_data', 'figure_7')
 
 significance_level = 0.05
 
+mono_total = len(all_mono_pairs)
+
 def get_figure_7_panel_b():
     response_only_mono_pairs_percent = 0
     background_only_mono_pairs_percent = 0
@@ -88,13 +90,13 @@ def get_figure_7_panel_b():
     both_mono_pairs_percent_relative_value = both_mono_pairs_percent_relative_value / total_mono_pairs
     neither_mono_pairs_percent_relative_value = 1 - response_only_mono_pairs_percent_relative_value - background_only_mono_pairs_percent_relative_value - both_mono_pairs_percent_relative_value
 
-    # |correlation|percentage|
-    panel_b_data = pd.DataFrame({'correlation': ['not correlated', 'response only', 'background only', 'both'], 'percentage': [neither_mono_pairs_percent, response_only_mono_pairs_percent, background_only_mono_pairs_percent, both_mono_pairs_percent]})
+    # |correlation|percentage|count|
+    panel_b_data = pd.DataFrame({'correlation': ['not correlated', 'response only', 'background only', 'both'], 'percentage': [neither_mono_pairs_percent, response_only_mono_pairs_percent, background_only_mono_pairs_percent, both_mono_pairs_percent], 'count': [int(neither_mono_pairs_percent * mono_total), int(response_only_mono_pairs_percent * mono_total), int(background_only_mono_pairs_percent * mono_total), int(both_mono_pairs_percent * mono_total)]})
     panel_b_data.to_csv(pjoin(figure_7_data_root, 'figure_7_panel_b_prpd.csv'), index=False)
 
-    panel_b_data_relative_value = pd.DataFrame({'correlation': ['not correlated', 'response only', 'background only', 'both'], 'percentage': [neither_mono_pairs_percent_relative_value, response_only_mono_pairs_percent_relative_value, background_only_mono_pairs_percent_relative_value, both_mono_pairs_percent_relative_value]})
+    panel_b_data_relative_value = pd.DataFrame({'correlation': ['not correlated', 'response only', 'background only', 'both'], 'percentage': [neither_mono_pairs_percent_relative_value, response_only_mono_pairs_percent_relative_value, background_only_mono_pairs_percent_relative_value, both_mono_pairs_percent_relative_value], 'count': [int(neither_mono_pairs_percent_relative_value * mono_total), int(response_only_mono_pairs_percent_relative_value * mono_total), int(background_only_mono_pairs_percent_relative_value * mono_total), int(both_mono_pairs_percent_relative_value * mono_total)]})
     panel_b_data_relative_value.to_csv(pjoin(figure_7_data_root, 'figure_7_panel_b_relative_value.csv'), index=False)
 
     # show the result in a pie chart
     plt.figure(figsize=(4, 4))
-    plt.pie([neither_mono_pairs_percent, response_only_mono_pairs_percent, background_only_mono_pairs_percent, both_mono_pairs_percent], labels=['not correlated', 'response only', 'background only', 'both'], autopct='%1.1f%%')
+    plt.pie([neither_mono_pairs_percent, response_only_mono_pairs_percent, background_only_mono_pairs_percent, both_mono_pairs_percent], labels=[f'not correlated {int(neither_mono_pairs_percent * mono_total)}', f'response only {int(response_only_mono_pairs_percent * mono_total)}', f'background only {int(background_only_mono_pairs_percent * mono_total)}', f'both {both_mono_pairs_percent * mono_total}'], autopct='%1.1f%%')
