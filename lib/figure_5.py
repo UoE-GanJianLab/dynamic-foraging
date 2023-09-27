@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 import scipy
-import stats
 
 from lib.calculation import get_firing_rate_window
 
@@ -19,6 +18,8 @@ WINDOW_RIGHT = 1.5
 BIN_WIDTH = 0.02
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
+behaviour_root = pjoin('data', 'behaviour_data')
+relative_value_root = pjoin('data', 'prpd')
 
 figure_5_data_source = pjoin('figure_data', 'figure_5')
 figure_5_panel_abcd_pfc_data_top = pjoin(figure_5_data_source, 'figure_5_panel_abcd_pfc_top')
@@ -518,11 +519,11 @@ def get_figure_5_panel_gh():
             # check if the firing rates and relative values are 
             # strongly correlated using pearson correlation
             # continue if p value is less than threshold
-            if np.std(firing_rates) != 0 and stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
+            if np.std(firing_rates) != 0 and scipy.stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
                 firing_rates = (firing_rates - np.mean(firing_rates)) / np.std(firing_rates)
                 # if pearson's r < 0 then flip the relative values
                 # so that the firing rate is positively correlated with relative values
-                if stats.pearsonr(firing_rates, relative_values)[0] < 0:
+                if scipy.stats.pearsonr(firing_rates, relative_values)[0] < 0:
                     relative_values = -relative_values
 
                 # get the firing rates for the past and future trials
@@ -539,10 +540,10 @@ def get_figure_5_panel_gh():
                 relative_values_pfc_all.extend(relative_values)
                 pfc_firing_all.extend(firing_rates)
             
-            if np.std(firing_rates_response) != 0 and stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
+            if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
                 firing_rates_response = (firing_rates_response - np.mean(firing_rates_response)) / np.std(firing_rates_response)
 
-                if stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
+                if scipy.stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
                     relative_values = -relative_values
 
                 # get the firing rates for the past and future trials
@@ -570,8 +571,8 @@ def get_figure_5_panel_gh():
             firing_rates_response = get_firing_rate_window(cue_time, dms_cell_data, window_left=0, window_right=1.5)
             firing_rates_response = np.array(firing_rates_response)
 
-            if np.std(firing_rates) != 0 and stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
-                if stats.pearsonr(firing_rates, relative_values)[0] < 0:
+            if np.std(firing_rates) != 0 and scipy.stats.pearsonr(firing_rates, relative_values)[1] < significan_p_threshold:
+                if scipy.stats.pearsonr(firing_rates, relative_values)[0] < 0:
                     relative_values = -relative_values
 
                 firing_rates = (firing_rates - np.mean(firing_rates)) / np.std(firing_rates)
@@ -589,8 +590,8 @@ def get_figure_5_panel_gh():
                 relative_values_dms_all.extend(relative_values)
                 dms_firing_all.extend(firing_rates)
 
-            if np.std(firing_rates_response) != 0 and stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
-                if stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
+            if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
+                if scipy.stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
                     relative_values = -relative_values
 
                 firing_rates_response = (firing_rates_response - np.mean(firing_rates_response)) / np.std(firing_rates_response)
@@ -787,7 +788,7 @@ def get_figure_5_panel_gh():
 
     # save all the data to a csv file
     df = pd.DataFrame({'x': x, 'pfc_past_R_bg': pfc_firing_rate_past_R_mean, 'past_R_bg_sem': pfc_firing_rate_past_R_sem, 'pfc_past_L_bg': pfc_firing_rate_past_L_mean, 'past_L_bg_sem': pfc_firing_rate_past_L_sem, 'pfc_future_R_bg': pfc_firing_rate_future_R_mean, 'future_R_bg_sem': pfc_firing_rate_future_R_sem, 'pfc_future_L_bg': pfc_firing_rate_future_L_mean, 'future_L_bg_sem': pfc_firing_rate_future_L_sem, 'dms_past_R_bg': dms_firing_rate_past_R_mean, 'dms_past_R_bg_sem': dms_firing_rate_past_R_sem, 'dms_past_L_bg': dms_firing_rate_past_L_mean, 'dms_past_L_bg_sem': dms_firing_rate_past_L_sem, 'dms_future_R_bg': dms_firing_rate_future_R_mean, 'dms_future_R_bg_sem': dms_firing_rate_future_R_sem, 'dms_future_L_bg': dms_firing_rate_future_L_mean, 'dms_future_L_bg_sem': dms_firing_rate_future_L_sem, 'pfc_past_R_response': pfc_firing_rate_past_R_response_mean, 'pfc_past_R_response_sem': pfc_firing_rate_past_R_response_sem, 'pfc_past_L_response': pfc_firing_rate_past_L_response_mean, 'pfc_past_L_response_sem': pfc_firing_rate_past_L_response_sem, 'pfc_future_R_response': pfc_firing_rate_future_R_response_mean, 'pfc_future_R_response_sem': pfc_firing_rate_future_R_response_sem, 'pfc_future_L_response': pfc_firing_rate_future_L_response_mean, 'pfc_future_L_response_sem': pfc_firing_rate_future_L_response_sem, 'dms_past_R_response': dms_firing_rate_past_R_response_mean, 'dms_past_R_response_sem': dms_firing_rate_past_R_response_sem, 'dms_past_L_response': dms_firing_rate_past_L_response_mean, 'dms_past_L_response_sem': dms_firing_rate_past_L_response_sem, 'dms_future_R_response': dms_firing_rate_future_R_response_mean, 'dms_future_R_response_sem': dms_firing_rate_future_R_response_sem, 'dms_future_L_response': dms_firing_rate_future_L_response_mean, 'dms_future_L_response_sem': dms_firing_rate_future_L_response_sem, 'pfc_all_firing_bg': pfc_firing_all_mean, 'pfc_all_firing_bg_sem': pfc_firing_all_sem, 'dms_all_firing_bg': dms_firing_all_mean, 'dms_all_firing_bg_sem': dms_firing_all_sem, 'pfc_all_firing_response': pfc_firing_all_response_mean, 'pfc_all_firing_response_sem': pfc_firing_all_response_sem, 'dms_all_firing_response': dms_firing_all_response_mean, 'dms_all_firing_response_sem': dms_firing_all_response_sem})
-    df.to_csv(pjoin(figure_data_root, 'beri_cohen_extra.csv'), index=False)
+    df.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_gh.csv'), index=False)
 
 
 def get_mean_and_sem(x, y):
