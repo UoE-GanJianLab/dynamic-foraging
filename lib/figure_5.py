@@ -2,6 +2,7 @@ from os.path import join as pjoin
 from os import listdir, mkdir
 from os.path import basename, isfile, isdir
 from glob import glob
+from itertools import product
 
 import pandas as pd
 import numpy as np
@@ -9,7 +10,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 import scipy
-from scipy.stats import ttest_rel
+from scipy.stats import ttest_rel, linregress, ttest_1samp
+from statsmodels.stats.weightstats import ztest
 
 from lib.calculation import get_firing_rate_window
 
@@ -483,6 +485,16 @@ def get_figure_5_panel_gh():
     dms_firing_rates_future_R_response = []
     dms_firing_rates_future_L_response = []
 
+    pfc_response_diffrences_past = []
+    pfc_response_diffrences_future = []
+    pfc_bg_diffrences_past = []
+    pfc_bg_diffrences_future = []
+
+    dms_response_diffrences_past = []
+    dms_response_diffrences_future = []
+    dms_bg_diffrences_past = []
+    dms_bg_diffrences_future = []
+
     for session in glob(pjoin(behaviour_root, '*.csv')):
         session_name = basename(session).split('.')[0]
         relative_values = np.load(pjoin(relative_value_root, session_name+'.npy'))
@@ -610,9 +622,6 @@ def get_figure_5_panel_gh():
                 relative_values_dms_all_response.extend(relative_values)
                 dms_firing_all_response.extend(firing_rates_response)
 
-    # do paired t test before digitization
-    print('pfc firing rate past R vs past L: ', ttest_rel(pfc_firing_rates_past_R_bg, pfc_firing_rates_past_L_bg))
-    print('pfc firing rate future R vs future L: ', ttest_rel(pfc_firing_rates_future_R_bg, pfc_firing_rates_future_L_bg))
 
     # discretize the relative values into 20 bins
     relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
@@ -663,30 +672,44 @@ def get_figure_5_panel_gh():
     dms_firing_rates_future_R_response = np.array(dms_firing_rates_future_R_response)
     dms_firing_rates_future_L_response = np.array(dms_firing_rates_future_L_response)
 
-    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R_bg)
-    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L_bg)
-    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R_bg)
-    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L_bg)
+    # get all possible values of firing rates corresponding to each relative value
+    pfc_response_future_L = [pfc_firing_rates_future_L_response[relative_values_future_L_pfc_response == i] for i in range(1, len(x)+1)]
+    pfc_response_future_R = [pfc_firing_rates_future_R_response[relative_values_future_R_pfc_response == i] for i in range(1, len(x)+1)]
 
-    dms_firing_rate_past_R_mean, dms_firing_rate_past_R_sem = get_mean_and_sem(relative_values_past_R_dms, dms_firing_rates_past_R)
-    dms_firing_rate_past_L_mean, dms_firing_rate_past_L_sem = get_mean_and_sem(relative_values_past_L_dms, dms_firing_rates_past_L)
-    dms_firing_rate_future_R_mean, dms_firing_rate_future_R_sem = get_mean_and_sem(relative_values_future_R_dms, dms_firing_rates_future_R)
-    dms_firing_rate_future_L_mean, dms_firing_rate_future_L_sem = get_mean_and_sem(relative_values_future_L_dms, dms_firing_rates_future_L)
-
-    pfc_firing_rate_past_R_response_mean, pfc_firing_rate_past_R_response_sem = get_mean_and_sem(relative_values_past_R_pfc_response, pfc_firing_rates_past_R_response)
-    pfc_firing_rate_past_L_response_mean, pfc_firing_rate_past_L_response_sem = get_mean_and_sem(relative_values_past_L_pfc_response, pfc_firing_rates_past_L_response)
-    pfc_firing_rate_future_R_response_mean, pfc_firing_rate_future_R_response_sem = get_mean_and_sem(relative_values_future_R_pfc_response, pfc_firing_rates_future_R_response)
-    pfc_firing_rate_future_L_response_mean, pfc_firing_rate_future_L_response_sem = get_mean_and_sem(relative_values_future_L_pfc_response, pfc_firing_rates_future_L_response)
+    # get the difference between all possible pairs of firing rates for each relative value as a 1d array
+    for k in range(len(pfc_response_future_L)):
+        for i in tqdm(range(min(len(pfc_response_future_L[k]), len(pfc_response_future_R[k])))):
+                pfc_response_diffrences_future.append(pfc_response_future_L[k][i] - pfc_response_future_R[k][i])
     
-    dms_firing_rate_past_R_response_mean, dms_firing_rate_past_R_response_sem = get_mean_and_sem(relative_values_past_R_dms_response, dms_firing_rates_past_R_response)
-    dms_firing_rate_past_L_response_mean, dms_firing_rate_past_L_response_sem = get_mean_and_sem(relative_values_past_L_dms_response, dms_firing_rates_past_L_response)
-    dms_firing_rate_future_R_response_mean, dms_firing_rate_future_R_response_sem = get_mean_and_sem(relative_values_future_R_dms_response, dms_firing_rates_future_R_response)
-    dms_firing_rate_future_L_response_mean, dms_firing_rate_future_L_response_sem = get_mean_and_sem(relative_values_future_L_dms_response, dms_firing_rates_future_L_response)
+    print(np.mean(pfc_response_diffrences_future))
 
-    pfc_firing_all_mean, pfc_firing_all_sem = get_mean_and_sem(relative_values_pfc_all, pfc_firing_all)
-    dms_firing_all_mean, dms_firing_all_sem = get_mean_and_sem(relative_values_dms_all, dms_firing_all)
-    pfc_firing_all_response_mean, pfc_firing_all_response_sem = get_mean_and_sem(relative_values_pfc_all_response, pfc_firing_all_response)
-    dms_firing_all_response_mean, dms_firing_all_response_sem = get_mean_and_sem(relative_values_dms_all_response, dms_firing_all_response)
+    # do a one sample t test to see if the mean of the differences is significantly different from 0
+    # print('pfc response future L vs future R: ', ztest(pfc_response_diffrences_future, 0), 'sample size: ', len(pfc_response_diffrences_future))
+
+    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = pair_and_get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R_bg)
+    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = pair_and_get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L_bg)
+    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = pair_and_get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R_bg)
+    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = pair_and_get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L_bg)
+
+    dms_firing_rate_past_R_mean, dms_firing_rate_past_R_sem = pair_and_get_mean_and_sem(relative_values_past_R_dms, dms_firing_rates_past_R)
+    dms_firing_rate_past_L_mean, dms_firing_rate_past_L_sem = pair_and_get_mean_and_sem(relative_values_past_L_dms, dms_firing_rates_past_L)
+    dms_firing_rate_future_R_mean, dms_firing_rate_future_R_sem = pair_and_get_mean_and_sem(relative_values_future_R_dms, dms_firing_rates_future_R)
+    dms_firing_rate_future_L_mean, dms_firing_rate_future_L_sem = pair_and_get_mean_and_sem(relative_values_future_L_dms, dms_firing_rates_future_L)
+
+    pfc_firing_rate_past_R_response_mean, pfc_firing_rate_past_R_response_sem = pair_and_get_mean_and_sem(relative_values_past_R_pfc_response, pfc_firing_rates_past_R_response)
+    pfc_firing_rate_past_L_response_mean, pfc_firing_rate_past_L_response_sem = pair_and_get_mean_and_sem(relative_values_past_L_pfc_response, pfc_firing_rates_past_L_response)
+    pfc_firing_rate_future_R_response_mean, pfc_firing_rate_future_R_response_sem = pair_and_get_mean_and_sem(relative_values_future_R_pfc_response, pfc_firing_rates_future_R_response)
+    pfc_firing_rate_future_L_response_mean, pfc_firing_rate_future_L_response_sem = pair_and_get_mean_and_sem(relative_values_future_L_pfc_response, pfc_firing_rates_future_L_response)
+    
+    dms_firing_rate_past_R_response_mean, dms_firing_rate_past_R_response_sem = pair_and_get_mean_and_sem(relative_values_past_R_dms_response, dms_firing_rates_past_R_response)
+    dms_firing_rate_past_L_response_mean, dms_firing_rate_past_L_response_sem = pair_and_get_mean_and_sem(relative_values_past_L_dms_response, dms_firing_rates_past_L_response)
+    dms_firing_rate_future_R_response_mean, dms_firing_rate_future_R_response_sem = pair_and_get_mean_and_sem(relative_values_future_R_dms_response, dms_firing_rates_future_R_response)
+    dms_firing_rate_future_L_response_mean, dms_firing_rate_future_L_response_sem = pair_and_get_mean_and_sem(relative_values_future_L_dms_response, dms_firing_rates_future_L_response)
+
+    pfc_firing_all_mean, pfc_firing_all_sem = pair_and_get_mean_and_sem(relative_values_pfc_all, pfc_firing_all)
+    dms_firing_all_mean, dms_firing_all_sem = pair_and_get_mean_and_sem(relative_values_dms_all, dms_firing_all)
+    pfc_firing_all_response_mean, pfc_firing_all_response_sem = pair_and_get_mean_and_sem(relative_values_pfc_all_response, pfc_firing_all_response)
+    dms_firing_all_response_mean, dms_firing_all_response_sem = pair_and_get_mean_and_sem(relative_values_dms_all_response, dms_firing_all_response)
 
     x = np.arange(-1+bin_size/2, 1, bin_size)
 
@@ -796,7 +819,7 @@ def get_figure_5_panel_gh():
     df.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_gh.csv'), index=False)
 
 
-def get_mean_and_sem(x, y):
+def pair_and_get_mean_and_sem(x, y):
     df = pd.DataFrame({'x': x, 'y': y})
     df_org = df.copy()
     df = df.groupby('x').mean()

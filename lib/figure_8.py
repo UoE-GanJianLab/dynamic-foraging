@@ -271,10 +271,11 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
     sig_rs_positive_percentage = np.array(sig_rs_positive_percentage)
     sig_rs_negative_percentage = np.array(sig_rs_negative_percentage)
 
-    sns.boxplot(data=[sig_rs_positive_percentage, sig_rs_negative_percentage], ax=axes, fliersize=0.05)
-    axes.set_ylim(0, 1)
+    # calculate the mean and sem of the percentage of positive and negative significant rs
+    sig_rs_positive_percentage_mean, sig_rs_positive_percentage_sem = get_mean_and_sem(sig_rs_positive_percentage)
+    sig_rs_negative_percentage_mean, sig_rs_negative_percentage_sem = get_mean_and_sem(sig_rs_negative_percentage)
 
-
+    print(f'positive: {sig_rs_positive_percentage_mean}, positive sem {sig_rs_positive_percentage_sem}, negative: {sig_rs_negative_percentage_mean}, negative: {sig_rs_negative_percentage_sem}')
 
 # mean cross correlation between interconnectivity strength and reward proportion
 # panel e is for all the data, while panel f is for the mono pair data
