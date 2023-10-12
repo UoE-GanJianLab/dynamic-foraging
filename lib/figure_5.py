@@ -517,6 +517,26 @@ def get_figure_5_panel_gh():
         future_R_indices = future_R_indices - 1
         future_L_indices = future_L_indices - 1
 
+        pfc_firing_rates_past_R_bg_session = []
+        pfc_firing_rates_past_L_bg_session = []
+        pfc_firing_rates_future_R_bg_session = []
+        pfc_firing_rates_future_L_bg_session = []
+
+        pfc_relative_values_past_R_bg_session = []
+        pfc_relative_values_past_L_bg_session = []
+        relative_values_future_R_pfc_bg_session = []
+        relative_values_future_L_pfc_bg_session = []
+
+        pfc_firing_rates_past_R_response_session = []
+        pfc_firing_rates_past_L_response_session = []
+        pfc_firing_rates_future_R_response_session = []
+        pfc_firing_rates_future_L_response_session = []
+
+        pfc_relative_values_past_R_response_session = []
+        pfc_relative_values_past_L_response_session = []
+        pfc_relative_values_future_R_response_session = []
+        pfc_relative_values_future_L_response_session = []
+
         # load up the spike data
         for pfc_cell in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
             pfc_cell_name = basename(pfc_cell).split('.')[0]
@@ -540,15 +560,15 @@ def get_figure_5_panel_gh():
                     relative_values = -relative_values
 
                 # get the firing rates for the past and future trials
-                pfc_firing_rates_past_R_bg.extend(firing_rates_bg[past_R_indices])
-                pfc_firing_rates_past_L_bg.extend(firing_rates_bg[past_L_indices])
-                pfc_firing_rates_future_R_bg.extend(firing_rates_bg[future_R_indices])
-                pfc_firing_rates_future_L_bg.extend(firing_rates_bg[future_L_indices])
+                pfc_firing_rates_past_R_bg_session.extend(firing_rates_bg[past_R_indices])
+                pfc_firing_rates_past_L_bg_session.extend(firing_rates_bg[past_L_indices])
+                pfc_firing_rates_future_R_bg_session.extend(firing_rates_bg[future_R_indices])
+                pfc_firing_rates_future_L_bg_session.extend(firing_rates_bg[future_L_indices])
 
-                relative_values_future_L_pfc.extend(relative_values[future_L_indices])
-                relative_values_future_R_pfc.extend(relative_values[future_R_indices])
-                relative_values_past_L_pfc.extend(relative_values[past_L_indices])
-                relative_values_past_R_pfc.extend(relative_values[past_R_indices])
+                relative_values_future_L_pfc_bg_session.extend(relative_values[future_L_indices])
+                relative_values_future_R_pfc_bg_session.extend(relative_values[future_R_indices])
+                pfc_relative_values_past_L_bg_session.exten_pfcd(relative_values[past_L_indices])
+                pfc_relative_values_past_R_bg_session.extend(relative_values[past_R_indices])
 
                 relative_values_pfc_all.extend(relative_values)
                 pfc_firing_all.extend(firing_rates_bg)
@@ -560,15 +580,15 @@ def get_figure_5_panel_gh():
                     relative_values = -relative_values
 
                 # get the firing rates for the past and future trials
-                pfc_firing_rates_past_R_response.extend(firing_rates_response[past_R_indices])
-                pfc_firing_rates_past_L_response.extend(firing_rates_response[past_L_indices])
-                pfc_firing_rates_future_R_response.extend(firing_rates_response[future_R_indices])
-                pfc_firing_rates_future_L_response.extend(firing_rates_response[future_L_indices])
+                pfc_firing_rates_past_R_response_session.extend(firing_rates_response[past_R_indices])
+                pfc_firing_rates_past_L_response_session.extend(firing_rates_response[past_L_indices])
+                pfc_firing_rates_future_R_response_session.extend(firing_rates_response[future_R_indices])
+                pfc_firing_rates_future_L_response_session.extend(firing_rates_response[future_L_indices])
 
-                relative_values_future_L_pfc_response.extend(relative_values[future_L_indices])
-                relative_values_future_R_pfc_response.extend(relative_values[future_R_indices])
-                relative_values_past_L_pfc_response.extend(relative_values[past_L_indices])
-                relative_values_past_R_pfc_response.extend(relative_values[past_R_indices])
+                pfc_relative_values_future_L_response_session.extend(relative_values[future_L_indices])
+                pfc_relative_values_future_R_response_session.extend(relative_values[future_R_indices])
+                pfc_relative_values_past_L_response_session.extend(relative_values[past_L_indices])
+                pfc_relative_values_past_R_response_session.extend(relative_values[past_R_indices])
 
                 relative_values_pfc_all_response.extend(relative_values)
                 pfc_firing_all_response.extend(firing_rates_response)
@@ -672,16 +692,6 @@ def get_figure_5_panel_gh():
     dms_firing_rates_future_R_response = np.array(dms_firing_rates_future_R_response)
     dms_firing_rates_future_L_response = np.array(dms_firing_rates_future_L_response)
 
-    # get all possible values of firing rates corresponding to each relative value
-    pfc_response_future_L = [pfc_firing_rates_future_L_response[relative_values_future_L_pfc_response == i] for i in range(1, len(x)+1)]
-    pfc_response_future_R = [pfc_firing_rates_future_R_response[relative_values_future_R_pfc_response == i] for i in range(1, len(x)+1)]
-
-    # get the difference between all possible pairs of firing rates for each relative value as a 1d array
-    for k in range(len(pfc_response_future_L)):
-        for i in tqdm(range(min(len(pfc_response_future_L[k]), len(pfc_response_future_R[k])))):
-                pfc_response_diffrences_future.append(pfc_response_future_L[k][i] - pfc_response_future_R[k][i])
-    
-    print(np.mean(pfc_response_diffrences_future))
 
     # do a one sample t test to see if the mean of the differences is significantly different from 0
     # print('pfc response future L vs future R: ', ztest(pfc_response_diffrences_future, 0), 'sample size: ', len(pfc_response_diffrences_future))

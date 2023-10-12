@@ -86,6 +86,8 @@ def get_figure_1_panel_b():
     reward_axis = axes.twinx()
     reward_axis.set_ylabel('reward probability')
 
+    print(np.median(relative_reward_time))
+
     # bin the reward times 
     reward_time_digitized = np.digitize(relative_reward_time, bins = np.arange(WINDOW_LEFT, WINDOW_RIGHT+1/DOWNSAMPLING_FREQUENCY, 1/DOWNSAMPLING_FREQUENCY), right=True)
     # count the number of entries in each bin
