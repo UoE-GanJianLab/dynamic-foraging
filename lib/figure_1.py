@@ -8,7 +8,7 @@ from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from lib.calculation import moving_window_mean
+from lib.calculation import moving_window_mean, get_mean_and_sem
 from lib.figure_utils import remove_top_and_right_spines
 
 
@@ -87,6 +87,7 @@ def get_figure_1_panel_b():
     reward_axis.set_ylabel('reward probability')
 
     print(np.median(relative_reward_time))
+    print(get_mean_and_sem(relative_reward_time))
 
     # bin the reward times 
     reward_time_digitized = np.digitize(relative_reward_time, bins = np.arange(WINDOW_LEFT, WINDOW_RIGHT+1/DOWNSAMPLING_FREQUENCY, 1/DOWNSAMPLING_FREQUENCY), right=True)

@@ -27,13 +27,13 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 behaviour_root = pjoin('data', 'behaviour_data')
 spike_root = pjoin('data', 'spike_times', 'sessions')
 
-figure_6_figure_root = pjoin('figures', 'all_figures', 'figure_8')
-if not isdir(figure_6_figure_root):
-    mkdir(figure_6_figure_root)
-panel_abc_figure_root = pjoin(figure_6_figure_root, 'panel_abc')
+figure_8_figure_root = pjoin('figures', 'all_figures', 'figure_8')
+if not isdir(figure_8_figure_root):
+    mkdir(figure_8_figure_root)
+panel_abc_figure_root = pjoin(figure_8_figure_root, 'panel_abc')
 if not isdir(panel_abc_figure_root):
     mkdir(panel_abc_figure_root)
-panel_abc_significant = pjoin(figure_6_figure_root, 'panel_abc', 'significant')
+panel_abc_significant = pjoin(figure_8_figure_root, 'panel_abc', 'significant')
 if not isdir(panel_abc_significant):
     mkdir(panel_abc_significant)
 
@@ -104,7 +104,7 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     
     return interconnectivity_strength
 
-
+# TODO divie this method into panel ab and c
 def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
@@ -147,16 +147,20 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
         panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
 
         # plot reward proportion vs cross correlation in twinx plot
-        fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+        fig, axes = plt.subplots(2, 1, figsize=(10, 8))
         axes[0].plot(reward_proportion, color='tab:blue')
-        axes[0].set_xlabel('Trial')
-        axes[0].set_ylabel('Reward proportion', color='tab:blue')
+        axes[0].set_xlabel('Trial number')
+        axes[0].set_ylabel('Prior reward\nproportion', color='tab:blue')
         axes[0].tick_params(axis='y', labelcolor='tab:blue')
         
         ax2 = axes[0].twinx()
         ax2.plot(interconnectivity_strength, color='tab:red')
-        ax2.set_ylabel('Cross correlation', color='tab:red')
+        ax2.set_ylabel('Max absolutecross\ncorrelation', color='tab:red')
         ax2.tick_params(axis='y', labelcolor='tab:red')
+
+        # remove the top spine of the twinx plot
+        axes[0].spines['top'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
 
         # fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
         plt.close()
@@ -165,13 +169,17 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
         panel_c_data.to_csv(pjoin(panel_c_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
         
         # plot interconnectivity_strength against reward_proportion with error bar
-        sns.lineplot(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, ax=axes[1])
+        sns.lineplot(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, ax=axes[1], color='black')
         axes[1].errorbar(x=np.arange(0.1, 1, 0.2), y=interconnectivity_strength_binned, yerr=interconnectivity_strength_binned_err, fmt='o', color='black')
         # set x axis tick label 
         axes[1].set_xticks(np.arange(0, 1, 0.2))
-        axes[1].set_title(f'Pearson r: {dis_r:.2f}, p: {dis_p:.2f}')
-
-        fig.suptitle(f'Pearson r: {r:.2f}, p: {p:.2f}, {pfc_name} vs {dms_name}')
+        axes[1].set_xlabel('Prior reward proportion')
+        axes[1].set_ylabel('Max absolute\ncross correlation')
+        # print r and p value somewhere on the plot
+        axes[1].text(0.5, 0.9, f'r= {dis_r:.3f}\np= {dis_p:.3f}', transform=axes[1].transAxes)
+        
+        # remove the top spine of the twinx plot
+        remove_top_and_right_spines(axes[1])
 
         if p < p_value_threshold:
             fig.savefig(pjoin(panel_abc_significant, f'{session_name}_{pfc_name}_{dms_name}.png'))
@@ -250,7 +258,7 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
         dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
         with Pool() as pool:
-            process_session_partial = partial(process_session_panel_d, reset=reset)
+            process_session_partial = partial(process_session_panel_dh, reset=reset)
             results = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
         for result in results:
@@ -318,7 +326,7 @@ def figure_8_panel_ei(mono: bool = False, reset: bool = False):
         dms_pfc_paths = get_dms_pfc_paths_all(no_nan=False)
 
         with Pool() as pool:
-            process_session_partial = partial(process_session_panel_f, reset=reset)
+            process_session_partial = partial(process_session_panel_ei, reset=reset)
             overall_crosscors = list(tqdm.tqdm(pool.imap(process_session_partial, dms_pfc_paths), total=len(dms_pfc_paths)))
 
         # print the length of arrays in overall_crosscors
@@ -513,7 +521,7 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
     print(f't: {t}, p: {p}')
 
 
-def process_session_panel_d(session, reset=False):
+def process_session_panel_dh(session, reset=False):
     session_sig_rs_positive = 0
     session_sig_rs_negative = 0
     session_name = session[0]
@@ -634,7 +642,7 @@ def process_session_panel_e_plateau_transition(session, reset=False):
 
     return (plateau_interconnectivity, transition_interconnectivity)
 
-def process_session_panel_f(session, reset=False):
+def process_session_panel_ei(session, reset=False):
     session_name = session[0]
     cue_time = session[1]
     trial_reward = session[2]
@@ -654,7 +662,7 @@ def process_session_panel_f(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
 
         overall_crosscors.append(overall_crosscor)
     
