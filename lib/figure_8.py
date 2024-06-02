@@ -60,6 +60,8 @@ WINDOW_LEFT = -1
 WINDOW_RIGHT = 0
 BIN_SIZE = 0.01
 
+figure_8_selected = ['AKED0420210804_pfc_10_dms_23', 'AKED0520210726_pfc_16_dms_18', 'AKED0120210721_pfc_6_dms_0']
+
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
 def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reset: bool=False) -> np.ndarray:
     pfc_spike_times = get_spike_times_in_window(pfc_times, cue_times, WINDOW_LEFT, WINDOW_RIGHT)
@@ -141,7 +143,7 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
     
-    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
+    if plot and f'{session_name}_{pfc_name}_{dms_name}' in figure_8_selected and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
         panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
 
         panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
@@ -182,9 +184,9 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
         remove_top_and_right_spines(axes[1])
 
         if p < p_value_threshold:
-            fig.savefig(pjoin(panel_abc_significant, f'{session_name}_{pfc_name}_{dms_name}.png'))
+            fig.savefig(pjoin(panel_abc_significant, f'{session_name}_{pfc_name}_{dms_name}.svg'))
         else:
-            fig.savefig(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png'))
+            fig.savefig(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.svg'))
 
         plt.close()
     

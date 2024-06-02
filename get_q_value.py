@@ -8,10 +8,19 @@ from functools import partial
 from multiprocessing import Pool
 
 from lib.models import RW
-from lib.calculation import moving_window_mean_prior
+from lib.calculation import get_session_performances
 
 BEHAVIOUR_ROOT = 'data/behaviour_data/'
 RELATIVE_VALUE_ROOT = 'data/relative_values/'
+
+# file to store all the save data
+SAVE_FILE = 'data/relative_values.csv'
+# write the header to the save file
+with open(SAVE_FILE, 'w') as f:
+    f.write('session_name, beta, b, alpha, nll, performance\n')
+f.close()
+
+performances, mean = get_session_performances()
 
 def fit_and_save(session: str, reset=True):
     crainotomy_side = 'R'
@@ -22,6 +31,10 @@ def fit_and_save(session: str, reset=True):
 
     # if session_name[:6] == "AKED01":
     #     crainotomy_side = "L"
+
+    # calculate the performance of the session
+    session_performance = performances[session_name]
+
 
     org_length = len(session_data)
     # get the index of the nan trials
@@ -39,10 +52,18 @@ def fit_and_save(session: str, reset=True):
     parameters, nll_min = rw.fit(choices_real=choices, rewards_real=rewards)
     # print the fitted parameters with their names: beta, kappa, b, alpha, accurate to 3 decimal places
     print(f'{session_name}: beta: {parameters[0]:.3f}, b: {parameters[1]:.3f}, alpha: {parameters[2]:.3f}, nll: {nll_min:.3f}')
+
+    # write the fitted parameters and performance to the save file
+    with open(SAVE_FILE, 'a') as f:
+        # write all the parameters with precision of 3 decimal places
+        f.write(f'{session_name}, {parameters[0]:.3f}, {parameters[1]:.3f}, {parameters[2]:.3f}, {nll_min:.3f}, {session_performance}\n')
+    f.close()
+
     # if alpha is 0.001, then the model has failed to converge
     if parameters[2] < 0.002:
         print(f'{session_name}: alpha is too small, model has failed to converge')
         return
+    
     # print out the fitted 
     session_name = session.split('/')[-1].split('.')[0]
     # get the relative values

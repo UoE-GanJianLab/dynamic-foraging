@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tqdm
 
-from lib.calculation import moving_window_mean, get_relative_spike_times, get_relative_firing_rate_binned, get_mean_and_sem
+from lib.calculation import moving_window_mean, get_relative_spike_times, get_relative_firing_rate_binned, get_mean_and_sem, get_firing_rate_window
 from lib.figure_utils import remove_top_and_right_spines, plot_with_sem_error_bar
+from lib.figure_1 import find_switch
 
 # figures not in the current draft
 
@@ -21,6 +22,9 @@ panel_c_data_root = pjoin(figure_data_root, 'panel_c')
 for dir in [figure_data_root, panel_c_data_root]:
     if not isdir(dir):
         mkdir(dir)
+
+prpd_modulation_data = pjoin('data', 'prpd_correlation.csv')
+prpd_modulation_data = pd.read_csv(prpd_modulation_data)
 
 wheel_velocity_data_root = pjoin('data', 'behaviour_data', 'wheel_velocity')
 WHEEL_VELOCITY_SAMPLING_FEREQUENCY = 200
@@ -193,5 +197,105 @@ def figure_3_panel_bc():
             pfc_times = np.load(pfc_times)
             relative_to_pfc = get_relative_spike_times(pfc_times, cue_times, -0.5, 1.5)
 
-            
+def prpd_firing_rate_vs_advantageous_proportion(type='ALL'):
+    advantageous_proportion = []
+    normalized_prpd_firing_rate_response_mag = []
 
+    # iterate through the sessions and find the prpd modulated neurons
+    for session_name in tqdm.tqdm(listdir(behaviour_data_root)):
+        if isdir(pjoin(behaviour_data_root, session_name)):
+            continue
+
+        # load the behaviour data
+        behaviour_data = pd.read_csv(pjoin(behaviour_data_root, session_name))
+
+        session_name = session_name.split('.')[0]
+
+        # get the switches
+        switches = find_switch(behaviour_data['leftP'].values)
+
+        # calculate the percentage of advantageous trials in 20 trials after each switch
+        for switch in switches:
+            # if there are less than 20 trials after the switch, skip
+            if switch + 20 > len(behaviour_data):
+                continue
+
+
+            if behaviour_data.iloc[switch+1]['leftP'] > behaviour_data.iloc[switch+1]['rightP']:
+                advantageous_proportion.append(moving_window_mean(behaviour_data['trial_response_side'].values[switch:switch+20] == 1))
+            else:
+                advantageous_proportion.append(moving_window_mean(behaviour_data['trial_response_side'].values[switch:switch+20] == -1))
+            
+            if type == 'PFC':
+                cells = glob(pjoin(spike_firing_root, session_name, 'pfc_*'))
+            elif type == 'DMS':
+                cells = glob(pjoin(spike_firing_root, session_name, 'dms_*'))
+            else:
+                cells = glob(pjoin(spike_firing_root, session_name, 'pfc_*')) + glob(pjoin(spike_firing_root, session_name, 'dms_*'))
+            # load the pfc firing data in the sessions
+            for cell_firing in cells:
+                cell_name = basename(cell_firing).split('.')[0]
+
+                cell_firing = np.load(cell_firing)
+                relative_firing_rate = get_firing_rate_window(cue_times=behaviour_data['cue_time'].values, spike_times=cell_firing, window_left=0, window_right=1.5)
+                # normalized the firing rate
+                if np.max(relative_firing_rate) != 0:
+                    relative_firing_rate = relative_firing_rate / np.max(relative_firing_rate)
+                else:
+                    continue
+
+                # check if the neuron is prpd modulated
+                prpd_modulation = prpd_modulation_data[(prpd_modulation_data['session'] == session_name) & (prpd_modulation_data['cell'] == cell_name)]
+
+                # if cell does not have prpd modulation data, skip
+                if prpd_modulation.empty:
+                    continue
+
+                if prpd_modulation['response_firing_p_values'].values[0] > 0.05:
+                    continue
+
+                # get the firing rate in the current switch
+                relative_firing_rate = relative_firing_rate[switch:switch+20]
+
+                if prpd_modulation['response_firing_pearson_r'].values[0] < 0:
+                    normalized_prpd_firing_rate_response_mag.append(relative_firing_rate)
+                else:
+                    # sign flip the negatively modulated neurons
+                    normalized_prpd_firing_rate_response_mag.append(1-relative_firing_rate)
+
+    advantageous_proportion = np.array(advantageous_proportion)
+    normalized_prpd_firing_rate_response_mag = np.array(normalized_prpd_firing_rate_response_mag)
+
+    print(advantageous_proportion.shape)
+    print(normalized_prpd_firing_rate_response_mag.shape)
+
+    # get the mean and sem of the firing rate and advantageous proportion
+    mean_firing_rate, sem_firing_rate = get_mean_and_sem(normalized_prpd_firing_rate_response_mag)
+    mean_advantageous_proportion, sem_advantageous_proportion = get_mean_and_sem(advantageous_proportion)
+
+    # save the data as csv
+    data = pd.DataFrame({
+        'firing_rate': mean_firing_rate,
+        'sem_firing_rate': sem_firing_rate,
+        'advantageous_proportion': mean_advantageous_proportion,
+        'sem_advantageous_proportion': sem_advantageous_proportion
+    })
+
+    if type == 'PFC':
+        data.to_csv(pjoin(panel_c_data_root, 'pfc.csv'))
+    elif type == 'DMS':
+        data.to_csv(pjoin(panel_c_data_root, 'dms.csv'))
+    else:
+        data.to_csv(pjoin(panel_c_data_root, 'all.csv'))
+
+
+    # plot the firing rate against the advantageous proportion
+    fig, axes = plt.subplots(1, 1, figsize=(10, 5))
+    axes_1 = axes.twinx()
+    plot_with_sem_error_bar(axes, x=range(20), mean=mean_firing_rate, sem=sem_firing_rate, label='Firing Rate', color='black')
+    plot_with_sem_error_bar(axes_1, x=range(20), mean=mean_advantageous_proportion, sem=sem_advantageous_proportion, label='Advantageous Proportion', color='red')
+    # merge the legend
+    axes.legend(loc='upper left')
+    axes_1.legend(loc='upper right')
+    
+    plt.show()

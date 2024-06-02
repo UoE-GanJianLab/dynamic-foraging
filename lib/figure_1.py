@@ -109,10 +109,11 @@ def get_figure_1_panel_b():
     figure_data.to_csv(path_or_buf=pjoin(figure_data_root, 'figure_1_panel_b.csv'))
     
 
-        
 def get_figure_1_panel_c():
     for session in glob(pjoin(behaviour_data_root, '*.csv')):
         session_name = basename(session).split('.')[0]
+        if session_name != "AKED0220210730":
+            continue
 
         if not isfile(pjoin('data', 'relative_values', session_name+'.npy')):
             continue
@@ -126,12 +127,14 @@ def get_figure_1_panel_c():
         high_reward_side = np.array(high_reward_side, dtype=int)
         high_reward_side[high_reward_side==0] = -1
         chosen_high_reward_side = trial_response_side == high_reward_side
+        chosen_right_side = trial_response_side == 1
 
         left_response, right_response = trial_response_side == -1, trial_response_side == 1
         left_response_proportion, right_response_proportion = moving_window_mean(left_response, 20), moving_window_mean(right_response, 20)
 
         high_reward_proportion = moving_window_mean(chosen_high_reward_side, 20)
         reward_proportion = moving_window_mean(trial_reward == 1, 20)
+        right_response_proportion = moving_window_mean(right_response, 20) 
 
         trial_indices = np.arange(len(leftP)) + 1
 
@@ -145,36 +148,81 @@ def get_figure_1_panel_c():
         figure_1_panel_c_data.to_csv(pjoin(panel_c_data_root, session_name+'.csv'), index=False)
 
 
-        # plot the results
-        fig, axes = plt.subplots(4, 1, figsize=(10, 15))
-        # plot set reward probabilities
-        axes[0].plot(trial_indices, leftP, label='leftP')
-        axes[0].plot(trial_indices, rightP, label='rightP')
-        axes[0].set_xlabel('trials')
-        axes[0].set_ylabel('reward probability')
-        axes[0].legend()
-        # plot the proportion of left and right responses
-        axes[1].plot(trial_indices, left_response_proportion, label='left response proportion')
-        axes[1].plot(trial_indices, right_response_proportion, label='right response proportion')
-        axes[1].set_xlabel('trials')
-        axes[1].set_ylabel('proportion')
-        axes[1].legend()
-        # plot perceived reward probabilities and prpd
-        axes[2].plot(trial_indices, perceived_left, label='perceived left')
-        axes[2].plot(trial_indices, perceived_right, label='perceived right')
-        axes[2].plot(trial_indices, prpd, label='prpd')
-        axes[2].plot(trial_indices, relative_values, label='relative values')
-        axes[2].plot(trial_indices, prpd_calculated, label='prpd calculated')
-        axes[2].set_xlabel('trials')
-        axes[2].set_ylabel('reward probability')
-        axes[2].legend()
-        # plot the proportion of high reward side choices and rewarded trials
-        axes[3].plot(trial_indices, high_reward_proportion, label='high reward proportion')
-        axes[3].plot(trial_indices, reward_proportion, label='reward proportion')
-        axes[3].set_xlabel('trials')
-        axes[3].set_ylabel('proportion')
-        axes[3].legend()
-        fig.suptitle(session_name)
+        # # plot the results
+        # fig, axes = plt.subplots(4, 1, figsize=(10, 15))
+        # # plot set reward probabilities
+        # axes[0].plot(trial_indices, leftP, label='leftP')
+        # axes[0].plot(trial_indices, rightP, label='rightP')
+        # axes[0].set_xlabel('trials')
+        # axes[0].set_ylabel('reward probability')
+        # axes[0].legend()
+        # # plot the proportion of left and right responses
+        # axes[1].plot(trial_indices, left_response_proportion, label='left response proportion')
+        # axes[1].plot(trial_indices, right_response_proportion, label='right response proportion')
+        # axes[1].set_xlabel('trials')
+        # axes[1].set_ylabel('proportion')
+        # axes[1].legend()
+        # # plot perceived reward probabilities and prpd
+        # axes[2].plot(trial_indices, perceived_left, label='perceived left')
+        # axes[2].plot(trial_indices, perceived_right, label='perceived right')
+        # axes[2].plot(trial_indices, prpd, label='prpd')
+        # axes[2].plot(trial_indices, relative_values, label='relative values')
+        # axes[2].plot(trial_indices, prpd_calculated, label='prpd calculated')
+        # axes[2].set_xlabel('trials')
+        # axes[2].set_ylabel('reward probability')
+        # axes[2].legend()
+        # # plot the proportion of high reward side choices and rewarded trials
+        # axes[3].plot(trial_indices, high_reward_proportion, label='high reward proportion')
+        # axes[3].plot(trial_indices, reward_proportion, label='reward proportion')
+        # axes[3].set_xlabel('Trial Number')
+        # axes[3].set_ylabel('Probability')
+        # axes[3].legend()
+        # fig.suptitle(session_name)
+
+        plt.rcParams.update({'font.size': 20})
+        # increase line width and axis width
+        plt.rcParams['axes.linewidth'] = 2
+        plt.rcParams['lines.linewidth'] = 2
+
+        fig, axes = plt.subplots(2, 1, figsize=(10, 6), height_ratios=[1, 2])
+        axes1 = axes[1].twinx()
+        # plot leftP, rightP, prpd and reward proportion on the same plot
+        axes[0].plot(trial_indices[:-1], leftP[:-1], label='left reward probability', color='blue')
+        axes[0].plot(trial_indices[:-1], rightP[:-1], label='right reward probability', color='red')
+        axes[1].plot(trial_indices, prpd, label='prpd', color='black')
+        axes1.plot(trial_indices, left_response_proportion, label='left response proportion', color='magenta')
+        axes[1].set_xlabel('Trial Number')
+        axes[1].set_ylabel('Probability')
+        axes1.set_ylabel('Proportion')
+        axes[0].set_ylabel('Probability')
+        axes[0].set_ylim(0, 1)
+        axes[0].set_xlim(0, len(trial_indices))
+
+
+
+        axes[1].set_ylim(-1.1, 1.1)
+        axes[1].set_xlim(0, len(trial_indices))
+        axes1.set_ylim(-0.1, 1.1)
+        axes1.set_xlim(0, len(trial_indices))
+        # remove top spine
+        axes[1].spines['top'].set_visible(False)
+        axes1.spines['top'].set_visible(False)
+        remove_top_and_right_spines(axes[0])
+        # remove the bottom spine as well
+        axes[0].spines['bottom'].set_visible(False)
+        # remove the x axis
+        axes[0].xaxis.set_visible(False)
+        # set legend to below the plot
+        # and merge the legend of the two axes
+        h1, l1 = axes[0].get_legend_handles_labels()
+        h2, l2 = axes1.get_legend_handles_labels()
+        h3, l3 = axes[1].get_legend_handles_labels()
+        axes[1].legend(h1+h2+h3, l1+l2+l3, loc='upper center', bbox_to_anchor=(0.5, -0.16), ncol=2, frameon=False)
+        # fig.suptitle(session_name)
+        plt.show()
+
+        return fig        
+
 
 
 def get_figure_1_panel_d():
@@ -224,8 +272,7 @@ def get_figure_1_panel_d():
     ax.set_ylabel('percentage')
     ax.legend()
     plt.show()
-
-
+    
 # return the indices of the trials where the high reward side switches
 def find_switch(leftP: np.ndarray) -> List[int]:
     switch_indices = []

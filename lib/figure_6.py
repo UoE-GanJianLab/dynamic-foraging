@@ -7,6 +7,8 @@ from shutil import rmtree
 
 import pandas as pd
 import numpy as np
+import matplotlib
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import seaborn as sns
@@ -64,6 +66,8 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
             dms_times = np.load(row['dms_path'])
 
             session_name = basename(row['session_path']).split('.')[0]
+            if session_name != 'AKED0220210730':
+                continue
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
             if relative_value_root == pjoin('data', 'relative_values'):
                 # smoothen the relative value
@@ -78,13 +82,21 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
             pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
             dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-            draw_fig_6_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
+            # if either pfc or dms mag has zero std, then skip the pair
+            if np.std(pfc_mag) == 0 or np.std(dms_mag) == 0:
+                continue
+
+            figure = draw_fig_6_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
+            figure.savefig(fig_path, dpi=300)
     else:
         for session_name in listdir(spike_data_root):
             behaviour = pjoin(behaviour_root, session_name + '.csv')
             behaviour_data = pd.read_csv(behaviour)
             cue_times = behaviour_data['cue_time'].tolist()
             relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
+            # check if session name is AKED0220210730
+            if session_name != 'AKED0220210730':
+                continue
             # if relative_value_root == pjoin('data', 'relative_values'):
             #     # smoothen the relative value
             #     relative_value = moving_window_mean_prior(relative_value, 10)
@@ -98,72 +110,132 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
             for pfc in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
                 pfc_times = np.load(pfc)
                 pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
-                if check_probe_drift(pfc_mag):
+                # if check_probe_drift(pfc_mag):
+                #     progress_bar.update(dms_count)
+                #     continue
+                pfc_name = basename(pfc).split('.')[0]
+                if pfc_name != 'pfc_12':
+                    continue
+                if np.std(pfc_mag) == 0:
+                    print(pfc_mag)
                     progress_bar.update(dms_count)
                     continue
                 for dms in glob(pjoin(spike_data_root, session_name, 'dms_*')):
                     dms_times = np.load(dms)
                     dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times) 
-                    if check_probe_drift(dms_mag):
+                    if np.std(dms_mag) == 0:
+                        print(dms_mag)
                         progress_bar.update(1)
                         continue
+                    # if check_probe_drift(dms_mag):
+                    #     progress_bar.update(1)
+                    #     continue
                     pfc_name = basename(pfc).split('.')[0]
                     dms_name = basename(dms).split('.')[0]
+
+                    if dms_name != 'dms_7':
+                        continue
                     
                     fig = draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
-                    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+                    plt.show()
+                    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.svg'
+                    fig_name_png = '_'.join([session_name, pfc_name, dms_name]) + '.png'
                     if relative_value_root == pjoin('data', 'relative_values'):
                         fig_path = pjoin(figure_6_panel_b_figure_path_relative_value, fig_name)
                     else:
                         fig_path = pjoin(figure_6_panel_b_figure_path_prpd, fig_name)
 
                     fig.savefig(fig_path, dpi=300)
+                    fig.savefig(fig_path.replace('.svg', '.png'), dpi=300)
                     plt.close(fig)
                     progress_bar.update(1)
 
 
 # TODO add relative value signal
 def draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
+    # increase figure font size
+    plt.rcParams.update({'font.size': 20})
+    # increase line width and axis width
+    plt.rcParams['axes.linewidth'] = 2
+    plt.rcParams['lines.linewidth'] = 2
+
     session_length = len(pfc_mag)
     # green is striatum, black is PFC, left is striatum, right is pfc
-    fig, axes = plt.subplots(3, 1, figsize=(15, 20))
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12))
+    # set all axes to twin x
+    axes_0_1 = axes[0].twinx()
+    # remove the top spine
+    axes[0].spines['top'].set_visible(False)
+    remove_top_and_right_spines(axes[1])
+    remove_top_and_right_spines(axes[2])
+    axes_0_1.spines['top'].set_visible(False)
+
+    # locate y axis at 0 on x axis
+    plt.xlim(0, session_length)
+    axes[0].set_ylim(0, max(dms_mag))
+    axes_0_1.set_ylim(0, max(pfc_mag))
+
+    # set the tick labels color to green
+    axes[0].tick_params(axis='y', colors='green')
+
+    # relative_values = (relative_values - np.mean(relative_values)) / np.std(relative_values)
+
+    fig_1 = sns.lineplot(x=np.arange(session_length, dtype=int), y=dms_mag, ax=axes[0], color='green', label='Striatum')
+    fig_2 = sns.lineplot(x=np.arange(session_length, dtype=int), y=pfc_mag, ax=axes_0_1, color='black', label='PFC')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=relative_values, ax=axes[0], color='red')
+
+    # set y limit of the axes
+    axes[0].set_ylim(0, 35)
+    axes_0_1.set_ylim(0, 10)
+
+    # plot the legend so that they do not overlap
+    h1,l1 = fig_1.get_legend_handles_labels()
+    h2,l2 = fig_2.get_legend_handles_labels()
+    axes[0].legend(handles=h1+h2, labels = l1+l2, frameon=False, ncol=2)
+
+    axes_0_1.get_legend().remove()
+
+    pfc_mag_org = pfc_mag
+    dms_mag_org = dms_mag
+
     # get the z score of pfc, dms and relative value
     pfc_mag = (pfc_mag - np.mean(pfc_mag)) / np.std(pfc_mag)
     dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
-    relative_values = (relative_values - np.mean(relative_values)) / np.std(relative_values)
-
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=dms_mag, ax=axes[0], color='green')
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=pfc_mag, ax=axes[0], color='black')
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=relative_values, ax=axes[0], color='red')
 
     # low_pass filter
     b, a = butter(N=4, Wn=10/session_length, btype='low', output='ba')
     filtered_pfc = filter_signal(pfc_mag, b, a)
     filtered_dms = filter_signal(dms_mag, b, a)
-    filtered_relative_values = filter_signal(relative_values, b, a)
+    # filtered_relative_values = filter_signal(relative_values, b, a)
 
     # plot filtered signal
     sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_dms, ax=axes[1], color='green')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_pfc, ax=axes[1], color='black')
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_relative_values, ax=axes[1], color='red')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_relative_values, ax=axes[1], color='red')
+
+    axes[1].set_ylim(min(min(filtered_dms), min(filtered_pfc)), max(max(filtered_dms), max(filtered_pfc)))
+    axes[1].set_xlim(0, session_length)
 
     # hilbert transform
     phase_pfc = hilbert_transform(filtered_pfc)
     phase_dms = hilbert_transform(filtered_dms)
-    phase_relative_values = hilbert_transform(filtered_relative_values)
+    # phase_relative_values = hilbert_transform(filtered_relative_values)
     sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_dms, ax=axes[2], color='green')
     sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_pfc, ax=axes[2], color='black')
-    sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_relative_values, ax=axes[2], color='red')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_relative_values, ax=axes[2], color='red')
+
+    axes[2].set_ylim(-np.pi, np.pi)
+    axes[2].set_xlim(0, session_length)
 
     data_file_name = '_'.join([session_name, pfc_name, dms_name]) + '.csv'
 
     if relative_value_root == pjoin('data', 'relative_values'):
         # store the data in a dataframe
-        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'relative_value_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'relative_value_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'relative_value_phase': phase_relative_values})
+        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'relative_value_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms,  'pfc_phase': phase_pfc, 'dms_phase': phase_dms})
         figure_6_panel_b_data.to_csv(pjoin(figure_6_panel_b_data_root_relative_value, data_file_name), index=False)
     else:
         # store the data in a dataframe
-        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms, 'prpd_filtered': filtered_relative_values, 'pfc_phase': phase_pfc, 'dms_phase': phase_dms, 'prpd_phase': phase_relative_values})
+        figure_6_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_org': pfc_mag_org, 'dms_mag_org': dms_mag_org,' pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms,  'pfc_phase': phase_pfc, 'dms_phase': phase_dms})
         figure_6_panel_b_data.to_csv(pjoin(figure_6_panel_b_data_root_prpd, data_file_name), index=False)
     
     return fig
