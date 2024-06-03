@@ -42,19 +42,6 @@ for relative_value_file in glob.glob(pjoin(relative_value_dir, '*.npy')):
 # get the absolute value of the pearson correlation
 pearson_correlation = np.abs(pearson_correlation)
 
-# plt.clf()
-# # plot the pearson correlation against the performance
-# plt.scatter(pearson_correlation, session_performances)
-# # fit a linear regression line to the data with minimum mse
-# m, b = np.polyfit(pearson_correlation, session_performances, 1)
-# plt.plot(pearson_correlation, m*np.array(pearson_correlation) + b, color='red') 
-# plt.xlabel('Pearson Correlation')
-# plt.ylabel('Performance')
-# plt.title('Pearson Correlation vs Performance')
-# # remove the top and right spines
-# sns.despine()
-# plt.savefig('relative_value_vs_performance.png')
-
 # plot the two plots in one figure side by side
 plt.rcParams.update({'font.size': 20})
 # increase line width and axis width
