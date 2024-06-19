@@ -27,15 +27,12 @@ wheel_velocity_time_bin = 1 / DOWNSAMPLING_FREQUENCY
 WINDOW_LEFT = -0.5
 WINDOW_RIGHT = 1.5
 
-# TODO correct figure_data path with poster figure number
 def get_figure_1_panel_b():
     wheel_velocities_rewarded = []
     wheel_velocities_unrewarded = []
 
     relative_reward_time = []
     total_trial = 0
-
-    # TODO downsample the wheel velocity signal
 
 
     # for all sessions, load the cue times
