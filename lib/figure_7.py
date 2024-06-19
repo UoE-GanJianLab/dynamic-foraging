@@ -19,6 +19,7 @@ significance_level = 0.05
 
 mono_total = len(all_mono_pairs)
 
+# figure 7 pie chart 
 def get_figure_7_panel_b():
     response_only_mono_pairs_percent = 0
     background_only_mono_pairs_percent = 0

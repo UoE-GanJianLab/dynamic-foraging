@@ -23,9 +23,6 @@ BIN_SIZE = 0.02 # 20ms bins
 spike_time_dir = pjoin('data', 'spike_times')
 behaviour_root = pjoin('data', 'behaviour_data')
 
-# TODO: prpd strongly correlated either
-# TODO: left and right response split
-
 # load the prpd correlation data
 prpd_correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
 
@@ -56,7 +53,7 @@ def compute_component_prp_spike_times(component_idx, prp_idx, relative_to_pfc, w
 
 
 
-# poster panel a,b of figure 3
+# mPFC DMS firing rate aligned by trial initiation
 def get_figure_3_panel_ab(reset=False, prpd=False):
     dms_count = 0
     pfc_count = 0
@@ -339,7 +336,7 @@ def get_figure_3_panel_ab(reset=False, prpd=False):
     ax_dms.set_xlabel('Time from Trial Start (s)', fontsize=16)
     ax_dms.legend(loc='upper right', fontsize=16)
 
-
+# the signal, mvt, and reward regressors for the pfc and dms
 def get_figure_3_panel_cd():
     if not isfile(signal_mvt_reward_file):
         # print error message
@@ -379,7 +376,7 @@ def get_figure_3_panel_cd():
     fig_pfc.suptitle('PFC', fontsize=16)
     fig_dms.suptitle('DMS', fontsize=16)
 
-
+# regression coefficients of the signal, mvt, and reward components
 def get_figure_3_panel_ef():
     if not isfile(signal_mvt_reward_file):
         # print error message
@@ -624,6 +621,7 @@ def get_figure_3_panel_ef():
     fig_pfc.tight_layout()
     fig_dms.tight_layout()
 
+# split by direction to rule out directional effects
 def get_figure_3_panel_ef_direction_modulation(prpd=False):
     if not isfile(signal_mvt_reward_file):
         # print error message
@@ -1016,7 +1014,7 @@ def get_figure_3_panel_ef_direction_modulation(prpd=False):
     coeffs_dataframe = pd.DataFrame({'direction': ['left', 'right'],'dms_signal_mvt_coeff': [signal_mvt_coeffs_left_mean, signal_mvt_coeffs_right_mean], 'dms_signal_mvt_sem': [signal_mvt_coeffs_left_err, signal_mvt_coeffs_right_err], 'dms_mvt_mvt_coeff': [mvt_mvt_coeffs_left_mean, mvt_mvt_coeffs_right_mean], 'dms_mvt_mvt_sem': [mvt_mvt_coeffs_left_err, mvt_mvt_coeffs_right_err], 'dms_reward_mvt_coeff': [reward_mvt_coeffs_left_mean, reward_mvt_coeffs_right_mean], 'dms_reward_mvt_sem': [reward_mvt_coeffs_left_err, reward_mvt_coeffs_right_err], 'dms_signal_reward_coeff': [signal_reward_coeffs_left_mean, signal_reward_coeffs_right_mean], 'dms_signal_reward_sem': [signal_reward_coeffs_left_err, signal_reward_coeffs_right_err], 'dms_mvt_reward_coeff': [mvt_reward_coeffs_left_mean, mvt_reward_coeffs_right_mean], 'dms_mvt_reward_sem': [mvt_reward_coeffs_left_err, mvt_reward_coeffs_right_err], 'dms_reward_reward_coeff': [reward_reward_coeffs_left_mean, reward_reward_coeffs_right_mean], 'dms_reward_reward_sem': [reward_reward_coeffs_left_err, reward_reward_coeffs_right_err]})
     coeffs_dataframe.to_csv('dms_coeffs.csv', index=False)
 
-
+# split regression results by high and low prp
 def get_figure_4_panel_ab():
     if not isfile(signal_mvt_reward_file):
         # print error message
@@ -1417,7 +1415,7 @@ def figure_3_panel_bc():
             relative_to_pfc = get_relative_spike_times(pfc_times, cue_times, -0.5, 1.5)
 
 
-
+# split the trials by high and low prp
 def get_high_low_prp_index(session_name: str, reset: bool = False):
     if isfile(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy')) and not reset:
         high_prp = np.load(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy'))
@@ -1435,12 +1433,11 @@ def get_high_low_prp_index(session_name: str, reset: bool = False):
         np.save(pjoin(spike_time_dir, 'figure_3', session_name+'_high.npy'), high_prp)
         np.save(pjoin(spike_time_dir, 'figure_3', session_name+'_low.npy'), low_prp)
     # truncate the high_prp and low_prp to the same length
-    # TODO why is this necessary?
     high_prp = high_prp[:min(len(high_prp), len(low_prp))]
     low_prp = low_prp[:min(len(high_prp), len(low_prp))]
     return high_prp, low_prp
 
-
+# split the trials by direction
 def get_lr_index(session_name: str, reset: bool = False):
     # load the behaviour data
     behaviour_data = pd.read_csv(pjoin(behaviour_root, session_name+'.csv'))

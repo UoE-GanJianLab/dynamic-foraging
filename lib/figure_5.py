@@ -52,6 +52,7 @@ for dir in [figure_5_figure_root, figure_5_panel_abcd_figure_root, figure_5_pane
 
 significance_threshold = 0.05
 
+# plotting the raster plots used by panel a, b, c, and d
 def raster(spikes, cue_times, leftP, session_name, brain_section):
     for ind in range(len(spikes)):
         fig, axes = plt.subplots(2, 1, figsize=(15, 10))
@@ -260,7 +261,7 @@ def calculate_correlation_statistics():
     relative_value_correlation_data = pd.DataFrame({'session': session_names_relative_value, 'cell': cell_names_relative_value, 'background_firing_pearson_r': relative_value_correlations_bg, 'background_firing_p_values': relative_value_p_values_bg, 'response_firing_pearson_r': relative_value_correlations_response, 'response_firing_p_values': relative_value_p_values_response})
     relative_value_correlation_data.to_csv(pjoin('data', 'relative_value_correlation.csv'), index=False)
 
-
+# pie char for panel e and f
 def get_figure_5_panel_ef_left(prpd=True):
     if prpd:
         correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
@@ -318,7 +319,7 @@ def get_figure_5_panel_ef_left(prpd=True):
     plt.pie([dms_cells_neither_percent, dms_cells__background_only_percent, dms_cells_response_only_percent, dms_cells_both_percent], labels=[f'not correlated {dms_cells_neither_percent * total_dms_cells:.0f}', f'ITI firing only {dms_cells__background_only_percent * total_dms_cells:.0f}', f'response magnitude only {dms_cells_response_only_percent * total_dms_cells:.0f}', f'both {dms_cells_both_percent * total_dms_cells:.0f}'], autopct='%1.1f%%')
     plt.title('DMS')
 
-
+# comparing direction of firing rate correlation with prpd(positive vs negative correlation) 
 def get_figure_5_panel_ef_right(prpd=True):
     if prpd:
         correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
@@ -420,16 +421,7 @@ def get_figure_5_panel_ef_right(prpd=True):
 significan_p_threshold = 0.05
 bin_size = 0.25
 
-def firing_rate_vs_relative_value():
-    # instead of spliting to R and L trials
-    # plot the firing rate vs relative value
-    # for all trials
-    # go through each sessions and load up the behaviour data
-    # as well as the relative values
-    relative_values = []
-    firing_rates = []
-
-
+# NOTE: removed from manuscript
 def get_figure_5_panel_gh():
     # go through each sessions and load up the behaviour data 
     # as well as the relative values

@@ -60,7 +60,6 @@ WINDOW_LEFT = -1
 WINDOW_RIGHT = 0
 BIN_SIZE = 0.01
 
-figure_8_selected = ['AKED0420210804_pfc_10_dms_23', 'AKED0520210726_pfc_16_dms_18', 'AKED0120210721_pfc_6_dms_0']
 
 # using firing during intertrial interval (ITI) window -1 to -0.5ms
 def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reset: bool=False) -> np.ndarray:
@@ -107,7 +106,7 @@ def get_interconnectivity_strength(pfc_times: np.ndarray, dms_times: np.ndarray,
     return interconnectivity_strength
 
 # TODO divie this method into panel ab and c
-def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
+def figure_8_panel_abcd(session_name: str, pfc_name: str, dms_name: str, pfc_times: np.ndarray, dms_times: np.ndarray, cue_times: np.ndarray, reward_proportion: np.ndarray, reset: bool = False, plot: bool = True):
     # load the interconnectivity strength if it exists
     if isfile(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy')) and not reset:
         interconnectivity_strength = np.load(pjoin(figure_8_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.npy'))
@@ -143,7 +142,7 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
         except (RuntimeWarning, UserWarning):
             r, p = 0, 1
     
-    if plot and f'{session_name}_{pfc_name}_{dms_name}' in figure_8_selected and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
+    if plot and not isfile(pjoin(panel_abc_figure_root, f'{session_name}_{pfc_name}_{dms_name}.png')) and not check_probe_drift(interconnectivity_strength):
         panel_a_data = pd.DataFrame({'trial_index': np.arange(len(interconnectivity_strength), dtype=int)+1, 'interconnectivity_strength': interconnectivity_strength})
 
         panel_a_data.to_csv(pjoin(panel_a_data_root, f'{session_name}_{pfc_name}_{dms_name}_interconnectivity_strength.csv'))
@@ -199,10 +198,10 @@ def figure_8_panel_abc(session_name: str, pfc_name: str, dms_name: str, pfc_time
     return p, r, list(overall_cross_cor)
 
 
-# average propotion of significantly positively and negatively correlated prior reward
-# proportion and interconnectivity strength. Panel d is for all the data, while panel d
+# average proportion of significantly positively and negatively correlated prior reward
+# proportion and interconnectivity strength. Panel e is for all the data, while panel i
 # is for the mono pair data
-def figure_8_panel_dh(mono: bool = False, reset: bool = False):
+def figure_8_panel_hl(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
     sig_rs_positive_percentage = []
     sig_rs_negative_percentage = []
@@ -245,7 +244,7 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, _ = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, _ = figure_8_panel_abcd(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             if p < p_value_threshold:
                 if r > 0:
@@ -288,8 +287,8 @@ def figure_8_panel_dh(mono: bool = False, reset: bool = False):
     print(f'positive: {sig_rs_positive_percentage_mean}, positive sem {sig_rs_positive_percentage_sem}, negative: {sig_rs_negative_percentage_mean}, negative: {sig_rs_negative_percentage_sem}')
 
 # mean cross correlation between interconnectivity strength and reward proportion
-# panel e is for all the data, while panel f is for the mono pair data
-def figure_8_panel_ei(mono: bool = False, reset: bool = False):
+# panel f is for all the data, while panel j is for the mono pair data
+def figure_8_panel_hl(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     if reset:
@@ -321,7 +320,7 @@ def figure_8_panel_ei(mono: bool = False, reset: bool = False):
             reward_proportion = moving_window_mean_prior(trial_reward, 10)
 
             # plot figure 6 poster panel ab
-            p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+            p, r, overall_crosscor = figure_8_panel_abcd(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
             overall_crosscors.append(overall_crosscor)
     else:
@@ -350,7 +349,7 @@ def figure_8_panel_ei(mono: bool = False, reset: bool = False):
 
 
 # split into rewarded and non_rewarded trials
-def figure_8_panel_fj(mono: bool = False, reset: bool = False):
+def figure_8_panel_hl(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     rewarded_strength = []
@@ -427,9 +426,9 @@ def figure_8_panel_fj(mono: bool = False, reset: bool = False):
     t, p = ttest_ind(rewarded_strength, non_rewarded_strength)
     print(f't: {t}, p: {p}')
 
-# similar to panel e, but split into plateau and transition trials instead of 
+# similar to panel gk, but split into plateau and transition trials instead of 
 # rewarded and non-rewarded trials
-def figure_8_panel_gk(mono: bool = False, reset: bool = False):
+def figure_8_panel_hl(mono: bool = False, reset: bool = False):
     fig, axes = plt.subplots(1, 1, figsize=(5, 5))
 
     plateau_strength = []
@@ -509,9 +508,9 @@ def figure_8_panel_gk(mono: bool = False, reset: bool = False):
     # save the data into a dataframe
     figure_8_panel_gk_data = pd.DataFrame({'trial_type': ['plateau', 'transition'], 'strength': [plateau_strength_mean, transition_strength_mean], 'sem': [plateau_strength_sem, transition_strength_sem]})
     if mono:
-        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_data_mono.csv'), index=False)
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_hl_data_mono.csv'), index=False)
     else:
-        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_gk_data.csv'), index=False)
+        figure_8_panel_gk_data.to_csv(pjoin(figure_data_root, 'figure_8_panel_hl_data.csv'), index=False)
 
     # # plot the plateau and transitioning trials as box plots
     # sns.boxplot(data=plateau_strength, x='trial_type', y='strength', ax=axes)
@@ -548,7 +547,7 @@ def process_session_panel_dh(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, _ = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
+        p, r, _ = figure_8_panel_abcd(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=False)
 
         if p < p_value_threshold:
             if r > 0:
@@ -664,7 +663,7 @@ def process_session_panel_ei(session, reset=False):
         dms_times = np.load(dms_path)
 
         # plot figure 6 poster panel ab
-        p, r, overall_crosscor = figure_8_panel_abc(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
+        p, r, overall_crosscor = figure_8_panel_abcd(session_name, pfc_name, dms_name, pfc_times, dms_times, cue_time, reward_proportion, reset=reset, plot=True)
 
         overall_crosscors.append(overall_crosscor)
     

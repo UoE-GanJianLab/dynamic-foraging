@@ -151,7 +151,6 @@ def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
                     progress_bar.update(1)
 
 
-# TODO add relative value signal
 def draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
     # increase figure font size
     plt.rcParams.update({'font.size': 20})
@@ -473,7 +472,7 @@ def draw_fig_6_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], ph
 
     return fig
 
-def get_figure_6_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
+def draw_figure_6_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
     fig, axes = plt.subplots(2, 2, figsize=(20, 12))
 
     bin_size = 36

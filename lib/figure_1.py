@@ -195,8 +195,6 @@ def get_figure_1_panel_c():
         axes[0].set_ylim(0, 1)
         axes[0].set_xlim(0, len(trial_indices))
 
-
-
         axes[1].set_ylim(-1.1, 1.1)
         axes[1].set_xlim(0, len(trial_indices))
         axes1.set_ylim(-0.1, 1.1)
@@ -278,6 +276,7 @@ def find_switch(leftP: np.ndarray) -> List[int]:
             switch_indices.append(i)
     return switch_indices
 
+# calculate the corresponding PRPD value of a given session
 def get_prpd(session_name, trial_response_side, trial_reward):
     crainotomy_side = 'L' if session_name[:6] == "AKED01" else 'R' 
     perceived_left = []
