@@ -1,5 +1,5 @@
 # PSRP_RPD
-Code base for paper Prefronto-striatal representation of perceived reward probability difference in a two alternative choice dynamic foraging paradigm
+Code base for paper Prefrontal cortex leads and enhances functional connectivity with striatum in need of change during flexible behavior
 
 ## data format
 
