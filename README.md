@@ -30,7 +30,7 @@ PRP: prior reward probability
 
 Organized data used for plotting the figures.
 
-The figure_data are named according to the names on the poster. 
+The figure_data are named according to the names on the manuscript. 
 
 #### Figure 1
 
