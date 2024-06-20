@@ -301,20 +301,24 @@ The parameters were bounded to the following ranges:
 
 ## lib
 
-helper functions as well as functions written for producing each figure given formatted session data
+helper functions as well as functions written for producing each figure given formatted session data.
 
 ### calculation.py
 
-Come extension to the common math libraries, including the moving window mean function as well as relative firing rate calculation
+Come extension to the common math libraries, including the moving window mean function as well as relative firing rate calculation.
 
-Normalized cross-correlation as defined by Wei Xu and the cross-correlation metric 
-
-### conversion.py
-
-### extraction.py
+Normalized cross-correlation as defined by Wei Xu and the cross-correlation metric.
 
 ### models.py
 
+Reinforcement learning model class.
+
 ### file_utils.py
+
+Loading the preprocessed input files for the figures
+
+### figure_utils.py
+
+Extensions to seaborn libraries useful in this study. Including the line plot with error bar plotted using `fill\_between`.
 
 
