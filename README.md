@@ -1,5 +1,5 @@
 # PSRP_RPD
-Code base for paper Prefronto-striatal representation of perceived reward probability difference in a two alternative choice dynamic foraging paradigm
+Code base for paper Prefrontal cortex leads and enhances functional connectivity with striatum in need of change during flexible behavior
 
 ## data format
 
@@ -30,7 +30,7 @@ PRP: prior reward probability
 
 Organized data used for plotting the figures.
 
-The figure_data are named according to the names on the poster. 
+The figure_data are named according to the names on the manuscript. 
 
 #### Figure 1
 
@@ -301,20 +301,24 @@ The parameters were bounded to the following ranges:
 
 ## lib
 
-helper functions as well as functions written for producing each figure given formatted session data
+helper functions as well as functions written for producing each figure given formatted session data.
 
 ### calculation.py
 
-Come extension to the common math libraries, including the moving window mean function as well as relative firing rate calculation
+Come extension to the common math libraries, including the moving window mean function as well as relative firing rate calculation.
 
-Normalized cross-correlation as defined by Wei Xu and the cross-correlation metric 
-
-### conversion.py
-
-### extraction.py
+Normalized cross-correlation as defined by Wei Xu and the cross-correlation metric.
 
 ### models.py
 
+Reinforcement learning model class.
+
 ### file_utils.py
+
+Loading the preprocessed input files for the figures
+
+### figure_utils.py
+
+Extensions to seaborn libraries useful in this study. Including the line plot with error bar plotted using `fill\_between`.
 
 

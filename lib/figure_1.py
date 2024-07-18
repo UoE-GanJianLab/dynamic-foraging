@@ -27,15 +27,12 @@ wheel_velocity_time_bin = 1 / DOWNSAMPLING_FREQUENCY
 WINDOW_LEFT = -0.5
 WINDOW_RIGHT = 1.5
 
-# TODO correct figure_data path with poster figure number
 def get_figure_1_panel_b():
     wheel_velocities_rewarded = []
     wheel_velocities_unrewarded = []
 
     relative_reward_time = []
     total_trial = 0
-
-    # TODO downsample the wheel velocity signal
 
 
     # for all sessions, load the cue times
@@ -198,8 +195,6 @@ def get_figure_1_panel_c():
         axes[0].set_ylim(0, 1)
         axes[0].set_xlim(0, len(trial_indices))
 
-
-
         axes[1].set_ylim(-1.1, 1.1)
         axes[1].set_xlim(0, len(trial_indices))
         axes1.set_ylim(-0.1, 1.1)
@@ -281,6 +276,7 @@ def find_switch(leftP: np.ndarray) -> List[int]:
             switch_indices.append(i)
     return switch_indices
 
+# calculate the corresponding PRPD value of a given session
 def get_prpd(session_name, trial_response_side, trial_reward):
     crainotomy_side = 'L' if session_name[:6] == "AKED01" else 'R' 
     perceived_left = []
