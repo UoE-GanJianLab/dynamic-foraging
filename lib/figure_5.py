@@ -1,838 +1,825 @@
-from os.path import join as pjoin
+from os.path import join as pjoin, isdir, isfile
 from os import listdir, mkdir
-from os.path import basename, isfile, isdir
+from os.path import basename
+from typing import List, Tuple, Dict
 from glob import glob
-from itertools import product
+from shutil import rmtree
 
 import pandas as pd
 import numpy as np
+import matplotlib
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import seaborn as sns
+from scipy.signal import butter, filtfilt, hilbert, detrend # type: ignore
+from lib.calculation import circ_mtest
+from scipy.stats import circmean, ttest_1samp # type: ignore]
+from scipy.io import savemat # type: ignore
+from pingouin import circ_corrcc
 from tqdm import tqdm
-import scipy
-from scipy.stats import ttest_rel, linregress, ttest_1samp
-from statsmodels.stats.weightstats import ztest
+# suppress warning
+import warnings
+warnings.filterwarnings("ignore")
 
-from lib.calculation import get_firing_rate_window
+from lib.file_utils import get_dms_pfc_paths_mono, get_dms_pfc_paths_all
+from lib.calculation import get_response_bg_firing, get_session_performances, moving_window_mean_prior, check_probe_drift
 
-WINDOW_LEFT = 0.5
-WINDOW_RIGHT = 1.5
-# 1/BIN_WIDTH must be an integer
-BIN_WIDTH = 0.02
+
+# relative positions to cue_time
+ITI_LEFT = -1
+ITI_RIGHT = -0.5
+RESPONSE_LEFT = 0
+RESPONSE_RIGHT = 1.5
 
 spike_data_root = pjoin('data', 'spike_times', 'sessions')
 behaviour_root = pjoin('data', 'behaviour_data')
 relative_value_root = pjoin('data', 'prpd')
 
-figure_5_data_source = pjoin('figure_data', 'figure_5')
-figure_5_panel_abcd_pfc_data_top = pjoin(figure_5_data_source, 'figure_5_panel_abcd_pfc_top')
-figure_5_panel_abcd_dms_data_top = pjoin(figure_5_data_source, 'figure_5_panel_abcd_dms_top')
-figure_5_panel_abcd_pfc_data_bottom = pjoin(figure_5_data_source, 'figure_5_panel_abcd_pfc_bottom')
-figure_5_panel_abcd_dms_data_bottom = pjoin(figure_5_data_source, 'figure_5_panel_abcd_dms_bottom')
-
-figure_5_figure_root = pjoin('figures', 'all_figures', 'figure_5')
 figure_5_data_root = pjoin('figure_data', 'figure_5')
-
-spike_firing_root = pjoin('data', 'spike_times', 'sessions')
-all_mono_pairs = pd.read_csv(pjoin('data', 'mono_pairs.csv'))
-
-ITI_WINDOW_LEFT = -1
-ITI_WINDOW_RIGHT = -0.5
-RESPONSE_WINDOW_LEFT = 0
-RESPONSE_WINDOW_RIGHT = 1.5
-
-figure_5_figure_root = pjoin('figures', 'all_figures', 'figure_5')
-figure_5_panel_abcd_figure_root = pjoin(figure_5_figure_root, 'panel_abcd')
-figure_5_panel_abcd_pfc_root = pjoin(figure_5_panel_abcd_figure_root, 'pfc')
-figure_5_panel_abcd_dms_root = pjoin(figure_5_panel_abcd_figure_root, 'dms')
-
-for dir in [figure_5_figure_root, figure_5_panel_abcd_figure_root, figure_5_panel_abcd_pfc_root, figure_5_panel_abcd_dms_root, figure_5_data_source, figure_5_panel_abcd_pfc_data_top, figure_5_panel_abcd_dms_data_top, figure_5_panel_abcd_pfc_data_bottom, figure_5_panel_abcd_dms_data_bottom]:
-    if not isdir(dir):
-        mkdir(dir)
+if not isdir(figure_5_data_root):
+    mkdir(figure_5_data_root)
+figure_5_panel_b_data_root_prpd = pjoin(figure_5_data_root, 'panel_b_prpd')
+if not isdir(figure_5_panel_b_data_root_prpd):
+    mkdir(figure_5_panel_b_data_root_prpd)
+figure_5_panel_b_data_root_relative_value = pjoin(figure_5_data_root, 'panel_b_relative_value')
+if not isdir(figure_5_panel_b_data_root_relative_value):
+    mkdir(figure_5_panel_b_data_root_relative_value)
+figure_5_panel_b_figure_path_prpd = pjoin('figures', 'all_figures', 'figure_5', 'panel_b_prpd')
+if not isdir(figure_5_panel_b_figure_path_prpd):
+    mkdir(figure_5_panel_b_figure_path_prpd)
+figure_5_panel_b_figure_path_relative_value = pjoin('figures', 'all_figures', 'figure_5', 'panel_b_relative_value')
+if not isdir(figure_5_panel_b_figure_path_relative_value):
+    mkdir(figure_5_panel_b_figure_path_relative_value)
 
 significance_threshold = 0.05
 
-def raster(spikes, cue_times, leftP, session_name, brain_section):
-    for ind in range(len(spikes)):
-        fig, axes = plt.subplots(2, 1, figsize=(15, 10))
-        pointer = 0
-        # left side advantageous
-        all_spikes_left = []
-        # right side advantageous
-        all_spikes_right = []
+def get_fig_6_panel_b(mono: bool = False, nonan: bool = False):
+    if mono:
+        mono_pairs = get_dms_pfc_paths_mono()
 
-        trial_indices = []
-        relative_spike_times = []
+        for ind, row in mono_pairs.iterrows():
+            behaviour_data = pd.read_csv(row['session_path'])
+            if nonan:
+                behaviour_data = behaviour_data[behaviour_data['trial_reward'].notna()]
+            pfc_times = np.load(row['pfc_path'])
+            dms_times = np.load(row['dms_path'])
 
-        for tiral_ind, cue in enumerate(cue_times):
-            trial_spikes = []
-            cue_left = cue - WINDOW_LEFT
-            cue_right = cue + WINDOW_RIGHT
+            session_name = basename(row['session_path']).split('.')[0]
+            if session_name != 'AKED0220210730':
+                continue
+            relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
+            if relative_value_root == pjoin('data', 'relative_values'):
+                # smoothen the relative value
+                relative_value = moving_window_mean_prior(relative_value, 10)
 
-            cell = spikes[ind]
-            # move the pointer into the trial window
-            while pointer < len(cell) and cell[pointer] < cue_left:
-                pointer += 1
-            # recording all spikes in the window
-            while pointer < len(cell) and cell[pointer] <= cue_right:
-                relative_time = cell[pointer] - cue
-                if leftP[tiral_ind] > 0.5:
-                    all_spikes_left.append(relative_time)
-                else:
-                    all_spikes_right.append(relative_time)
-                trial_spikes.append(relative_time)
-                pointer += 1
-            sns.scatterplot(x=trial_spikes, y=tiral_ind, ax=axes[0], color='black', markers=".", s=5) # type: ignore
-            trial_indices.extend(([tiral_ind])*len(trial_spikes))
-            relative_spike_times.extend(trial_spikes)
-        
-        bins = np.arange(start=-WINDOW_LEFT, stop=WINDOW_RIGHT, step=BIN_WIDTH)
-        left_y, left_bin_edges = np.histogram(all_spikes_left, bins=bins)
-        left_bin_centers = 0.5 * (left_bin_edges[1:] + left_bin_edges[:-1])
-        sns.lineplot(x=left_bin_centers, y=(left_y * int(1 / BIN_WIDTH)) / len(cue_times), ax=axes[1], label='Left P high')
+            pfc_name = basename(row['pfc_path']).split('.')[0]
+            dms_name = basename(row['dms_path']).split('.')[0]
+            fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+            fig_path = pjoin('figures', 'all_figures', 'figure_5', 'panel_b', fig_name)
 
-        right_y, right_bin_edges = np.histogram(all_spikes_right, bins=bins)
-        right_bin_centers = 0.5 * (right_bin_edges[1:] + right_bin_edges[:-1])
-        sns.lineplot(x=right_bin_centers, y=right_y * int(1 / BIN_WIDTH) / len(cue_times), ax=axes[1], label='Right P high')
+            cue_times = behaviour_data['cue_time'].tolist()
+            pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+            dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
 
-        axes[0].get_xaxis().set_visible(False)
-        axes[1].set_xticks([-0.5, 0, 0.5, 1, 1.5])
-        axes[0].spines['top'].set_visible(False)
-        axes[0].spines['bottom'].set_visible(False)
-        axes[0].spines['right'].set_visible(False)
-        axes[1].spines['top'].set_visible(False)
-        axes[1].spines['right'].set_visible(False)
-
-        # set axis labels and fig name
-        axes[0].set_ylabel('Trial Number')
-        axes[1].set_ylabel('Frequency (HZ)')
-
-        axes[1].legend(bbox_to_anchor=(1.15, 0.7))
-
-        fig_name = session_name + '_' + brain_section + '_' + str(ind) + '.png'
-        data_file_name = session_name + '_' + brain_section + '_' + str(ind) + '.csv'
-
-        if brain_section == 'pfc':
-            fig.savefig(pjoin(figure_5_panel_abcd_pfc_root, fig_name), dpi=100)
-        else:
-            fig.savefig(pjoin(figure_5_panel_abcd_dms_root, fig_name), dpi=100)
-
-        plt.close(fig)
-
-        # save the firing data
-        raster_data = pd.DataFrame({'trial_index': trial_indices, 'relative_spike_time': relative_spike_times})
-        if brain_section == 'pfc':
-            figure_5_panel_abcd_pfc_data_top_path = pjoin(figure_5_panel_abcd_pfc_data_top, data_file_name)
-            raster_data.to_csv(figure_5_panel_abcd_pfc_data_top_path, index=False)
-        else:
-            figure_5_panel_abcd_dms_data_top_path = pjoin(figure_5_panel_abcd_dms_data_top, data_file_name)
-            raster_data.to_csv(figure_5_panel_abcd_dms_data_top_path, index=False)
-
-        left_bin_centers = np.round(left_bin_centers, 2)
-        line_data = pd.DataFrame({'bin_centers': left_bin_centers, 'left_p_high': left_y * int(1 / BIN_WIDTH) / len(cue_times), 'right_p_high': right_y * int(1 / BIN_WIDTH) / len(cue_times)})
-        if brain_section == 'pfc':
-            figure_5_panel_abcd_pfc_data_bottom_path = pjoin(figure_5_panel_abcd_pfc_data_bottom, data_file_name)
-            line_data.to_csv(figure_5_panel_abcd_pfc_data_bottom_path, index=False)
-        else:
-            figure_5_panel_abcd_dms_data_bottom_path = pjoin(figure_5_panel_abcd_dms_data_bottom, data_file_name)
-            line_data.to_csv(figure_5_panel_abcd_dms_data_bottom_path, index=False)
-
-def get_figure_5_panel_abcd():
-    for dir in tqdm(listdir(spike_data_root)):
-        pfc_path = pjoin(spike_data_root, dir, 'pfc.npy')
-        dms_path = pjoin(spike_data_root, dir, 'dms.npy')
-
-        if not isfile(pfc_path):
-            print(dir)
-            continue
-        
-        pfc_data = np.load(pfc_path, allow_pickle=True)
-        dms_data = np.load(dms_path, allow_pickle=True)
-
-        behaviour_path = pjoin('data', 'behaviour_data', dir + '.csv')
-        task_info = pd.read_csv(behaviour_path)
-
-        cue_times = task_info['cue_time']
-        leftP = task_info['leftP']
-
-        raster(spikes=pfc_data, cue_times=cue_times, leftP=leftP, session_name=dir, brain_section='pfc')
-        raster(spikes=dms_data, cue_times=cue_times, leftP=leftP, session_name=dir, brain_section='dms')
- 
-# calculate the correlation statistics
-def calculate_correlation_statistics():
-    session_names_prpd = []
-    cell_names_prpd = []
-    session_names_relative_value = []
-    cell_names_relative_value = []
-
-    prpd_correlations_response = []
-    prpd_p_values_response = []
-    prpd_correlations_bg = []
-    prpd_p_values_bg = []
-    relative_value_correlations_response = []
-    relative_value_p_values_response = []
-    relative_value_correlations_bg = []
-    relative_value_p_values_bg = []
-
-    # load the spike times for each session
-    sessions = glob(pjoin('data', 'spike_times', 'sessions', '*'))
-    for session in sessions:
-        session_name = basename(session)
-        behaviour_data = pd.read_csv(pjoin('data', 'behaviour_data', session_name+'.csv'))
-        cue_times = behaviour_data['cue_time'].values
-        
-        # load the individual cell firing data file paths
-        pfc_cells = glob(pjoin(session, 'pfc_*'))
-        dms_cells = glob(pjoin(session, 'dms_*'))
-        all_cells = pfc_cells + dms_cells
-
-        prpd = np.load(pjoin('data', 'prpd', session_name+'.npy')) 
-        prpd[prpd == 1] = 0.999 
-        relative = False
-        if isfile(pjoin('data', 'relative_values', session_name+'.npy')):
-            relative_values = np.load(pjoin('data', 'relative_values', session_name+'.npy'))
-            relative_values[relative_values == 1] = 0.999
-            relative = True
-        
-        # calculate the pearson correlation coefficient and p value for prpd and firing rate
-        # discretize the prpd into 10 bins from -1 to 1
-        bins = np.arange(-1, 1.1, 0.1)
-        prpd = np.digitize(prpd, bins, right=True)
-        # calculate the bin center for all available prpd values
-        prpd_values = np.sort(np.unique(prpd))
-
-        if relative:
-            relative_values = np.digitize(relative_values, bins, right=True)
-            delta_q_values = np.sort(np.unique(relative_values))
-
-        # load the firing data
-        for cell in all_cells:
-            cell_name = basename(cell).split('.')[0]
-            firing_data = np.load(cell, allow_pickle=False)
-            firing_rate_response = np.array(get_firing_rate_window(cue_times, firing_data, RESPONSE_WINDOW_LEFT, RESPONSE_WINDOW_RIGHT))
-            firing_rate_bg= np.array(get_firing_rate_window(cue_times, firing_data, ITI_WINDOW_LEFT, ITI_WINDOW_RIGHT))
-
-            if np.std(firing_rate_response) == 0 or np.std(firing_rate_bg) == 0:
+            # if either pfc or dms mag has zero std, then skip the pair
+            if np.std(pfc_mag) == 0 or np.std(dms_mag) == 0:
                 continue
 
-            # calculate the z score for the firing rate
-            firing_rate_response = (firing_rate_response - np.mean(firing_rate_response)) / np.std(firing_rate_response)
-            firing_rate_bg = (firing_rate_bg - np.mean(firing_rate_bg)) / np.std(firing_rate_bg)
-
-            firing_rate_response_prpd = np.array([np.mean(firing_rate_response[prpd == i]) for i in prpd_values])
-            firing_rate_bg_prpd_binned = np.array([np.mean(firing_rate_bg[prpd == i]) for i in prpd_values])
-
-            prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd_values, firing_rate_response_prpd)
-            prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd_values, firing_rate_bg_prpd_binned)
-
-            # prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd, firing_rate_response)
-            # prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd, firing_rate_bg)
-
-
-            session_names_prpd.append(session_name)
-            cell_names_prpd.append(cell_name)
-            prpd_correlations_response.append(prpd_correlation_response)
-            prpd_p_values_response.append(prpd_p_value_response)
-            prpd_correlations_bg.append(prpd_correlation_bg)
-            prpd_p_values_bg.append(prpd_p_value_bg)
-
-            if relative:
-                firing_rate_response_relative_value = np.array([np.mean(firing_rate_response[relative_values == i]) for i in delta_q_values])
-                firing_rate_bg_relative_value = np.array([np.mean(firing_rate_bg[relative_values == i]) for i in delta_q_values])
-
-                relative_value_correlation_response, relative_value_p_value_response = scipy.stats.pearsonr(delta_q_values, firing_rate_response_relative_value)
-                relative_value_correlation_bg, relative_value_p_value_bg = scipy.stats.pearsonr(delta_q_values, firing_rate_bg_relative_value)
-
-                # relative_value_correlation_response, relative_value_p_value_response = scipy.stats.pearsonr(relative_values, firing_rate_response)
-                # relative_value_correlation_bg, relative_value_p_value_bg = scipy.stats.pearsonr(relative_values, firing_rate_bg)
-
-                session_names_relative_value.append(session_name)
-                cell_names_relative_value.append(cell_name)
-                relative_value_correlations_response.append(relative_value_correlation_response)
-                relative_value_p_values_response.append(relative_value_p_value_response)
-                relative_value_correlations_bg.append(relative_value_correlation_bg)
-                relative_value_p_values_bg.append(relative_value_p_value_bg)
-    
-    # save the data to csv
-    prpd_correlation_data = pd.DataFrame({'session': session_names_prpd, 'cell': cell_names_prpd, 'background_firing_pearson_r': prpd_correlations_bg, 'background_firing_p_values': prpd_p_values_bg, 'response_firing_pearson_r': prpd_correlations_response, 'response_firing_p_values': prpd_p_values_response})
-    prpd_correlation_data.to_csv(pjoin('data', 'prpd_correlation.csv'), index=False)
-
-    relative_value_correlation_data = pd.DataFrame({'session': session_names_relative_value, 'cell': cell_names_relative_value, 'background_firing_pearson_r': relative_value_correlations_bg, 'background_firing_p_values': relative_value_p_values_bg, 'response_firing_pearson_r': relative_value_correlations_response, 'response_firing_p_values': relative_value_p_values_response})
-    relative_value_correlation_data.to_csv(pjoin('data', 'relative_value_correlation.csv'), index=False)
-
-
-def get_figure_5_panel_ef_left(prpd=True):
-    if prpd:
-        correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
+            figure = draw_fig_6_panel_b(session_name, pfc_name, dms_name,pfc_mag, dms_mag, relative_value)
+            figure.savefig(fig_path, dpi=300)
     else:
-        correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
+        for session_name in listdir(spike_data_root):
+            behaviour = pjoin(behaviour_root, session_name + '.csv')
+            behaviour_data = pd.read_csv(behaviour)
+            cue_times = behaviour_data['cue_time'].tolist()
+            relative_value = np.load(pjoin(relative_value_root, session_name + '.npy'))
+            # check if session name is AKED0220210730
+            if session_name != 'AKED0220210730':
+                continue
+            # if relative_value_root == pjoin('data', 'relative_values'):
+            #     # smoothen the relative value
+            #     relative_value = moving_window_mean_prior(relative_value, 10)
 
-    # # remove rows with nan values
-    # correlation_data = correlation_data.dropna()
+            # count the number of pfc and str pairs and use it for progress bar
+            pfc_count = len(glob(pjoin(spike_data_root, session_name, 'pfc_*')))
+            dms_count = len(glob(pjoin(spike_data_root, session_name, 'dms_*')))
+            total_count = pfc_count * dms_count
+            progress_bar = tqdm(total=total_count, desc=session_name)
 
-    # correlation_data have following columns:
-    # session,background_firing_pearson_r,background_firing_p_values,response_firing_pearson_r,response_firing_p_values,cell
-    # get the pfc cells(cell start with pfc) who are not correlated in background firing and correlated in response firing,
-    # correlated in background firing only, correlated in response firing only, and correlated in both
-    pfc_cells = correlation_data[correlation_data['cell'].str.startswith('pfc')]
-    total_pfc_cells = len(glob(pjoin(spike_firing_root, '*', 'pfc_*')))
-    
-    
-    pfc_cells__background_only = pfc_cells[(pfc_cells['background_firing_p_values'] < significance_threshold) & (pfc_cells['response_firing_p_values'] >= significance_threshold)]
-    pfc_cells__background_only_percent = len(pfc_cells__background_only) / total_pfc_cells
-    pfc_cells_response_only = pfc_cells[(pfc_cells['background_firing_p_values'] >= significance_threshold) & (pfc_cells['response_firing_p_values'] < significance_threshold)]
-    pfc_cells_response_only_percent = len(pfc_cells_response_only) / total_pfc_cells
-    pfc_cells_both = pfc_cells[(pfc_cells['background_firing_p_values'] < significance_threshold) & (pfc_cells['response_firing_p_values'] < significance_threshold)]
-    pfc_cells_both_percent = len(pfc_cells_both) / total_pfc_cells
-    pfc_cells_neither = pfc_cells[(pfc_cells['background_firing_p_values'] >= significance_threshold) & (pfc_cells['response_firing_p_values'] >= significance_threshold)]
-    pfc_cells_neither_percent = len(pfc_cells_neither) / total_pfc_cells
+            for pfc in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
+                pfc_times = np.load(pfc)
+                pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+                # if check_probe_drift(pfc_mag):
+                #     progress_bar.update(dms_count)
+                #     continue
+                pfc_name = basename(pfc).split('.')[0]
+                if pfc_name != 'pfc_12':
+                    continue
+                if np.std(pfc_mag) == 0:
+                    print(pfc_mag)
+                    progress_bar.update(dms_count)
+                    continue
+                for dms in glob(pjoin(spike_data_root, session_name, 'dms_*')):
+                    dms_times = np.load(dms)
+                    dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times) 
+                    if np.std(dms_mag) == 0:
+                        print(dms_mag)
+                        progress_bar.update(1)
+                        continue
+                    # if check_probe_drift(dms_mag):
+                    #     progress_bar.update(1)
+                    #     continue
+                    pfc_name = basename(pfc).split('.')[0]
+                    dms_name = basename(dms).split('.')[0]
 
-    # similarly for dms
-    dms_cells = correlation_data[correlation_data['cell'].str.startswith('dms')]
-    total_dms_cells = len(glob(pjoin(spike_firing_root, '*', 'dms_*')))
+                    if dms_name != 'dms_7':
+                        continue
+                    
+                    fig = draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_value) 
+                    plt.show()
+                    fig_name = '_'.join([session_name, pfc_name, dms_name]) + '.svg'
+                    fig_name_png = '_'.join([session_name, pfc_name, dms_name]) + '.png'
+                    if relative_value_root == pjoin('data', 'relative_values'):
+                        fig_path = pjoin(figure_5_panel_b_figure_path_relative_value, fig_name)
+                    else:
+                        fig_path = pjoin(figure_5_panel_b_figure_path_prpd, fig_name)
 
-    dms_cells__background_only = dms_cells[(dms_cells['background_firing_p_values'] < significance_threshold) & (dms_cells['response_firing_p_values'] >= significance_threshold)]
-    dms_cells__background_only_percent = len(dms_cells__background_only) / total_dms_cells
-    dms_cells_response_only = dms_cells[(dms_cells['background_firing_p_values'] >= significance_threshold) & (dms_cells['response_firing_p_values'] < significance_threshold)]
-    dms_cells_response_only_percent = len(dms_cells_response_only) / total_dms_cells
-    dms_cells_both = dms_cells[(dms_cells['background_firing_p_values'] < significance_threshold) & (dms_cells['response_firing_p_values'] < significance_threshold)]
-    dms_cells_both_percent = len(dms_cells_both) / total_dms_cells
-    dms_cells_neither = dms_cells[(dms_cells['background_firing_p_values'] >= significance_threshold) & (dms_cells['response_firing_p_values'] >= significance_threshold)]
-    dms_cells_neither_percent = len(dms_cells_neither) / total_dms_cells
+                    fig.savefig(fig_path, dpi=300)
+                    fig.savefig(fig_path.replace('.svg', '.png'), dpi=300)
+                    plt.close(fig)
+                    progress_bar.update(1)
 
-    # save the data to csv with these columns: |cell_location|not-correlated percentage|ITI firing correlated percentage|
-    # response magnitude correlated percentage|both ITI firing and response magnitude correlated percentage|
-    panel_e_data = pd.DataFrame({'cell_location': ['pfc', 'dms'], 'not-correlated percentage': [pfc_cells_neither_percent, dms_cells_neither_percent], 'ITI firing correlated percentage': [pfc_cells__background_only_percent, dms_cells__background_only_percent], 'response magnitude correlated percentage': [pfc_cells_response_only_percent, dms_cells_response_only_percent], 'both ITI firing and response magnitude correlated percentage': [pfc_cells_both_percent, dms_cells_both_percent]})
-    if prpd:
-        panel_e_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_left_prpd.csv'), index=False) 
+
+# TODO add relative value signal
+def draw_fig_6_panel_b(session_name, pfc_name, dms_name, pfc_mag, dms_mag, relative_values = []):
+    # increase figure font size
+    plt.rcParams.update({'font.size': 20})
+    # increase line width and axis width
+    plt.rcParams['axes.linewidth'] = 2
+    plt.rcParams['lines.linewidth'] = 2
+
+    session_length = len(pfc_mag)
+    # green is striatum, black is PFC, left is striatum, right is pfc
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12))
+    # set all axes to twin x
+    axes_0_1 = axes[0].twinx()
+    # remove the top spine
+    axes[0].spines['top'].set_visible(False)
+    remove_top_and_right_spines(axes[1])
+    remove_top_and_right_spines(axes[2])
+    axes_0_1.spines['top'].set_visible(False)
+
+    # locate y axis at 0 on x axis
+    plt.xlim(0, session_length)
+    axes[0].set_ylim(0, max(dms_mag))
+    axes_0_1.set_ylim(0, max(pfc_mag))
+
+    # set the tick labels color to green
+    axes[0].tick_params(axis='y', colors='green')
+
+    # relative_values = (relative_values - np.mean(relative_values)) / np.std(relative_values)
+
+    fig_1 = sns.lineplot(x=np.arange(session_length, dtype=int), y=dms_mag, ax=axes[0], color='green', label='Striatum')
+    fig_2 = sns.lineplot(x=np.arange(session_length, dtype=int), y=pfc_mag, ax=axes_0_1, color='black', label='PFC')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=relative_values, ax=axes[0], color='red')
+
+    # set y limit of the axes
+    axes[0].set_ylim(0, 35)
+    axes_0_1.set_ylim(0, 10)
+
+    # plot the legend so that they do not overlap
+    h1,l1 = fig_1.get_legend_handles_labels()
+    h2,l2 = fig_2.get_legend_handles_labels()
+    axes[0].legend(handles=h1+h2, labels = l1+l2, frameon=False, ncol=2)
+
+    axes_0_1.get_legend().remove()
+
+    pfc_mag_org = pfc_mag
+    dms_mag_org = dms_mag
+
+    # get the z score of pfc, dms and relative value
+    pfc_mag = (pfc_mag - np.mean(pfc_mag)) / np.std(pfc_mag)
+    dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
+
+    # low_pass filter
+    b, a = butter(N=4, Wn=10/session_length, btype='low', output='ba')
+    filtered_pfc = filter_signal(pfc_mag, b, a)
+    filtered_dms = filter_signal(dms_mag, b, a)
+    # filtered_relative_values = filter_signal(relative_values, b, a)
+
+    # plot filtered signal
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_dms, ax=axes[1], color='green')
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_pfc, ax=axes[1], color='black')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=filtered_relative_values, ax=axes[1], color='red')
+
+    axes[1].set_ylim(min(min(filtered_dms), min(filtered_pfc)), max(max(filtered_dms), max(filtered_pfc)))
+    axes[1].set_xlim(0, session_length)
+
+    # hilbert transform
+    phase_pfc = hilbert_transform(filtered_pfc)
+    phase_dms = hilbert_transform(filtered_dms)
+    # phase_relative_values = hilbert_transform(filtered_relative_values)
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_dms, ax=axes[2], color='green')
+    sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_pfc, ax=axes[2], color='black')
+    # sns.lineplot(x=np.arange(session_length, dtype=int), y=phase_relative_values, ax=axes[2], color='red')
+
+    axes[2].set_ylim(-np.pi, np.pi)
+    axes[2].set_xlim(0, session_length)
+
+    data_file_name = '_'.join([session_name, pfc_name, dms_name]) + '.csv'
+
+    if relative_value_root == pjoin('data', 'relative_values'):
+        # store the data in a dataframe
+        figure_5_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'relative_value_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms,  'pfc_phase': phase_pfc, 'dms_phase': phase_dms})
+        figure_5_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_relative_value, data_file_name), index=False)
     else:
-        panel_e_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_left_relative_value.csv'), index=False)
-
-    # plot the result as pie charts, show the original counts in the pie chart
-    plt.figure(figsize=(4, 4))
-    plt.pie([pfc_cells_neither_percent, pfc_cells__background_only_percent, pfc_cells_response_only_percent, pfc_cells_both_percent], labels=[f'not correlated {pfc_cells_neither_percent * total_pfc_cells:.0f}', f'ITI firing only {pfc_cells__background_only_percent * total_pfc_cells:.0f}', f'response magnitude only {pfc_cells_response_only_percent * total_pfc_cells:.0f}', f'both {pfc_cells_both_percent * total_pfc_cells:.0f}'], autopct='%1.1f%%')
-    plt.title('PFC')
+        # store the data in a dataframe
+        figure_5_panel_b_data = pd.DataFrame({'trial_index': np.arange(len(relative_values), dtype=int)+1, 'pfc_mag_org': pfc_mag_org, 'dms_mag_org': dms_mag_org,' pfc_mag_standardized': pfc_mag, 'dms_mag_standardized': dms_mag, 'prpd_standardized': relative_values, 'pfc_mag_filtered': filtered_pfc, 'dms_mag_filtered': filtered_dms,  'pfc_phase': phase_pfc, 'dms_phase': phase_dms})
+        figure_5_panel_b_data.to_csv(pjoin(figure_5_panel_b_data_root_prpd, data_file_name), index=False)
     
+    return fig
 
-    plt.figure(figsize=(4, 4))
-    plt.pie([dms_cells_neither_percent, dms_cells__background_only_percent, dms_cells_response_only_percent, dms_cells_both_percent], labels=[f'not correlated {dms_cells_neither_percent * total_dms_cells:.0f}', f'ITI firing only {dms_cells__background_only_percent * total_dms_cells:.0f}', f'response magnitude only {dms_cells_response_only_percent * total_dms_cells:.0f}', f'both {dms_cells_both_percent * total_dms_cells:.0f}'], autopct='%1.1f%%')
-    plt.title('DMS')
-
-
-def get_figure_5_panel_ef_right(prpd=True):
-    if prpd:
-        correlation_data = pd.read_csv(pjoin('data', 'prpd_correlation.csv'))
+def get_fig_6_panel_c(phase_diffs: List[float], phase_diffs_bg: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
+    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
+    hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    if zero_ymin:
+        y_min = 0
     else:
-        correlation_data = pd.read_csv(pjoin('data', 'relative_value_correlation.csv'))
-
-    # # remove rows with nan values
-    # correlation_data = correlation_data.dropna()
-
-    # for each session, calculate the percentage cells of strongly positively and negatively correlated with prpd for pfc and dms
-    sessions = correlation_data['session'].unique()
-    pfc_strongly_positively_correlated = []
-    pfc_strongly_negatively_correlated = []
-    pfc_strongly_positively_correlated_bg = []
-    pfc_strongly_negatively_correlated_bg = []
-    dms_strongly_positively_correlated = []
-    dms_strongly_negatively_correlated = []
-    dms_strongly_negatively_correlated_bg = []
-    dms_strongly_positively_correlated_bg = []
-
-
-    for session in sessions:
-        session_cells = correlation_data[correlation_data['session'] == session]
-        if len(session_cells) == 0:
-            continue
-        pfc_cells = session_cells[session_cells['cell'].str.startswith('pfc')]
-        dms_cells = session_cells[session_cells['cell'].str.startswith('dms')]
-
-        total_pfc_cells = len(glob(pjoin(spike_firing_root, session, 'pfc_*')))
-        total_dms_cells = len(glob(pjoin(spike_firing_root, session, 'dms_*')))
-
-        pfc_strongly_positively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] > 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        pfc_strongly_negatively_correlated.append(len(pfc_cells[(pfc_cells['response_firing_pearson_r'] < 0) & (pfc_cells['response_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        pfc_strongly_negatively_correlated_bg.append(len(pfc_cells[(pfc_cells['background_firing_pearson_r'] < 0) & (pfc_cells['background_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        pfc_strongly_positively_correlated_bg.append(len(pfc_cells[(pfc_cells['background_firing_pearson_r'] > 0) & (pfc_cells['background_firing_p_values'] < significance_threshold)])/ total_pfc_cells)
-        dms_strongly_positively_correlated.append(len(dms_cells[(dms_cells['response_firing_pearson_r'] > 0) & (dms_cells['response_firing_p_values'] < significance_threshold)])/ total_dms_cells)
-        dms_strongly_negatively_correlated.append(len(dms_cells[(dms_cells['response_firing_pearson_r'] < 0) & (dms_cells['response_firing_p_values'] < significance_threshold)])/ total_dms_cells)
-        dms_strongly_negatively_correlated_bg.append(len(dms_cells[(dms_cells['background_firing_pearson_r'] < 0) & (dms_cells['background_firing_p_values'] < significance_threshold)])/ total_dms_cells)
-        dms_strongly_positively_correlated_bg.append(len(dms_cells[(dms_cells['background_firing_pearson_r'] > 0) & (dms_cells['background_firing_p_values'] < significance_threshold)])/ total_dms_cells)
-
-    # plot the result as boxplots
-    pfc_strongly_positively_correlated = np.array(pfc_strongly_positively_correlated)
-    pfc_strongly_negatively_correlated = np.array(pfc_strongly_negatively_correlated)
-    pfc_strongly_positively_correlated_bg = np.array(pfc_strongly_positively_correlated_bg)
-    pfc_strongly_negatively_correlated_bg = np.array(pfc_strongly_negatively_correlated_bg)
-
-    dms_strongly_positively_correlated = np.array(dms_strongly_positively_correlated)
-    dms_strongly_negatively_correlated = np.array(dms_strongly_negatively_correlated)
-    dms_strongly_negatively_correlated_bg = np.array(dms_strongly_negatively_correlated_bg)
-    dms_strongly_positively_correlated_bg = np.array(dms_strongly_positively_correlated_bg)
-
-    # plot pfc data
-    fig, axes = plt.subplots(1, 2, figsize=(15, 10))
-    sns.boxplot(data=[pfc_strongly_positively_correlated, pfc_strongly_negatively_correlated], ax=axes[0])
-    sns.boxplot(data=[pfc_strongly_positively_correlated_bg, pfc_strongly_negatively_correlated_bg], ax=axes[1])
-
-    axes[0].set_title('PFC response')
-    axes[0].set_ylabel('Percentage')
-    axes[0].set_xticklabels(['Positively correlated', 'Negatively correlated'])
-    axes[1].set_title('PFC background')
-    axes[1].set_ylabel('Percentage')
-    axes[1].set_xticklabels(['Positively correlated', 'Negatively correlated'])
-
-    # set the y limit of all figures to [0, 1]
-    for ax in axes:
-        ax.set_ylim([0, 1])
-
-    # plot dms data
-    fig, axes = plt.subplots(1, 2, figsize=(15, 10))
-    sns.boxplot(data=[dms_strongly_positively_correlated, dms_strongly_negatively_correlated], ax=axes[0])
-    sns.boxplot(data=[dms_strongly_positively_correlated_bg, dms_strongly_negatively_correlated_bg], ax=axes[1])
-
-    axes[0].set_title('DMS response')
-    axes[0].set_ylabel('Percentage')
-    axes[0].set_xticklabels(['Positively correlated', 'Negatively correlated'])
-    axes[1].set_title('DMS background')
-    axes[1].set_ylabel('Percentage')
-    axes[1].set_xticklabels(['Positively correlated', 'Negatively correlated'])
-
-    # set the y limit of all figures to [0, 1]
-    for ax in axes:
-        ax.set_ylim([0, 1])
-
-    # do the t test for pfc and dms
-    from scipy.stats import ttest_ind
-    print('pfc response: ', ttest_ind(pfc_strongly_positively_correlated, pfc_strongly_negatively_correlated))
-    print('pfc background: ', ttest_ind(pfc_strongly_positively_correlated_bg, pfc_strongly_negatively_correlated_bg))
-    print('dms response: ', ttest_ind(dms_strongly_positively_correlated, dms_strongly_negatively_correlated))
-    print('dms background: ', ttest_ind(dms_strongly_positively_correlated_bg, dms_strongly_negatively_correlated_bg))
-
-    # save the data to csv
-    panel_ef_right_data = pd.DataFrame({'pfc_strongly_positively_correlated_response': pfc_strongly_positively_correlated, 'pfc_strongly_negatively_correlated_response': pfc_strongly_negatively_correlated, 'pfc_strongly_positively_correlated_bg': pfc_strongly_positively_correlated_bg, 'pfc_strongly_negatively_correlated_bg': pfc_strongly_negatively_correlated_bg, 'dms_strongly_positively_correlated_response': dms_strongly_positively_correlated, 'dms_strongly_negatively_correlated_response': dms_strongly_negatively_correlated, 'dms_strongly_positively_correlated_bg': dms_strongly_positively_correlated_bg, 'dms_strongly_negatively_correlated_bg': dms_strongly_negatively_correlated_bg})
-
-    if prpd:
-        panel_ef_right_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_right_prpd.csv'), index=False)
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    dist = y_max - y_min
+    axes[0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bg, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    if zero_ymin:
+        y_min = 0
     else:
-        panel_ef_right_data.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_ef_right_relative_value.csv'), index=False)
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[1].set_ylim(y_min, y_max)
+    sns.histplot(phase_diffs, ax=axes[0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg, ax=axes[1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=True) # type: ignore
 
-significan_p_threshold = 0.05
-bin_size = 0.25
+    # set y label
+    axes[0].set_ylabel('Number of Cell Pairs')
+    axes[1].set_ylabel('Number of Cell Pairs')
 
-def firing_rate_vs_relative_value():
-    # instead of spliting to R and L trials
-    # plot the firing rate vs relative value
-    # for all trials
-    # go through each sessions and load up the behaviour data
-    # as well as the relative values
-    relative_values = []
-    firing_rates = []
+    # set x label
+    axes[0].set_xlabel('Phase Difference (radians)')
+    axes[1].set_xlabel('Phase Difference (radians)')
 
+    # Set the x-axis tick labels to pi
+    set_xticks_and_labels_pi(axes[0])
+    set_xticks_and_labels_pi(axes[1])
 
-def get_figure_5_panel_gh():
-    # go through each sessions and load up the behaviour data 
-    # as well as the relative values
-    relative_values_past_R_pfc = []
-    relative_values_past_L_pfc = []
-    relative_values_future_R_pfc = []
-    relative_values_future_L_pfc = []
+    # remove the top and right spines
+    remove_top_and_right_spines(axes[0])
+    remove_top_and_right_spines(axes[1])
 
-    relative_values_future_R_pfc_response = []
-    relative_values_future_L_pfc_response = []
-    relative_values_past_R_pfc_response = []
-    relative_values_past_L_pfc_response = []
+    return fig
 
-    relative_values_past_R_dms = []
-    relative_values_past_L_dms = []
-    relative_values_future_R_dms = []
-    relative_values_future_L_dms = []
+def get_figure_5_panel_d(mono: bool = False, bin_size: int=36, zero_ymin: bool = True):
+    good_sessions = []
+    # iti correlated
+    phase_diffs = []
+    phase_diffs_bg = []
+    phase_diffs_bad = []
+    phase_diffs_bg_bad = []
 
-    relative_values_future_R_dms_response = []
-    relative_values_future_L_dms_response = []
-    relative_values_past_R_dms_response = []
-    relative_values_past_L_dms_response = []
+    phase_diffs_session_mean = []
+    phase_diffs_session_mean_bg = []
+    phase_diffs_session_mean_bad = []
+    phase_diffs_session_mean_bg_bad = []
 
-    relative_values_pfc_all = []
-    relative_values_dms_all = []
+    performances, cutoff = get_session_performances()
 
-    relative_values_pfc_all_response = []
-    relative_values_dms_all_response = []
+    if mono:
+        session_phase_diffs_good: Dict[str, List] = {}
+        session_phase_diffs_good_bg: Dict[str, List] = {}
+        session_phase_diffs_bad: Dict[str, List] = {}
+        session_phase_diffs_bad_bg: Dict[str, List] = {}
 
-    pfc_firing_all = []
-    dms_firing_all = []
+        mono_pairs = get_dms_pfc_paths_mono()
 
-    pfc_firing_all_response = []
-    dms_firing_all_response = []
+        for ind, row in mono_pairs.iterrows():
+            behaviour_data = pd.read_csv(row['session_path'])
+            pfc_times = np.load(row['pfc_path'])
+            str_times = np.load(row['dms_path'])
 
-    pfc_firing_rates_past_R_bg = []
-    pfc_firing_rates_past_L_bg = []
-    pfc_firing_rates_future_R_bg = []
-    pfc_firing_rates_future_L_bg = []
+            session_name = basename(row['session_path']).split('.')[0]
 
-    pfc_firing_rates_past_R_response = []
-    pfc_firing_rates_past_L_response = []
-    pfc_firing_rates_future_R_response = []
-    pfc_firing_rates_future_L_response = []
+            # create an entry for the session in the dictionary if it doesn't exist
+            if session_name not in session_phase_diffs_good.keys():
+                session_phase_diffs_good[session_name] = []
+                session_phase_diffs_bad[session_name] = []
+                session_phase_diffs_good_bg[session_name] = []
+                session_phase_diffs_bad_bg[session_name] = []
 
-    dms_firing_rates_past_R = []
-    dms_firing_rates_past_L = []
-    dms_firing_rates_future_R = []
-    dms_firing_rates_future_L = []
+            cue_times = behaviour_data['cue_time'].tolist()
+            pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+            dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times)
 
-    dms_firing_rates_past_R_response = []
-    dms_firing_rates_past_L_response = []
-    dms_firing_rates_future_R_response = []
-    dms_firing_rates_future_L_response = []
+            phase_d, phase_d_bg = phase_diff_pfc_dms(pfc_mag=pfc_mag, pfc_bg=pfc_bg, dms_mag=dms_mag, dms_bg=dms_bg)
+            if performances[session_name] > cutoff:
+                phase_diffs.append(phase_d)
+                phase_diffs_bg.append(phase_d_bg)
 
-    pfc_response_diffrences_past = []
-    pfc_response_diffrences_future = []
-    pfc_bg_diffrences_past = []
-    pfc_bg_diffrences_future = []
+                session_phase_diffs_good[session_name].append(phase_d)
+                session_phase_diffs_good_bg[session_name].append(phase_d_bg)
+            else:
+                phase_diffs_bad.append(phase_d)
+                phase_diffs_bg_bad.append(phase_d_bg)
 
-    dms_response_diffrences_past = []
-    dms_response_diffrences_future = []
-    dms_bg_diffrences_past = []
-    dms_bg_diffrences_future = []
-
-    for session in glob(pjoin(behaviour_root, '*.csv')):
-        session_name = basename(session).split('.')[0]
-        relative_values = np.load(pjoin(relative_value_root, session_name+'.npy'))
-        # for binning to work correctly, reduce relative value of 1
-        # by bin size/2, increase relative value of -1 by bin size/2
-        relative_values[relative_values == 1] = relative_values[relative_values == 1] - bin_size/2
-        relative_values[relative_values == -1] = relative_values[relative_values == -1] + bin_size/2
-        session_data = pd.read_csv(session)
-        cue_time = np.array(session_data['cue_time'].values)
-
-        # get the trials where the last trial was a right and left response
-        past_R_indices = np.where(session_data['trial_response_side'].values[:-1] == 1)[0]
-        past_L_indices = np.where(session_data['trial_response_side'].values[:-1] == -1)[0]
-        past_R_indices = past_R_indices + 1
-        past_L_indices = past_L_indices + 1
-
-        # get the trials where the next trial was a right and left response
-        future_R_indices = np.where(session_data['trial_response_side'].values[1:] == 1)[0]
-        future_L_indices = np.where(session_data['trial_response_side'].values[1:] == -1)[0]
-        future_R_indices = future_R_indices - 1
-        future_L_indices = future_L_indices - 1
-
-        pfc_firing_rates_past_R_bg_session = []
-        pfc_firing_rates_past_L_bg_session = []
-        pfc_firing_rates_future_R_bg_session = []
-        pfc_firing_rates_future_L_bg_session = []
-
-        pfc_relative_values_past_R_bg_session = []
-        pfc_relative_values_past_L_bg_session = []
-        relative_values_future_R_pfc_bg_session = []
-        relative_values_future_L_pfc_bg_session = []
-
-        pfc_firing_rates_past_R_response_session = []
-        pfc_firing_rates_past_L_response_session = []
-        pfc_firing_rates_future_R_response_session = []
-        pfc_firing_rates_future_L_response_session = []
-
-        pfc_relative_values_past_R_response_session = []
-        pfc_relative_values_past_L_response_session = []
-        pfc_relative_values_future_R_response_session = []
-        pfc_relative_values_future_L_response_session = []
-
-        # load up the spike data
-        for pfc_cell in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
-            pfc_cell_name = basename(pfc_cell).split('.')[0]
-            pfc_cell_data = np.load(pfc_cell)
-
-            # get the firing rate of the cell
-            firing_rates_bg = get_firing_rate_window(cue_time, pfc_cell_data, window_left=-1, window_right=-0.5)
-            firing_rates_bg = np.array(firing_rates_bg)
-
-            firing_rates_response = get_firing_rate_window(cue_time, pfc_cell_data, window_left=0, window_right=1.5)
-            firing_rates_response = np.array(firing_rates_response)
-
-            # check if the firing rates and relative values are 
-            # strongly correlated using pearson correlation
-            # continue if p value is less than threshold
-            if np.std(firing_rates_bg) != 0 and scipy.stats.pearsonr(firing_rates_bg, relative_values)[1] < significan_p_threshold:
-                firing_rates_bg = (firing_rates_bg - np.mean(firing_rates_bg)) / np.std(firing_rates_bg)
-                # if pearson's r < 0 then flip the relative values
-                # so that the firing rate is positively correlated with relative values
-                if scipy.stats.pearsonr(firing_rates_bg, relative_values)[0] < 0:
-                    relative_values = -relative_values
-
-                # get the firing rates for the past and future trials
-                pfc_firing_rates_past_R_bg_session.extend(firing_rates_bg[past_R_indices])
-                pfc_firing_rates_past_L_bg_session.extend(firing_rates_bg[past_L_indices])
-                pfc_firing_rates_future_R_bg_session.extend(firing_rates_bg[future_R_indices])
-                pfc_firing_rates_future_L_bg_session.extend(firing_rates_bg[future_L_indices])
-
-                relative_values_future_L_pfc_bg_session.extend(relative_values[future_L_indices])
-                relative_values_future_R_pfc_bg_session.extend(relative_values[future_R_indices])
-                pfc_relative_values_past_L_bg_session.exten_pfcd(relative_values[past_L_indices])
-                pfc_relative_values_past_R_bg_session.extend(relative_values[past_R_indices])
-
-                relative_values_pfc_all.extend(relative_values)
-                pfc_firing_all.extend(firing_rates_bg)
+                session_phase_diffs_bad[session_name].append(phase_d)
+                session_phase_diffs_bad_bg[session_name].append(phase_d_bg)
             
-            if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
-                firing_rates_response = (firing_rates_response - np.mean(firing_rates_response)) / np.std(firing_rates_response)
+        # calculate the number of good bad pairs for each session
+        for session_name in session_phase_diffs_good.keys():
+            if session_phase_diffs_good[session_name]:
+                phase_diffs_session_mean.append(circmean(session_phase_diffs_good[session_name], low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg.append(circmean(session_phase_diffs_good_bg[session_name], low=-np.pi, high=np.pi))
+            if session_phase_diffs_bad[session_name]:
+                phase_diffs_session_mean_bad.append(circmean(session_phase_diffs_bad[session_name], low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg_bad.append(circmean(session_phase_diffs_bad_bg[session_name], low=-np.pi, high=np.pi))
+    else:
+        for session_name in tqdm(listdir(spike_data_root)):
+            behaviour = pjoin(behaviour_root, session_name + '.csv')
+            behaviour_data = pd.read_csv(behaviour)
+            cue_times = behaviour_data['cue_time'].tolist()
 
-                if scipy.stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
-                    relative_values = -relative_values
+            cur_good = []
+            cur_good_bg = []
+            cur_bad = []
+            cur_bad_bg = []
 
-                # get the firing rates for the past and future trials
-                pfc_firing_rates_past_R_response_session.extend(firing_rates_response[past_R_indices])
-                pfc_firing_rates_past_L_response_session.extend(firing_rates_response[past_L_indices])
-                pfc_firing_rates_future_R_response_session.extend(firing_rates_response[future_R_indices])
-                pfc_firing_rates_future_L_response_session.extend(firing_rates_response[future_L_indices])
+            good = performances[session_name] > cutoff
 
-                pfc_relative_values_future_L_response_session.extend(relative_values[future_L_indices])
-                pfc_relative_values_future_R_response_session.extend(relative_values[future_R_indices])
-                pfc_relative_values_past_L_response_session.extend(relative_values[past_L_indices])
-                pfc_relative_values_past_R_response_session.extend(relative_values[past_R_indices])
+            for pfc in glob(pjoin(spike_data_root, session_name, 'pfc_*')):
+                pfc_times = np.load(pfc)
+                pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+                for dms in glob(pjoin(spike_data_root, session_name, 'dms_*')):
+                    str_times = np.load(dms)
+                    str_mag, str_bg = get_response_bg_firing(cue_times=cue_times, spike_times=str_times)            
+                    phase_d, phase_d_bg = phase_diff_pfc_dms(pfc_mag=pfc_mag, pfc_bg=pfc_bg, dms_mag=str_mag, dms_bg=str_bg)
+                    if good:
+                        phase_diffs.append(phase_d)
+                        phase_diffs_bg.append(phase_d_bg)
 
-                relative_values_pfc_all_response.extend(relative_values)
-                pfc_firing_all_response.extend(firing_rates_response)
+                        cur_good.append(phase_d)
+                        cur_good_bg.append(phase_d_bg)
+                    else:
+                        phase_diffs_bad.append(phase_d)
+                        phase_diffs_bg_bad.append(phase_d_bg)
 
-        for dms_cell in glob(pjoin(spike_data_root, session_name, 'dms_*')):
-            dms_cell_name = basename(dms_cell).split('.')[0]
-            dms_cell_data = np.load(dms_cell)
+                        cur_bad.append(phase_d)
+                        cur_bad_bg.append(phase_d_bg)
 
-            # get the firing rate of the cell
-            firing_rates_bg = get_firing_rate_window(cue_time, dms_cell_data, window_left=-1, window_right=-0.5)
-            firing_rates_bg = np.array(firing_rates_bg)            
+            if good:
+                good_sessions.append(session_name)
+                phase_diffs_session_mean.append(circmean(cur_good, low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg.append(circmean(cur_good_bg, low=-np.pi, high=np.pi))
+            else:
+                phase_diffs_session_mean_bad.append(circmean(cur_bad, low=-np.pi, high=np.pi))
+                phase_diffs_session_mean_bg_bad.append(circmean(cur_bad_bg, low=-np.pi, high=np.pi))
 
-            firing_rates_response = get_firing_rate_window(cue_time, dms_cell_data, window_left=0, window_right=1.5)
-            firing_rates_response = np.array(firing_rates_response)
+    if mono:    
+        savemat('circular_data_panel_d_mono.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})   
+    else:
+        savemat('circular_data_panel_d_all.mat', {'array_1': phase_diffs_session_mean, 'array_2': phase_diffs_session_mean_bg, 'array_3': phase_diffs_session_mean_bad, 'array_4': phase_diffs_session_mean_bg_bad})
 
-            if np.std(firing_rates_bg) != 0 and scipy.stats.pearsonr(firing_rates_bg, relative_values)[1] < significan_p_threshold:
-                if scipy.stats.pearsonr(firing_rates_bg, relative_values)[0] < 0:
-                    relative_values = -relative_values
+    # print out the good sessions to terminal with each entry being a separate line
+    for good_session in good_sessions:
+        print(good_session)
 
-                firing_rates_bg = (firing_rates_bg - np.mean(firing_rates_bg)) / np.std(firing_rates_bg)
-                # get the firing rates for the past and future trials
-                dms_firing_rates_past_R.extend(firing_rates_bg[past_R_indices])
-                dms_firing_rates_past_L.extend(firing_rates_bg[past_L_indices])
-                dms_firing_rates_future_R.extend(firing_rates_bg[future_R_indices])
-                dms_firing_rates_future_L.extend(firing_rates_bg[future_L_indices])
+    fig = draw_fig_6_panel_d(phase_diffs=phase_diffs, phase_diffs_bg=phase_diffs_bg, phase_diffs_bad=phase_diffs_bad, phase_diffs_bg_bad=phase_diffs_bg_bad, bin_size=36, zero_ymin=zero_ymin)
 
-                relative_values_future_L_dms.extend(relative_values[future_L_indices])
-                relative_values_future_R_dms.extend(relative_values[future_R_indices])
-                relative_values_past_L_dms.extend(relative_values[past_L_indices])
-                relative_values_past_R_dms.extend(relative_values[past_R_indices])
+def draw_fig_6_panel_d(phase_diffs: List[float], phase_diffs_bg: List[float], phase_diffs_bad: List[float], phase_diffs_bg_bad: List[float], bin_size: int, zero_ymin: bool = True) -> Figure:
+    mid = int(bin_size / 2)
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    hist, edge = np.histogram(phase_diffs, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    good_response_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[0][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bg, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    good_bg_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[0][1].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bad, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    bad_response_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[1][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diffs_bg_bad, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    bad_bg_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[1][1].set_ylim(y_min, y_max)
 
-                relative_values_dms_all.extend(relative_values)
-                dms_firing_all.extend(firing_rates_bg)
+    sns.histplot(phase_diffs, ax=axes[0][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='blue', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bad, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='red', kde=True) # type: ignore
+    sns.histplot(phase_diffs_bg_bad, ax=axes[1][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='red', kde=True) # type: ignore
 
-            if np.std(firing_rates_response) != 0 and scipy.stats.pearsonr(firing_rates_response, relative_values)[1] < significan_p_threshold:
-                if scipy.stats.pearsonr(firing_rates_response, relative_values)[0] < 0:
-                    relative_values = -relative_values
+    # store the histogram data in the following format
+    # |bin_center|good_response_count|good_bg_count|bad_response_count|bad_bg_count|
+    bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
+    panel_d_data = pd.DataFrame({'bin_center': bin_centers, 'good_response_count': good_response_count, 'good_bg_count': good_bg_count, 'bad_response_count': bad_response_count, 'bad_bg_count': bad_bg_count})
+    if relative_value_root == pjoin('data', 'relative_values'):
+        panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_c_data_relative_value.csv'), index=False)
+    else:
+        panel_d_data.to_csv(pjoin(figure_5_data_root, 'panel_c_data.csv'), index=False)
 
-                firing_rates_response = (firing_rates_response - np.mean(firing_rates_response)) / np.std(firing_rates_response)
-                # get the firing rates for the past and future trials
-                dms_firing_rates_past_R_response.extend(firing_rates_response[past_R_indices])
-                dms_firing_rates_past_L_response.extend(firing_rates_response[past_L_indices])
-                dms_firing_rates_future_R_response.extend(firing_rates_response[future_R_indices])
-                dms_firing_rates_future_L_response.extend(firing_rates_response[future_L_indices])
+    # set y label
+    axes[0][1].set_ylabel('Number of Cell Pairs')
+    axes[0][0].set_ylabel('Number of Cell Pairs')
 
-                relative_values_future_L_dms_response.extend(relative_values[future_L_indices])
-                relative_values_future_R_dms_response.extend(relative_values[future_R_indices])
-                relative_values_past_L_dms_response.extend(relative_values[past_L_indices])
-                relative_values_past_R_dms_response.extend(relative_values[past_R_indices])
+    # set x label
+    axes[0][0].set_xlabel('Phase Difference (radians)')
+    axes[0][1].set_xlabel('Phase Difference (radians)')
+    axes[1][0].set_xlabel('Phase Difference (radians)')
+    axes[1][1].set_xlabel('Phase Difference (radians)')
 
-                relative_values_dms_all_response.extend(relative_values)
-                dms_firing_all_response.extend(firing_rates_response)
+    # Set the x-axis tick labels to pi
+    set_xticks_and_labels_pi(axes[0][0])
+    set_xticks_and_labels_pi(axes[0][1])
+    set_xticks_and_labels_pi(axes[1][0])
+    set_xticks_and_labels_pi(axes[1][1])
 
+    # remove top and right spines
+    remove_top_and_right_spines(axes[0][0])
+    remove_top_and_right_spines(axes[0][1])
+    remove_top_and_right_spines(axes[1][0])
+    remove_top_and_right_spines(axes[1][1])
 
-    # discretize the relative values into 20 bins
-    relative_values_past_L_dms = np.digitize(relative_values_past_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_past_R_dms = np.digitize(relative_values_past_R_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_L_dms = np.digitize(relative_values_future_L_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_R_dms = np.digitize(relative_values_future_R_dms, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    return fig
 
-    relative_values_past_L_pfc = np.digitize(relative_values_past_L_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_past_R_pfc = np.digitize(relative_values_past_R_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_L_pfc = np.digitize(relative_values_future_L_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_R_pfc = np.digitize(relative_values_future_R_pfc, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+def get_figure_5_panel_e(mono: bool=False, reset: bool=False, no_nan: bool=False, zero_ymin: bool=False, bin_size:int =36) -> Figure:
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
 
-    relative_values_past_L_dms_response = np.digitize(relative_values_past_L_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_past_R_dms_response = np.digitize(relative_values_past_R_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_L_dms_response = np.digitize(relative_values_future_L_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_R_dms_response = np.digitize(relative_values_future_R_dms_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    bin_size = 36
+    mid = int(bin_size / 2)
 
-    relative_values_past_L_pfc_response = np.digitize(relative_values_past_L_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_past_R_pfc_response = np.digitize(relative_values_past_R_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_L_pfc_response = np.digitize(relative_values_future_L_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_future_R_pfc_response = np.digitize(relative_values_future_R_pfc_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    phase_diff_bg_pfc = []
+    phase_diff_bg_dms = []
+    phase_diff_response_pfc = []
+    phase_diff_response_dms = []
 
-    relative_values_pfc_all = np.digitize(relative_values_pfc_all, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_dms_all = np.digitize(relative_values_dms_all, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    pfc_response_sig_count = 0
+    pfc_bg_sig_count = 0
 
-    relative_values_pfc_all_response = np.digitize(relative_values_pfc_all_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
-    relative_values_dms_all_response = np.digitize(relative_values_dms_all_response, bins=np.arange(-1, 1+bin_size, bin_size), right=False)
+    dms_response_sig_count = 0
+    dms_bg_sig_count = 0
 
-    x = np.arange(-1+bin_size/2, 1, bin_size)
+    pfc_count = 0
+    dms_count = 0
 
-    pfc_firing_rates_past_R_bg = np.array(pfc_firing_rates_past_R_bg)
-    pfc_firing_rates_past_L_bg = np.array(pfc_firing_rates_past_L_bg)
-    pfc_firing_rates_future_R_bg = np.array(pfc_firing_rates_future_R_bg)
-    pfc_firing_rates_future_L_bg = np.array(pfc_firing_rates_future_L_bg)
+    if mono:
+        dms_pfc_paths = get_dms_pfc_paths_mono()
 
-    dms_firing_rates_past_R = np.array(dms_firing_rates_past_R)
-    dms_firing_rates_past_L = np.array(dms_firing_rates_past_L)
-    dms_firing_rates_future_R = np.array(dms_firing_rates_future_R)
-    dms_firing_rates_future_L = np.array(dms_firing_rates_future_L)
+        pfc_count = len(dms_pfc_paths)
+        dms_count = pfc_count
 
-    pfc_firing_rates_past_R_response = np.array(pfc_firing_rates_past_R_response)
-    pfc_firing_rates_past_L_response = np.array(pfc_firing_rates_past_L_response)
-    pfc_firing_rates_future_R_response = np.array(pfc_firing_rates_future_R_response)
-    pfc_firing_rates_future_L_response = np.array(pfc_firing_rates_future_L_response)
+        session_phase_diffs_pfc: Dict[str, List] = {}
+        session_phase_diffs_pfc_bg: Dict[str, List] = {}
+        session_phase_diffs_dms: Dict[str, List] = {}
+        session_phase_diffs_dms_bg: Dict[str, List] = {}
+        
+        for mono_pair in tqdm(dms_pfc_paths.iterrows()):
+            session_path = mono_pair[1]['session_path']
+            pfc_path = mono_pair[1]['pfc_path']
+            dms_path = mono_pair[1]['dms_path']
 
-    dms_firing_rates_past_R_response = np.array(dms_firing_rates_past_R_response)
-    dms_firing_rates_past_L_response = np.array(dms_firing_rates_past_L_response)
-    dms_firing_rates_future_R_response = np.array(dms_firing_rates_future_R_response)
-    dms_firing_rates_future_L_response = np.array(dms_firing_rates_future_L_response)
+            session_name = basename(session_path).split('.')[0]
 
+            # create an entry for the session in the dictionary if it doesn't exist
+            if session_name not in session_phase_diffs_pfc.keys():
+                session_phase_diffs_pfc[session_name] = []
+                session_phase_diffs_pfc_bg[session_name] = []
+                session_phase_diffs_dms[session_name] = []
+                session_phase_diffs_dms_bg[session_name] = []
 
-    # do a one sample t test to see if the mean of the differences is significantly different from 0
-    # print('pfc response future L vs future R: ', ztest(pfc_response_diffrences_future, 0), 'sample size: ', len(pfc_response_diffrences_future))
+            pfc_times = np.load(pfc_path)
+            dms_times = np.load(dms_path)
 
-    pfc_firing_rate_past_R_mean, pfc_firing_rate_past_R_sem = pair_and_get_mean_and_sem(relative_values_past_R_pfc, pfc_firing_rates_past_R_bg)
-    pfc_firing_rate_past_L_mean, pfc_firing_rate_past_L_sem = pair_and_get_mean_and_sem(relative_values_past_L_pfc, pfc_firing_rates_past_L_bg)
-    pfc_firing_rate_future_R_mean, pfc_firing_rate_future_R_sem = pair_and_get_mean_and_sem(relative_values_future_R_pfc, pfc_firing_rates_future_R_bg)
-    pfc_firing_rate_future_L_mean, pfc_firing_rate_future_L_sem = pair_and_get_mean_and_sem(relative_values_future_L_pfc, pfc_firing_rates_future_L_bg)
+            behaviour_data = pd.read_csv(session_path)
+            # remove the nan trials
+            cue_times = np.array(behaviour_data['cue_time'].values)
+            
+            relative_value_path = pjoin(relative_value_root, session_name + '.npy')
+            relative_values = np.load(relative_value_path)
 
-    dms_firing_rate_past_R_mean, dms_firing_rate_past_R_sem = pair_and_get_mean_and_sem(relative_values_past_R_dms, dms_firing_rates_past_R)
-    dms_firing_rate_past_L_mean, dms_firing_rate_past_L_sem = pair_and_get_mean_and_sem(relative_values_past_L_dms, dms_firing_rates_past_L)
-    dms_firing_rate_future_R_mean, dms_firing_rate_future_R_sem = pair_and_get_mean_and_sem(relative_values_future_R_dms, dms_firing_rates_future_R)
-    dms_firing_rate_future_L_mean, dms_firing_rate_future_L_sem = pair_and_get_mean_and_sem(relative_values_future_L_dms, dms_firing_rates_future_L)
+            phase_relative_values = get_phase(relative_values)
 
-    pfc_firing_rate_past_R_response_mean, pfc_firing_rate_past_R_response_sem = pair_and_get_mean_and_sem(relative_values_past_R_pfc_response, pfc_firing_rates_past_R_response)
-    pfc_firing_rate_past_L_response_mean, pfc_firing_rate_past_L_response_sem = pair_and_get_mean_and_sem(relative_values_past_L_pfc_response, pfc_firing_rates_past_L_response)
-    pfc_firing_rate_future_R_response_mean, pfc_firing_rate_future_R_response_sem = pair_and_get_mean_and_sem(relative_values_future_R_pfc_response, pfc_firing_rates_future_R_response)
-    pfc_firing_rate_future_L_response_mean, pfc_firing_rate_future_L_response_sem = pair_and_get_mean_and_sem(relative_values_future_L_pfc_response, pfc_firing_rates_future_L_response)
+            pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+            dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
+
+            phase_pfc_mag = get_phase(pfc_mag)
+            if circ_corrcc(phase_pfc_mag, phase_relative_values)[1] < significance_threshold:
+                pfc_response_sig_count += 1
+                # calculate the phase difference wrt relative value
+                phase_diff_mag = phase_diff(relative_values, pfc_mag)
+                phase_diff_response_pfc.append(phase_diff_mag)
+
+            phase_pfc_bg = get_phase(pfc_bg)
+            if circ_corrcc(phase_pfc_bg, phase_relative_values)[1] < significance_threshold:
+                pfc_bg_sig_count += 1
+                phase_diff_bg = phase_diff(relative_values, pfc_bg)
+                phase_diff_bg_pfc.append(phase_diff_bg)
+
+            phase_dms_mag = get_phase(dms_mag)
+            if circ_corrcc(phase_dms_mag, phase_relative_values)[1] < significance_threshold:
+                dms_response_sig_count += 1
+                phase_diff_mag = phase_diff(relative_values, dms_mag)
+                phase_diff_response_dms.append(phase_diff_mag)
+            
+            phase_dms_bg = get_phase(dms_bg)
+            if circ_corrcc(phase_dms_bg, phase_relative_values)[1] < significance_threshold:
+                dms_bg_sig_count += 1
+                phase_diff_bg = phase_diff(relative_values, dms_bg)
+                phase_diff_bg_dms.append(phase_diff_bg)
+    else:
+        # initialize a set of strong correlated cells
+        strong_correlated_cells_pfc = []
+        strong_correlated_cells_pfc_bg = []
+        strong_correlated_cells_dms = []
+        strong_correlated_cells_dms_bg = []
+
+        session_names = []
+        session_names_bg = []
+
+        for session_name in tqdm(listdir(spike_data_root)):
+            session_path = pjoin(spike_data_root, session_name)
+            relative_value_path = pjoin(relative_value_root, session_name + '.npy')
+
+            if not isfile(relative_value_path):
+                continue
+            relative_values = np.load(relative_value_path)
+            if no_nan:
+                # smoothen relative values
+                relative_values = moving_window_mean_prior(relative_values, 10)
+            # get the z score of the relative values
+            relative_values = (relative_values - np.mean(relative_values)) / np.std(relative_values)
+            phase_relative_values = get_phase(relative_values)
+            behaviour_path = pjoin(behaviour_root, session_name + '.csv')
+            behaviour_data = pd.read_csv(behaviour_path)
+            # remove all the nan trials
+            if no_nan:
+                behaviour_data = behaviour_data[~behaviour_data['trial_reward'].isna()]
+            cue_times = np.array(behaviour_data['cue_time'].values)
+
+            session_strong_correlated_cells_pfc = []
+            session_strong_correlated_cells_pfc_bg = []
+            session_strong_correlated_cells_dms = []
+            session_strong_correlated_cells_dms_bg = []
+
+            # load the pfc cells
+            for pfc_path in glob(pjoin(session_path, 'pfc_*.npy')):
+                pfc_count += 1
+                pfc_times = np.load(pfc_path)
+                pfc_name = basename(pfc_path).split('.')[0]
+                pfc_mag, pfc_bg = get_response_bg_firing(cue_times=cue_times, spike_times=pfc_times)
+                
+                if np.std(pfc_mag) != 0:
+                    pfc_mag = (pfc_mag - np.mean(pfc_mag)) / np.std(pfc_mag)
+                    pfc_mag_phase = get_phase(pfc_mag) 
+                    if circ_corrcc(pfc_mag_phase, phase_relative_values)[1] < significance_threshold:
+                        session_strong_correlated_cells_pfc.append(pfc_name)
+                        pfc_response_sig_count += 1
+                        phase_diff_mag = phase_diff(relative_values, pfc_mag)
+                        phase_diff_response_pfc.append(phase_diff_mag)
+
+                if np.std(pfc_bg) != 0:
+                    pfc_bg = (pfc_bg - np.mean(pfc_bg)) / np.std(pfc_bg)
+                    pfc_bg_phase = get_phase(pfc_bg)
+                    if circ_corrcc(pfc_bg_phase, phase_relative_values)[1] < significance_threshold:
+                        session_strong_correlated_cells_pfc_bg.append(pfc_name)
+                        pfc_bg_sig_count += 1
+                        phase_diff_bg = phase_diff(relative_values, pfc_bg)
+                        phase_diff_bg_pfc.append(phase_diff_bg)
+                
+            # load the dms cells
+            for dms_path in glob(pjoin(session_path, 'dms_*.npy')):
+                dms_count += 1
+                dms_times = np.load(dms_path)
+                dms_name = basename(dms_path).split('.')[0]
+                dms_mag, dms_bg = get_response_bg_firing(cue_times=cue_times, spike_times=dms_times)
+                if np.std(dms_mag) != 0:
+                    session_strong_correlated_cells_dms.append(dms_name)
+                    # get the z score of the firing rates
+                    dms_mag = (dms_mag - np.mean(dms_mag)) / np.std(dms_mag)
+                    dms_mag_phase = get_phase(dms_mag)
+                    if circ_corrcc(dms_mag_phase, phase_relative_values)[1] < significance_threshold:
+                        dms_response_sig_count += 1
+                        phase_diff_mag = phase_diff(relative_values, dms_mag)
+                        phase_diff_response_dms.append(phase_diff_mag)
+                if np.std(dms_bg) != 0:
+                    dms_bg = (dms_bg - np.mean(dms_bg)) / np.std(dms_bg)
+                    dms_bg_phase = get_phase(dms_bg)
+                    if circ_corrcc(dms_bg_phase, phase_relative_values)[1] < significance_threshold:
+                        session_strong_correlated_cells_dms_bg.append(dms_name)
+                        dms_bg_sig_count += 1
+                        phase_diff_bg = phase_diff(relative_values, dms_bg)
+                        phase_diff_bg_dms.append(phase_diff_bg)
+
+            # remove the duplicates in the session list
+            session_strong_correlated_cells_pfc = list(set(session_strong_correlated_cells_pfc))
+            session_strong_correlated_cells_pfc_bg = list(set(session_strong_correlated_cells_pfc_bg))
+            session_strong_correlated_cells_dms = list(set(session_strong_correlated_cells_dms))
+            session_strong_correlated_cells_dms_bg = list(set(session_strong_correlated_cells_dms_bg))
+
+            for pfc in session_strong_correlated_cells_pfc:
+                for dms in session_strong_correlated_cells_dms:
+                    strong_correlated_cells_pfc.append(pfc)
+                    strong_correlated_cells_dms.append(dms)
+                    session_names.append(session_name)
+            
+            for pfc in session_strong_correlated_cells_pfc_bg:
+                for dms in session_strong_correlated_cells_dms_bg:
+                    strong_correlated_cells_pfc_bg.append(pfc)
+                    strong_correlated_cells_dms_bg.append(dms)
+                    session_names_bg.append(session_name)
+
     
-    dms_firing_rate_past_R_response_mean, dms_firing_rate_past_R_response_sem = pair_and_get_mean_and_sem(relative_values_past_R_dms_response, dms_firing_rates_past_R_response)
-    dms_firing_rate_past_L_response_mean, dms_firing_rate_past_L_response_sem = pair_and_get_mean_and_sem(relative_values_past_L_dms_response, dms_firing_rates_past_L_response)
-    dms_firing_rate_future_R_response_mean, dms_firing_rate_future_R_response_sem = pair_and_get_mean_and_sem(relative_values_future_R_dms_response, dms_firing_rates_future_R_response)
-    dms_firing_rate_future_L_response_mean, dms_firing_rate_future_L_response_sem = pair_and_get_mean_and_sem(relative_values_future_L_dms_response, dms_firing_rates_future_L_response)
 
-    pfc_firing_all_mean, pfc_firing_all_sem = pair_and_get_mean_and_sem(relative_values_pfc_all, pfc_firing_all)
-    dms_firing_all_mean, dms_firing_all_sem = pair_and_get_mean_and_sem(relative_values_dms_all, dms_firing_all)
-    pfc_firing_all_response_mean, pfc_firing_all_response_sem = pair_and_get_mean_and_sem(relative_values_pfc_all_response, pfc_firing_all_response)
-    dms_firing_all_response_mean, dms_firing_all_response_sem = pair_and_get_mean_and_sem(relative_values_dms_all_response, dms_firing_all_response)
+    hist, edge = np.histogram(phase_diff_response_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    pfc_response_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[0][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diff_bg_pfc, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    pfc_bg_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[0][1].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diff_response_dms, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    dms_response_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[1][0].set_ylim(y_min, y_max)
+    hist, edge = np.histogram(phase_diff_bg_dms, bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size))
+    dms_bg_count = hist
+    if zero_ymin:
+        y_min = 0
+    else:
+        # 10% lower than the lowest value
+        y_min = np.min(hist) * 0.95
+    y_max = np.max(hist) * 1.05
+    axes[1][1].set_ylim(y_min, y_max)
 
-    x = np.arange(-1+bin_size/2, 1, bin_size)
 
-    # plot the firing rates vs relative values as line plots with 
-    # shaded error bars for the standard error
-    # with R and L trials sharing the same plot
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    axes[0, 0].plot(x, pfc_firing_rate_past_R_mean, color='red')
-    axes[0, 0].fill_between(x, pfc_firing_rate_past_R_mean-pfc_firing_rate_past_R_sem, pfc_firing_rate_past_R_mean+pfc_firing_rate_past_R_sem, color='red', alpha=0.3)
-    axes[0, 0].plot(x, pfc_firing_rate_past_L_mean, color='blue')
-    axes[0, 0].fill_between(x, pfc_firing_rate_past_L_mean-pfc_firing_rate_past_L_sem, pfc_firing_rate_past_L_mean+pfc_firing_rate_past_L_sem, color='blue', alpha=0.3)
-    axes[0, 1].plot(x, pfc_firing_rate_future_R_mean, color='red')
-    axes[0, 1].fill_between(x, pfc_firing_rate_future_R_mean-pfc_firing_rate_future_R_sem, pfc_firing_rate_future_R_mean+pfc_firing_rate_future_R_sem, color='red', alpha=0.3)
-    axes[0, 1].plot(x, pfc_firing_rate_future_L_mean, color='blue')
-    axes[0, 1].fill_between(x, pfc_firing_rate_future_L_mean-pfc_firing_rate_future_L_sem, pfc_firing_rate_future_L_mean+pfc_firing_rate_future_L_sem, color='blue', alpha=0.3)
-    axes[1, 0].plot(x, dms_firing_rate_past_R_mean, color='red')
-    axes[1, 0].fill_between(x, dms_firing_rate_past_R_mean-dms_firing_rate_past_R_sem, dms_firing_rate_past_R_mean+dms_firing_rate_past_R_sem, color='red', alpha=0.3)
-    axes[1, 0].plot(x, dms_firing_rate_past_L_mean, color='blue')
-    axes[1, 0].fill_between(x, dms_firing_rate_past_L_mean-dms_firing_rate_past_L_sem, dms_firing_rate_past_L_mean+dms_firing_rate_past_L_sem, color='blue', alpha=0.3)
-    axes[1, 1].plot(x, dms_firing_rate_future_R_mean, color='red')
-    axes[1, 1].fill_between(x, dms_firing_rate_future_R_mean-dms_firing_rate_future_R_sem, dms_firing_rate_future_R_mean+dms_firing_rate_future_R_sem, color='red', alpha=0.3)
-    axes[1, 1].plot(x, dms_firing_rate_future_L_mean, color='blue')
-    axes[1, 1].fill_between(x, dms_firing_rate_future_L_mean-dms_firing_rate_future_L_sem, dms_firing_rate_future_L_mean+dms_firing_rate_future_L_sem, color='blue', alpha=0.3)
+    sns.histplot(phase_diff_response_pfc, ax=axes[0][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
+    sns.histplot(phase_diff_bg_pfc, ax=axes[0][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
+    sns.histplot(phase_diff_response_dms, ax=axes[1][0], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
+    sns.histplot(phase_diff_bg_dms, ax=axes[1][1], bins=np.arange(-np.pi, np.pi+2 * np.pi / bin_size, 2 * np.pi / bin_size), color='black', kde=False) # type: ignore
+
+    bin_centers = np.arange(-np.pi, np.pi, 2 * np.pi / bin_size) + np.pi / bin_size
+    panel_e_data = pd.DataFrame({'bin_center': bin_centers, 'pfc_response_count': pfc_response_count, 'pfc_bg_count': pfc_bg_count, 'dms_response_count': dms_response_count, 'dms_bg_count': dms_bg_count})
+    panel_e_data.to_csv(pjoin(figure_5_data_root, 'panel_d_data.csv'), index=False)
+
+    # calculate the circular mean for each group
+    mean = circmean(phase_diff_response_pfc, low=-np.pi, high=np.pi)
+    print(f'PFC response: {mean}')
+    mean = circmean(phase_diff_bg_pfc, low=-np.pi, high=np.pi)
+    print(f'PFC bg: {mean}')
+    mean = circmean(phase_diff_response_dms, low=-np.pi, high=np.pi)
+    print(f'DMS response: {mean}')
+    mean = circmean(phase_diff_bg_dms,  low=-np.pi, high=np.pi)
+    print(f'DMS bg: {mean}')
+
+    if mono:
+        savemat('circular_data_panel_e_mono.mat', {'array_1': phase_diff_response_pfc, 'array_2': phase_diff_bg_pfc, 'array_3': phase_diff_response_dms, 'array_4': phase_diff_bg_dms})
+    else:
+        savemat('circular_data_panel_e_all.mat', {'array_1': phase_diff_response_pfc, 'array_2': phase_diff_bg_pfc, 'array_3': phase_diff_response_dms, 'array_4': phase_diff_bg_dms})
+
+    print(f'PFC response: {pfc_response_sig_count} / {pfc_count}')
+    print(f'PFC bg: {pfc_bg_sig_count} / {pfc_count}')
+    print(f'DMS response: {dms_response_sig_count} / {dms_count}')
+    print(f'DMS bg: {dms_bg_sig_count} / {dms_count}')
+
+    # set y label
+    axes[0][1].set_ylabel('Number of PFC Pairs')
+    axes[0][0].set_ylabel('Number of DMS Pairs')
+
+    # set x label
+    axes[0][0].set_xlabel('Phase Difference (radians)')
+    axes[0][1].set_xlabel('Phase Difference (radians)')
+    axes[1][0].set_xlabel('Phase Difference (radians)')
+    axes[1][1].set_xlabel('Phase Difference (radians)')
+
+    # Set the x-axis tick labels to pi
+    set_xticks_and_labels_pi(axes[0][0])
+    set_xticks_and_labels_pi(axes[0][1])
+    set_xticks_and_labels_pi(axes[1][0])
+    set_xticks_and_labels_pi(axes[1][1])
+
+    # remove top and right spines
+    remove_top_and_right_spines(axes[0][0])
+    remove_top_and_right_spines(axes[0][1])
+    remove_top_and_right_spines(axes[1][0])
+    remove_top_and_right_spines(axes[1][1])
     
-    axes[0, 0].set_title('Past trials')
-    axes[0, 1].set_title('Future trials')
-    axes[0, 0].set_ylabel('PFC firing rate')
-    axes[1, 0].set_ylabel('DMS firing rate')
-    axes[1, 0].set_xlabel('Relative value')
-    axes[1, 1].set_xlabel('Relative value')
 
-    # set the x asis to [-1, 1]
-    axes[0, 0].set_xticks([-1, 0, 1])
-    axes[0, 1].set_xticks([-1, 0, 1])
-    axes[1, 0].set_xticks([-1, 0, 1])
-    axes[1, 1].set_xticks([-1, 0, 1])
+    # save the strong correlated pairs as two csv files
+    strong_correlated_data = {'pfc': strong_correlated_cells_pfc, 'dms': strong_correlated_cells_dms, 'session': session_names}
+    strong_correlated_data = pd.DataFrame(strong_correlated_data)
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs.csv'), index=False)
 
-    fig.suptitle('PFC firing rate vs relative value')
+    strong_correlated_data = {'pfc': strong_correlated_cells_pfc_bg, 'dms': strong_correlated_cells_dms_bg, 'session': session_names_bg}
+    strong_correlated_data = pd.DataFrame(strong_correlated_data)
+    strong_correlated_data.to_csv(pjoin('data', 'strong_circular_correlated_cells_pairs_bg.csv'), index=False)
 
-    # another figure for the response period
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    axes[0, 0].plot(x, pfc_firing_rate_past_R_response_mean, color='red')
-    axes[0, 0].fill_between(x, pfc_firing_rate_past_R_response_mean-pfc_firing_rate_past_R_response_sem, pfc_firing_rate_past_R_response_mean+pfc_firing_rate_past_R_response_sem, color='red', alpha=0.3)
-    axes[0, 0].plot(x, pfc_firing_rate_past_L_response_mean, color='blue')
-    axes[0, 0].fill_between(x, pfc_firing_rate_past_L_response_mean-pfc_firing_rate_past_L_response_sem, pfc_firing_rate_past_L_response_mean+pfc_firing_rate_past_L_response_sem, color='blue', alpha=0.3)
-    axes[0, 1].plot(x, pfc_firing_rate_future_R_response_mean, color='red')
-    axes[0, 1].fill_between(x, pfc_firing_rate_future_R_response_mean-pfc_firing_rate_future_R_response_sem, pfc_firing_rate_future_R_response_mean+pfc_firing_rate_future_R_response_sem, color='red', alpha=0.3)
-    axes[0, 1].plot(x, pfc_firing_rate_future_L_response_mean, color='blue')
-    axes[0, 1].fill_between(x, pfc_firing_rate_future_L_response_mean-pfc_firing_rate_future_L_response_sem, pfc_firing_rate_future_L_response_mean+pfc_firing_rate_future_L_response_sem, color='blue', alpha=0.3)
-    axes[1, 0].plot(x, dms_firing_rate_past_R_response_mean, color='red')
-    axes[1, 0].fill_between(x, dms_firing_rate_past_R_response_mean-dms_firing_rate_past_R_response_sem, dms_firing_rate_past_R_response_mean+dms_firing_rate_past_R_response_sem, color='red', alpha=0.3)
-    axes[1, 0].plot(x, dms_firing_rate_past_L_response_mean, color='blue')
-    axes[1, 0].fill_between(x, dms_firing_rate_past_L_response_mean-dms_firing_rate_past_L_response_sem, dms_firing_rate_past_L_response_mean+dms_firing_rate_past_L_response_sem, color='blue', alpha=0.3)
-    axes[1, 1].plot(x, dms_firing_rate_future_R_response_mean, color='red')
-    axes[1, 1].fill_between(x, dms_firing_rate_future_R_response_mean-dms_firing_rate_future_R_response_sem, dms_firing_rate_future_R_response_mean+dms_firing_rate_future_R_response_sem, color='red', alpha=0.3)
-    axes[1, 1].plot(x, dms_firing_rate_future_L_response_mean, color='blue')
-    axes[1, 1].fill_between(x, dms_firing_rate_future_L_response_mean-dms_firing_rate_future_L_response_sem, dms_firing_rate_future_L_response_mean+dms_firing_rate_future_L_response_sem, color='blue', alpha=0.3)
-
-    axes[0, 0].set_title('Past trials')
-    axes[0, 1].set_title('Future trials')
-    axes[0, 0].set_ylabel('PFC firing rate')
-    axes[1, 0].set_ylabel('DMS firing rate')
-
-    axes[1, 0].set_xlabel('Relative value')
-    axes[1, 1].set_xlabel('Relative value')
-
-    # set the x asis to [-1, 1]
-    axes[0, 0].set_xticks([-1, 0, 1])
-    axes[0, 1].set_xticks([-1, 0, 1])
-    axes[1, 0].set_xticks([-1, 0, 1])
-    axes[1, 1].set_xticks([-1, 0, 1])
-
-    fig.suptitle('firing rate vs relative value (response period)')
-    plt.show()
-
-    # another figure for all trials
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    axes[0, 0].plot(x, pfc_firing_all_mean, color='red')
-    axes[0, 0].fill_between(x, pfc_firing_all_mean-pfc_firing_all_sem, pfc_firing_all_mean+pfc_firing_all_sem, color='red', alpha=0.3)
-    axes[0, 1].plot(x, pfc_firing_all_mean, color='red')
-    axes[0, 1].fill_between(x, pfc_firing_all_mean-pfc_firing_all_sem, pfc_firing_all_mean+pfc_firing_all_sem, color='red', alpha=0.3)
-    axes[1, 0].plot(x, dms_firing_all_mean, color='red')
-    axes[1, 0].fill_between(x, dms_firing_all_mean-dms_firing_all_sem, dms_firing_all_mean+dms_firing_all_sem, color='red', alpha=0.3)
-    axes[1, 1].plot(x, dms_firing_all_mean, color='red')
-    axes[1, 1].fill_between(x, dms_firing_all_mean-dms_firing_all_sem, dms_firing_all_mean+dms_firing_all_sem, color='red', alpha=0.3)
+    return fig
 
 
-    axes[0, 0].set_title('BG')
-    axes[0, 1].set_title('Response period')
-    axes[0, 0].set_ylabel('PFC firing rate')
-    axes[1, 0].set_ylabel('DMS firing rate')
-    
-    axes[1, 0].set_xlabel('Relative value')
-    axes[1, 1].set_xlabel('Relative value')
-
-    # set the x asis to [-1, 1]
-    axes[0, 0].set_xticks([-1, 0, 1])
-    axes[0, 1].set_xticks([-1, 0, 1])
-    axes[1, 0].set_xticks([-1, 0, 1])
-    axes[1, 1].set_xticks([-1, 0, 1])
-
-    fig.suptitle('firing rate vs relative value (all trials)')
-    plt.show()
-
-    # save all the data to a csv file
-    df = pd.DataFrame({'x': x, 'pfc_past_R_bg': pfc_firing_rate_past_R_mean, 'past_R_bg_sem': pfc_firing_rate_past_R_sem, 'pfc_past_L_bg': pfc_firing_rate_past_L_mean, 'past_L_bg_sem': pfc_firing_rate_past_L_sem, 'pfc_future_R_bg': pfc_firing_rate_future_R_mean, 'future_R_bg_sem': pfc_firing_rate_future_R_sem, 'pfc_future_L_bg': pfc_firing_rate_future_L_mean, 'future_L_bg_sem': pfc_firing_rate_future_L_sem, 'dms_past_R_bg': dms_firing_rate_past_R_mean, 'dms_past_R_bg_sem': dms_firing_rate_past_R_sem, 'dms_past_L_bg': dms_firing_rate_past_L_mean, 'dms_past_L_bg_sem': dms_firing_rate_past_L_sem, 'dms_future_R_bg': dms_firing_rate_future_R_mean, 'dms_future_R_bg_sem': dms_firing_rate_future_R_sem, 'dms_future_L_bg': dms_firing_rate_future_L_mean, 'dms_future_L_bg_sem': dms_firing_rate_future_L_sem, 'pfc_past_R_response': pfc_firing_rate_past_R_response_mean, 'pfc_past_R_response_sem': pfc_firing_rate_past_R_response_sem, 'pfc_past_L_response': pfc_firing_rate_past_L_response_mean, 'pfc_past_L_response_sem': pfc_firing_rate_past_L_response_sem, 'pfc_future_R_response': pfc_firing_rate_future_R_response_mean, 'pfc_future_R_response_sem': pfc_firing_rate_future_R_response_sem, 'pfc_future_L_response': pfc_firing_rate_future_L_response_mean, 'pfc_future_L_response_sem': pfc_firing_rate_future_L_response_sem, 'dms_past_R_response': dms_firing_rate_past_R_response_mean, 'dms_past_R_response_sem': dms_firing_rate_past_R_response_sem, 'dms_past_L_response': dms_firing_rate_past_L_response_mean, 'dms_past_L_response_sem': dms_firing_rate_past_L_response_sem, 'dms_future_R_response': dms_firing_rate_future_R_response_mean, 'dms_future_R_response_sem': dms_firing_rate_future_R_response_sem, 'dms_future_L_response': dms_firing_rate_future_L_response_mean, 'dms_future_L_response_sem': dms_firing_rate_future_L_response_sem, 'pfc_all_firing_bg': pfc_firing_all_mean, 'pfc_all_firing_bg_sem': pfc_firing_all_sem, 'dms_all_firing_bg': dms_firing_all_mean, 'dms_all_firing_bg_sem': dms_firing_all_sem, 'pfc_all_firing_response': pfc_firing_all_response_mean, 'pfc_all_firing_response_sem': pfc_firing_all_response_sem, 'dms_all_firing_response': dms_firing_all_response_mean, 'dms_all_firing_response_sem': dms_firing_all_response_sem})
-    df.to_csv(pjoin(figure_5_data_root, 'figure_5_panel_gh.csv'), index=False)
+def set_xticks_and_labels_pi(ax: plt.Axes):
+    ax.set_xticks([-np.pi, 0, np.pi])
+    ax.set_xticklabels([r'$-\pi$', '0', r'$\pi$'])
 
 
-def pair_and_get_mean_and_sem(x, y):
-    df = pd.DataFrame({'x': x, 'y': y})
-    df_org = df.copy()
-    df = df.groupby('x').mean()
-    df['sem'] = df_org.groupby('x').sem()['y']
+def remove_top_and_right_spines(ax: plt.Axes):
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
 
-    return np.array(df['y']), np.array(df['sem'])
+
+def phase_diff_pfc_dms(pfc_mag, dms_mag, pfc_bg, dms_bg) -> Tuple[float, float]:
+    session_length = len(pfc_mag)
+    # green is striatum, black is PFC, left is striatum, right is pfc
+    # low_pass filter
+    b, a = butter(N=4, Wn=10/session_length, btype='low', output='ba')
+    filtered_pfc = filter_signal(pfc_mag, b, a)
+    filtered_dms = filter_signal(dms_mag, b, a)
+    phase_pfc, phase_dms = hilbert_transform(filtered_pfc), hilbert_transform(filtered_dms)
+
+    filtered_pfc_bg = filter_signal(pfc_bg, b, a)
+    filtered_dms_bg = filter_signal(dms_bg, b, a)
+    phase_pfc_bg, phase_dms_bg = hilbert_transform(filtered_pfc_bg), hilbert_transform(filtered_dms_bg)
+
+    phase_diff = circmean(phase_pfc - phase_dms, high=np.pi, low=-np.pi)
+    phase_diff_bg = circmean(phase_pfc_bg - phase_dms_bg, high=np.pi, low=-np.pi)
+
+    return phase_diff, phase_diff_bg
+
+
+def phase_diff(sig1, sig2) -> float:
+    phase_diff = circmean(get_phase(sig1) - get_phase(sig2), low=-np.pi, high=np.pi)
+    return phase_diff
+
+# low pass filter
+def filter_signal(signal, b, a) -> np.ndarray:
+    filtered_signal = detrend(signal, type='constant')
+    filtered_signal = filtfilt(b=b, a=a, x=filtered_signal)
+    return filtered_signal
+
+# hilbert transform
+def hilbert_transform(signal) -> np.ndarray:
+    hilbert_signal = hilbert(signal)
+    phase = np.angle(hilbert_signal)
+    return phase
+
+def get_phase(signal) -> np.ndarray:
+    length = len(signal)
+    b, a = butter(N=4, Wn=10/length, btype='low', output='ba')
+    signal = filter_signal(signal, b, a)
+    hilbert_signal = hilbert(signal)
+    phase = np.angle(hilbert_signal)
+    return phase
+
+# return the indices of the trials where the high reward side switches
+def find_switch(leftP: np.ndarray) -> List[int]:
+    switch_indices = []
+    for i in range(len(leftP)-1):
+        if leftP[i] != leftP[i+1]:
+            switch_indices.append(i)
+    return switch_indices
