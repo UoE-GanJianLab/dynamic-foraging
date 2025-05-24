@@ -128,9 +128,10 @@ Panel F makes further distinction between positive and negatively correlated cel
 |---|---|---|---|---|---|
 |PFC or DMS|response magnitude or ITI firing|mean percentage of cells that are positively correlated|standard error of positively correlated percentage across all sessions|mean percentage of cells that are negatively correlated|standard error of negatively correlated percentage across all sessions|
 
-#### Figure 6
+#### Figure 3 - new
 
 1. Panel B
+
 The data for panel b are split into two groups, one done with prpd, one with relative values from the reinforcement learning models. The data are organized as follows:
 
 |trial_index|pfc_mag_standardized|dms_mag_standardized|prpd_standardized|pfc_mag_filtered|dms_mag_filtered|prpd_filtered|pfc_phase|dms_phase|prpd_phase|
@@ -139,17 +140,19 @@ The data for panel b are split into two groups, one done with prpd, one with rel
 
 The pairs here are filtered by removing cells that are suspected to have experienced probe drift to reduce the amount of resulting images to go through. The filtering is done by removing cells with no firing in 10 consecutive trials in the response time window.
 
-2. Panel C
+2. Panel C, D
 
-Panel C shows the discretized mean phase difference between PFC and DMS pairs split by session performance. The bins range from $[-\pi, \pi]$ with 36 bins.
+Panel D shows the discretized mean phase difference between PFC and DMS pairs split by session performance. The bins range from $[-\pi, \pi]$ with 36 bins.
 
 |bin_center|good response count|good bg count|bad response count|bad bg count|
 |---|---|---|---|---|
 |center of the bin|number of good session PFC DMS pairs whose mean phase difference of response window firing falls into the bin|number of good session PFC DMS pairs whose mean phase difference of background firing falls into the bin|number of bad session PFC DMS pairs whose mean phase difference of response window firing falls into the bin|number of bad session PFC DMS pairs whose mean phase difference of background firing falls into the bin|
 
-3. Panel D
+Adding up the count in good and bad performance would produce the total count used in panel C
 
-Panel C shows the discretized mean phase difference between PFC/DMS cells during reponse/ITI windows and PRPD. The data are organized as follows:
+3. Panel E
+
+Panel E shows the discretized mean phase difference between PFC/DMS cells during reponse/ITI windows and PRPD. The data are organized as follows:
 
 |bin_center|pfc_response_count|pfc_bg_count|dms_response_count|dms_bg_count|
 |---|---|---|---|---|
