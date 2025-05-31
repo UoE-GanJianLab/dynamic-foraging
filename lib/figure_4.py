@@ -195,7 +195,7 @@ def calculate_correlation_statistics():
             relative = True
         
         # calculate the pearson correlation coefficient and p value for prpd and firing rate
-        # discretize the prpd into 10 bins from -1 to 1
+        # discretize the prpd into 10 bins from -1 to 1 to reduce noise
         bins = np.arange(-1, 1.1, 0.1)
         prpd = np.digitize(prpd, bins, right=True)
         # calculate the bin center for all available prpd values
@@ -227,7 +227,6 @@ def calculate_correlation_statistics():
 
             # prpd_correlation_response, prpd_p_value_response = scipy.stats.pearsonr(prpd, firing_rate_response)
             # prpd_correlation_bg, prpd_p_value_bg = scipy.stats.pearsonr(prpd, firing_rate_bg)
-
 
             session_names_prpd.append(session_name)
             cell_names_prpd.append(cell_name)
